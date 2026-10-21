@@ -1,0 +1,212 @@
+using System.Numerics;
+using Hexa.NET.ImGui;
+using Lapis.Editor.PropertyDrawers;
+using Lapis.Serialization;
+
+namespace Lapis.Editor.Panels;
+
+/// <summary>Shows and edits the selected entity: name, transform and components.</summary>
+internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel("Inspector")
+{
+    private const string AddComponentPopup = "##addComponent";
+
+    private string _componentFilter = string.Empty;
+
+    // Euler angles are cached while editing so values like 180° do not flip to -180° mid-drag.
+    private Transform? _eulerOwner;
+    private Quaternion _eulerSource;
+    private Vector3 _euler;
+
+    protected override void DrawContent()
+    {
+        if (context.Selection is not { } entity)
+        {
+            ImGui.TextDisabled("Select an entity to inspect it.");
+            return;
+        }
+
+        ImGui.PushID(entity.Id.ToString());
+
+        DrawHeader(entity);
+        ImGui.Spacing();
+        DrawTransform(entity.Transform);
+
+        Component? toRemove = null;
+        var index = 0;
+        foreach (var component in entity.Components)
+        {
+            if (component is Transform)
+            {
+                continue;
+            }
+
+            ImGui.PushID(index++);
+            if (!DrawComponent(component, entity.Scene))
+            {
+                toRemove = component;
+            }
+
+            ImGui.PopID();
+        }
+
+        if (toRemove is not null)
+        {
+            entity.RemoveComponent(toRemove);
+            context.MarkDirty();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawAddComponent(entity);
+
+        ImGui.PopID();
+    }
+
+    private void DrawHeader(Entity entity)
+    {
+        var active = entity.IsActive;
+        if (ImGui.Checkbox("##active", ref active))
+        {
+            entity.IsActive = active;
+            context.MarkDirty();
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Active");
+        }
+
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(-1);
+        var name = entity.Name;
+        if (ImGui.InputText("##name", ref name, 128))
+        {
+            entity.Name = name;
+            context.MarkDirty();
+        }
+    }
+
+    private void DrawTransform(Transform transform)
+    {
+        if (!ImGui.CollapsingHeader("Transform", ImGuiTreeNodeFlags.DefaultOpen))
+        {
+            return;
+        }
+
+        var position = transform.LocalPosition;
+        if (PropertyGrid.Vector3("Position", ref position))
+        {
+            transform.LocalPosition = position;
+            context.MarkDirty();
+        }
+
+        if (_eulerOwner != transform || _eulerSource != transform.LocalRotation)
+        {
+            _eulerOwner = transform;
+            _eulerSource = transform.LocalRotation;
+            _euler = transform.LocalEulerAngles;
+        }
+
+        if (PropertyGrid.Vector3("Rotation", ref _euler, 0.5f))
+        {
+            transform.LocalEulerAngles = _euler;
+            _eulerSource = transform.LocalRotation;
+            context.MarkDirty();
+        }
+
+        var scale = transform.LocalScale;
+        if (PropertyGrid.Vector3("Scale", ref scale, 0.02f))
+        {
+            transform.LocalScale = scale;
+            context.MarkDirty();
+        }
+
+        ImGui.Spacing();
+    }
+
+    /// <returns>False when the user asked to remove the component.</returns>
+    private bool DrawComponent(Component component, Scene scene)
+    {
+        var keep = true;
+        var title = component is MissingComponent missing
+            ? $"Missing: {missing.TypeName}"
+            : PropertyGrid.Nicify(component.GetType().Name);
+
+        if (!ImGui.CollapsingHeader(title, &keep, ImGuiTreeNodeFlags.DefaultOpen))
+        {
+            return keep;
+        }
+
+        if (component is MissingComponent)
+        {
+            ImGui.PushTextWrapPos(0);
+            ImGui.TextColored(PropertyGrid.WarningColor, "This component's type could not be found. Its data is kept and saved unchanged.");
+            ImGui.PopTextWrapPos();
+            ImGui.Spacing();
+            return keep;
+        }
+
+        foreach (var member in SerializedMember.For(component.GetType()))
+        {
+            if (member.GetAttribute<HideInEditorAttribute>() is not null)
+            {
+                continue;
+            }
+
+            if (PropertyGrid.Member(component, member, scene))
+            {
+                context.MarkDirty();
+            }
+        }
+
+        ImGui.Spacing();
+        return keep;
+    }
+
+    private void DrawAddComponent(Entity entity)
+    {
+        var width = MathF.Min(240f, ImGui.GetContentRegionAvail().X);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetContentRegionAvail().X - width) * 0.5f);
+        if (ImGui.Button("Add Component", new Vector2(width, 0)))
+        {
+            _componentFilter = string.Empty;
+            ImGui.OpenPopup(AddComponentPopup);
+        }
+
+        if (!ImGui.BeginPopup(AddComponentPopup))
+        {
+            return;
+        }
+
+        if (ImGui.IsWindowAppearing())
+        {
+            ImGui.SetKeyboardFocusHere();
+        }
+
+        ImGui.SetNextItemWidth(220);
+        ImGui.InputTextWithHint("##filter", "Search...", ref _componentFilter, 64);
+
+        foreach (var type in ComponentCatalog.Types)
+        {
+            if (_componentFilter.Length > 0 && !type.Name.Contains(_componentFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (ImGui.Selectable(PropertyGrid.Nicify(type.Name)))
+            {
+                entity.AddComponent(type);
+                context.MarkDirty();
+                ImGui.CloseCurrentPopup();
+            }
+
+            if (ImGui.IsItemHovered() && type.Namespace is { } ns)
+            {
+                ImGui.SetTooltip(ns);
+            }
+        }
+
+        ImGui.EndPopup();
+    }
+}

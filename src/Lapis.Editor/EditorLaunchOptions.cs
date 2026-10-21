@@ -5,13 +5,13 @@ namespace Lapis.Editor;
 /// <summary>Command-line options for the editor.</summary>
 /// <param name="ScenePath">Scene file to open; the demo scene is used when null.</param>
 /// <param name="SaveScenePath">When set, save the opened scene to this file at startup.</param>
-/// <param name="GameView">Render through the scene's main camera instead of the editor camera.</param>
+/// <param name="SelectName">Name of an entity to select at startup.</param>
 /// <param name="CapturePath">When set, save a screenshot to this PNG file and exit.</param>
 /// <param name="CaptureAfterFrames">Number of frames to render before capturing.</param>
 internal sealed record EditorLaunchOptions(
     string? ScenePath = null,
     string? SaveScenePath = null,
-    bool GameView = false,
+    string? SelectName = null,
     string? CapturePath = null,
     int CaptureAfterFrames = 30)
 {
@@ -20,7 +20,7 @@ internal sealed record EditorLaunchOptions(
 
           --scene <file.lscene>       Open a scene file (default: built-in demo scene)
           --save-scene <file.lscene>  Save the opened scene to a file at startup
-          --game-view                 Look through the scene's main camera
+          --select <name>             Select the first entity with this name
           --capture <file.png>        Render, save a screenshot and exit
           --frames <count>            Frames to render before capturing (default 30)
           --help                      Show this help
@@ -42,8 +42,8 @@ internal sealed record EditorLaunchOptions(
                 case "--save-scene":
                     options = options with { SaveScenePath = ReadValue(args, ref i) };
                     break;
-                case "--game-view":
-                    options = options with { GameView = true };
+                case "--select":
+                    options = options with { SelectName = ReadValue(args, ref i) };
                     break;
                 case "--capture":
                     options = options with { CapturePath = ReadValue(args, ref i) };

@@ -55,6 +55,10 @@ public sealed class SceneRenderer : IDisposable
         _gl.ClearColor(background.R, background.G, background.B, 1f);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
+        // Reset state that other renderers (such as the editor UI) may have left behind.
+        _gl.Disable(EnableCap.Blend);
+        _gl.Disable(EnableCap.ScissorTest);
+        _gl.DepthMask(true);
         _gl.Enable(EnableCap.DepthTest);
         _gl.Enable(EnableCap.CullFace);
         _gl.CullFace(TriangleFace.Back);

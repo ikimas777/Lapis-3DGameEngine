@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
 
-> **Status:** early development (milestone M2 — scene model). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M3 — editor shell). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ```csharp
 using Lapis;
@@ -44,17 +44,41 @@ dotnet test --solution Lapis.slnx
 dotnet run --project src/Lapis.Editor
 ```
 
-Drag with the left or right mouse button to orbit, scroll to zoom, press Esc to quit.
-Other options (`--help` lists them all):
+![Lapis editor](docs/images/editor.png)
+
+### Scene view controls
+
+| Input | Action |
+|---|---|
+| Right mouse + drag | Look around |
+| Right mouse + W A S D / Q E | Fly (hold Shift to go faster) |
+| Alt + left mouse + drag | Orbit around the focus point |
+| Middle mouse + drag | Pan |
+| Mouse wheel | Zoom |
+| F | Focus the selected entity |
+
+### Editor shortcuts
+
+| Keys | Action |
+|---|---|
+| Ctrl+N | New scene |
+| Ctrl+O | Open scene |
+| Ctrl+S / Ctrl+Shift+S | Save / Save As |
+| Delete (in Hierarchy) | Delete the selected entity |
+
+Drag entities in the Hierarchy to re-parent them, or drop an entity onto an entity / component field in the Inspector to assign it.
+
+### Command-line options
+
+`--help` lists them all:
 
 - `--scene samples/Scenes/Demo.lscene` opens a scene file
-- `--game-view` looks through the scene's main camera instead of the orbit camera
+- `--select Box` selects an entity at startup
 - `--save-scene file.lscene` saves the opened scene
-- `--capture shot.png` renders a few frames, saves a screenshot and exits
+- `--capture shot.png` renders a few frames with the default layout, saves a screenshot and exits
 
 The scene file format is described in [docs/scene-format.md](docs/scene-format.md).
-
-![Demo scene](docs/images/scene-preview.png)
+The editor stores its window layout in `%LOCALAPPDATA%\Lapis\editor-layout.ini`; use View > Reset Layout to restore the default.
 
 ## Repository layout
 

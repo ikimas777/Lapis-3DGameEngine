@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Games are assembled as scenes in the editor and programmed with C# scripts (`Behaviour`).
 
-> Status: **M2 — scene model** (done). Next: **M3 — editor shell**. This is a living document; it is updated at the end of every milestone.
+> Status: **M3 — editor shell** (done). Next: **M4 — editor tools**. This is a living document; it is updated at the end of every milestone.
 
 ---
 
@@ -311,6 +311,7 @@ Answers given by the project owner on 2026-10-21.
 | M0 | Solution, CI, license, plan. Merged into `main`. |
 | M1 | OpenGL 4.5 window (Silk.NET), `Application` frame loop, `Time`, `Log`, GL debug output, `Shader` loaded from files, DSA `Mesh`, cube / plane / sphere primitives, lit preview scene with orbit camera, `--capture` screenshots. Verified on Intel UHD Graphics 620. |
 | M2 | `Scene`, `Entity`, `Component`, `Transform` (hierarchy, cached world matrices, Euler helpers, `LookAt`), `Behaviour` lifecycle methods (executed from M5), `Camera`, `Light` (directional + up to 8 point lights), `MeshRenderer` with built-in meshes, `Color`, serialization attributes, JSON `.lscene` format with references and `MissingComponent` ([docs/scene-format.md](docs/scene-format.md)), `SceneRenderer`, sample scene in `samples/Scenes`. 65 tests. |
+| M3 | Dear ImGui (Hexa.NET.ImGui 1.92) with an own Silk.NET input layer and OpenGL renderer (dynamic font atlas), dark theme with Segoe UI, docking layout (Hierarchy / Scene + Game / Inspector / Console) saved per user, `Framebuffer` render targets, editor camera (look + fly, orbit, pan, zoom, focus), Hierarchy with search, create / delete / re-parent by drag and drop, Inspector with name / active / transform and reflection-based component editing (numbers, vectors, colours, enums, strings, entity and component references), Add / remove component, Console with level filters and search, File menu with New / Open / Save / Save As. Known gaps: no undo yet (M4), no clipboard in text fields, no prompt for unsaved changes. |
 
 ### Open items
 - No `origin` remote is configured yet; CI starts running once the repository is pushed to GitHub.

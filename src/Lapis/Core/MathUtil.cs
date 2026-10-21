@@ -70,7 +70,8 @@ public static class MathUtil
             roll = 0f;
         }
 
-        return new Vector3(pitch, yaw, roll) * Rad2Deg;
+        // Adding zero turns -0 into +0, so editors do not show "-0.000".
+        return new Vector3(pitch, yaw, roll) * Rad2Deg + Vector3.Zero;
     }
 }
 
