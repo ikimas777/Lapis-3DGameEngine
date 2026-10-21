@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".github/workflows/build.yml" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="PLAN.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Lapis/Lapis.csproj" />
+    <Project Path="src/Lapis.Editor/Lapis.Editor.csproj" />
+    <Project Path="src/Lapis.Player/Lapis.Player.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lapis.Tests/Lapis.Tests.csproj" />
+  </Folder>
+</Solution>

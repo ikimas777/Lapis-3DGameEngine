@@ -1,0 +1,71 @@
+# ===== .NET / C# build output =====
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]64/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+
+# ===== IDE: Visual Studio =====
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.VC.db
+*.VC.VC.opendb
+ipch/
+
+# ===== IDE: JetBrains Rider =====
+.idea/
+*.sln.iml
+
+# ===== IDE: VS Code =====
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ===== Tests / coverage =====
+TestResults/
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+*.coverage
+*.coveragexml
+
+# ===== Profiling / dumps =====
+*.dmp
+*.etl
+*.nettrace
+*.gcdump
+*.diagsession
+
+# ===== Engine: cache and generated data =====
+# Per-project cache (imported assets, compiled scripts) - regenerated from Assets/
+.lapis/
+# Games exported by the editor
+**/Builds/
+# Dear ImGui window layout saved at runtime (the default layout is in code)
+imgui.ini
+# Local editor preferences (recent projects, window size)
+editor.user.json
+
+# ===== OS =====
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*

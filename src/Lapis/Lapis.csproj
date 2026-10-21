@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Lapis</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lapis.Editor" />
+    <InternalsVisibleTo Include="Lapis.Player" />
+    <InternalsVisibleTo Include="Lapis.Tests" />
+  </ItemGroup>
+
+</Project>
