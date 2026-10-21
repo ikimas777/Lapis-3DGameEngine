@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Games are assembled as scenes in the editor and programmed with C# scripts (`Behaviour`).
 
-> Status: **M1 — window and renderer** (done). Next: **M2 — scene model**. This is a living document; it is updated at the end of every milestone.
+> Status: **M2 — scene model** (done). Next: **M3 — editor shell**. This is a living document; it is updated at the end of every milestone.
 
 ---
 
@@ -135,7 +135,7 @@ MyGame/
 - `Entity`: name, active flag, a `Transform` (always present), a list of `Component`s.
 - `Transform`: local position / rotation / scale, parent, children, cached world matrix (dirty flag).
 - `Component` → `Behaviour` (has `Enabled` and lifecycle methods) → user scripts.
-- Scripting API: `GetComponent<T>()`, `AddComponent<T>()`, `Destroy()`, `Instantiate()`, `Scene.Find<T>()`.
+- Scripting API: `GetComponent<T>()`, `AddComponent<T>()`, `Destroy()`, `Scene.Find<T>()`; `Instantiate()` (cloning) arrives together with prefabs.
 - Inside scripts, `entity` and `transform` are lowercase shortcuts; all other members use PascalCase
   (`Position`, `Rotation`, `DeltaTime`).
 
@@ -310,6 +310,7 @@ Answers given by the project owner on 2026-10-21.
 |---|---|
 | M0 | Solution, CI, license, plan. Merged into `main`. |
 | M1 | OpenGL 4.5 window (Silk.NET), `Application` frame loop, `Time`, `Log`, GL debug output, `Shader` loaded from files, DSA `Mesh`, cube / plane / sphere primitives, lit preview scene with orbit camera, `--capture` screenshots. Verified on Intel UHD Graphics 620. |
+| M2 | `Scene`, `Entity`, `Component`, `Transform` (hierarchy, cached world matrices, Euler helpers, `LookAt`), `Behaviour` lifecycle methods (executed from M5), `Camera`, `Light` (directional + up to 8 point lights), `MeshRenderer` with built-in meshes, `Color`, serialization attributes, JSON `.lscene` format with references and `MissingComponent` ([docs/scene-format.md](docs/scene-format.md)), `SceneRenderer`, sample scene in `samples/Scenes`. 65 tests. |
 
 ### Open items
 - No `origin` remote is configured yet; CI starts running once the repository is pushed to GitHub.
