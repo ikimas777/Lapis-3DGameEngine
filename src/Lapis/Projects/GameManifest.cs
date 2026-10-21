@@ -11,7 +11,7 @@ namespace Lapis.Projects;
 /// Layout of an exported game:
 /// <code>
 /// MyGame/
-///   MyGame.exe        the Lapis player, renamed (just "MyGame" on Linux)
+///   MyGame.exe        the Lapis runtime, renamed (just "MyGame" on Linux)
 ///   Game.dll          the compiled scripts
 ///   Data/game.json    this manifest
 ///   Data/Assets/...   scenes, models, textures and materials (with their .lmeta files)

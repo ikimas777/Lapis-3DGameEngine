@@ -152,7 +152,7 @@ internal sealed unsafe partial class EditorApplication
         var settings = new ExportSettings(project, _exportFolder.Trim().Trim('"'), _exportScene, _exportName.Trim());
         var progress = new Progress<string>(message => _exportStatus = message);
         _exportStatus = "Starting...";
-        _exportTask = Task.Run(() => GameExporter.Export(settings, PlayerRuntime.Locate(progress), progress));
+        _exportTask = Task.Run(() => GameExporter.Export(settings, GameRuntime.Locate(progress), progress));
     }
 
     /// <summary>Picks up a finished export; called once per frame.</summary>
@@ -196,7 +196,7 @@ internal sealed unsafe partial class EditorApplication
             var progress = new Progress<string>(Log.Info);
             var result = GameExporter.Export(
                 new ExportSettings(project, folder, project.StartScene, project.Name),
-                PlayerRuntime.Locate(progress),
+                GameRuntime.Locate(progress),
                 progress);
             Log.Info($"Exported the game to {result.ExecutablePath} ({result.AssetCount} assets, {result.TotalBytes / (1024.0 * 1024.0):0.0} MB).");
         }

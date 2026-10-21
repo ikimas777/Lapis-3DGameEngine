@@ -8,7 +8,7 @@ namespace Lapis.Platform;
 
 /// <summary>
 /// Forwards window keyboard and mouse events to the game's <see cref="Input"/> while <see cref="Enabled"/> is true.
-/// The editor enables it only while the Game view has focus; the player keeps it enabled.
+/// The editor enables it only while the Game view has focus; the runtime keeps it enabled.
 /// </summary>
 public sealed class InputBridge : IDisposable
 {

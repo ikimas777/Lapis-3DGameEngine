@@ -76,14 +76,14 @@ nothing else needs to be installed:
 - **Linux:** `Lapis-Linux-x64.tar.gz` — extract (`tar -xzf Lapis-Linux-x64.tar.gz`) and run `Lapis/Lapis.Editor`.
   Optional: install `zenity` (or `kdialog`) for the folder chooser and `code` (VS Code) for editing scripts.
 
-Keep the `Player` folder next to the editor: exported games are built from it.
+Keep the `Runtime` folder next to the editor: it is the game runtime (the engine without the editor) that exported games are built from. The package also has `Docs/` (these guides), `README.txt` and `LICENSE.txt`.
 
 ### Updates
 
 The project launcher checks GitHub for a newer release when it opens (this can be turned off in the update
 window). When one is found, the **Lapis Update** window shows what is new, and **Update to x.y.z** downloads the
 package for your system (`Lapis-Windows-x64.zip` on Windows, `Lapis-Linux-x64.tar.gz` on Linux) and replaces the
-editor's files in the folder it runs from — `Lapis.Editor` and `Player/Lapis.Player`, like pulling a new
+editor's files in the folder it runs from — `Lapis.Editor`, `Runtime/Lapis.Runtime`, `Docs`, `README.txt` and `LICENSE.txt`, like pulling a new
 version. Other files there, settings and projects are not touched. **Restart Now** starts the new version; the
 replaced files are kept as `.old` until the next start and then deleted. The **Check for updates** link under the
 version number opens the window at any time.
@@ -91,11 +91,30 @@ version number opens the window at any time.
 An editor started from source code (`dotnet run`) is updated with `git pull` instead; its update window only
 offers to download the package.
 
+The **update channel** in the same window chooses which releases are offered: **Stable** (finished releases
+only, the default), **Beta** (also betas) or **Alpha** (everything).
+
+### Version numbers
+
+Versions are `X.Y.Z`, optionally with a stage:
+
+| Part | Meaning | Example |
+|---|---|---|
+| `X` | Major update: big changes that may need projects or scripts to be updated | `1.0.0` |
+| `Y` | General update: new features (`Z` goes back to 0) | `0.7.0` |
+| `Z` | Hotfix: bug fixes only | `0.7.1` |
+| `-alpha.N` | Alpha: features are still being built and may change | `0.8.0-alpha.1` |
+| `-beta.N` | Beta: features are done, bugs are being fixed | `0.8.0-beta.2` |
+
+They are ordered `0.8.0-alpha.1 < 0.8.0-alpha.2 < 0.8.0-beta.1 < 0.8.0`. Alphas and betas are published as
+pre-releases, so the Releases page's "Latest" is always a stable version. While `X` is 0 the engine is in early
+development; `1.0.0` will be the first stable version.
+
 ## Editor executable (Windows)
 
 A ready-to-run editor is committed in the repository root: double-click **`Lapis.Editor.exe`**
-(it includes .NET and runs on any 64-bit Windows 10/11 PC). Keep the `Player` folder next to it: exported games
-are built from `Player\Lapis.Player.exe`.
+(it includes .NET and runs on any 64-bit Windows 10/11 PC). Keep the `Runtime` folder next to it: exported games
+are built from `Runtime\Lapis.Runtime.exe`.
 
 To rebuild it after changing the code:
 
@@ -117,15 +136,18 @@ The result is `publish/Lapis.Editor-linux/Lapis.Editor` (messages go to `~/.loca
 
 ### Publishing a release
 
-Pushing a version tag builds Windows and Linux packages on GitHub Actions and attaches them to a new release:
+Pushing a version tag builds Windows and Linux packages on GitHub Actions and attaches them to a new release.
+The programs get the version from the tag; a tag with `-alpha` or `-beta` becomes a pre-release:
 
 ```bash
-git tag v0.2.0
+git tag v0.8.0-beta.1
 ```
 
 ```bash
-git push origin v0.2.0
+git push origin v0.8.0-beta.1
 ```
+
+Set the same version in `Directory.Build.props` so builds made from the source show it too.
 
 ## Running
 
@@ -258,7 +280,7 @@ The editor stores its window layout in `%LOCALAPPDATA%\Lapis\editor-layout.ini`;
 |---|---|
 | `src/Lapis` | Engine library (`Lapis.dll`) — the API game scripts use |
 | `src/Lapis.Editor` | The editor application |
-| `src/Lapis.Player` | Runtime that runs exported games |
+| `src/Lapis.Runtime` | Game runtime (the engine without the editor) that runs exported games |
 | `samples/Sandbox` | Sample game project |
 | `tests/Lapis.Tests` | Unit tests |
 

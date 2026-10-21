@@ -24,7 +24,7 @@ public class UpdateCheckerTests
     {
         var release = UpdateChecker.ParseRelease(Release, windows)!;
 
-        Assert.Equal(new Version(0, 3, 0), release.Version);
+        Assert.Equal(new ReleaseVersion(0, 3, 0), release.Version);
         Assert.Equal("Lapis v0.3.0", release.Title);
         Assert.Equal("- Hierarchy folders", release.Notes);
         Assert.Equal(new ReleaseAsset(name, url, size), release.Asset);
@@ -44,20 +44,58 @@ public class UpdateCheckerTests
         Assert.Null(UpdateChecker.ParseRelease("""{ "tag_name": "nightly" }""", windows: true));
 
     [Theory]
-    [InlineData("v0.2.0", 0, 2, 0)]
-    [InlineData("1.4", 1, 4, 0)]
-    [InlineData("V2.0.1-beta", 2, 0, 1)]
-    public void ParseVersion_AcceptsCommonTags(string tag, int major, int minor, int patch) =>
-        Assert.Equal(new Version(major, minor, patch), UpdateChecker.ParseVersion(tag));
+    [InlineData("v0.2.0", "0.2.0")]
+    [InlineData("1.4", "1.4.0")]
+    [InlineData("V2.0.1-beta", "2.0.1-beta")]
+    [InlineData("v0.7.0-beta.2", "0.7.0-beta.2")]
+    [InlineData("0.7.0-alpha.1+9cafa50", "0.7.0-alpha.1")]
+    [InlineData("0.7.0-a.3", "0.7.0-alpha.3")]
+    [InlineData("0.7.0-b.1", "0.7.0-beta.1")]
+    [InlineData("0.5.0+9cafa50", "0.5.0")]
+    public void ReleaseVersion_ParsesTagsAndPrintsThemBack(string tag, string expected) =>
+        Assert.Equal(expected, ReleaseVersion.Parse(tag)!.Value.ToString());
 
     [Theory]
-    [InlineData("0.3.0", "0.2.0", true)]
-    [InlineData("0.2.0", "0.2.0", false)]
-    [InlineData("0.2.0", "0.2.0.0", false)]
-    [InlineData("0.1.9", "0.2.0", false)]
-    [InlineData("1.0.0", "0.9.9", true)]
-    public void IsNewer_ComparesMajorMinorPatch(string latest, string current, bool expected) =>
-        Assert.Equal(expected, UpdateChecker.IsNewer(Version.Parse(latest), Version.Parse(current)));
+    [InlineData("nightly")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void ReleaseVersion_RejectsNonVersions(string? tag) => Assert.Null(ReleaseVersion.Parse(tag));
+
+    [Theory]
+    [InlineData("0.3.0", "0.2.0")]
+    [InlineData("1.0.0", "0.9.9")]
+    [InlineData("0.2.1", "0.2.0")]
+    [InlineData("0.7.0-alpha.2", "0.7.0-alpha.1")]
+    [InlineData("0.7.0-beta.1", "0.7.0-alpha.9")]
+    [InlineData("0.7.0", "0.7.0-beta.3")]
+    [InlineData("0.7.0-alpha.1", "0.6.5")]
+    public void ReleaseVersion_FirstIsNewer(string newer, string older)
+    {
+        Assert.True(ReleaseVersion.Parse(newer) > ReleaseVersion.Parse(older));
+        Assert.False(ReleaseVersion.Parse(older) > ReleaseVersion.Parse(newer));
+    }
+
+    [Theory]
+    [InlineData("Stable", "0.6.0")]
+    [InlineData("Beta", "0.7.0-beta.1")]
+    [InlineData("Alpha", "0.8.0-alpha.1")]
+    public void PickLatest_FollowsTheChannel(string channel, string expected)
+    {
+        const string list = """
+            [
+              { "tag_name": "v0.8.0-alpha.1", "assets": [] },
+              { "tag_name": "v0.7.0-beta.1", "assets": [] },
+              { "tag_name": "v0.7.0-alpha.2", "assets": [] },
+              { "tag_name": "v0.6.0", "assets": [] },
+              { "tag_name": "v0.9.0", "draft": true, "assets": [] },
+              { "tag_name": "nightly", "assets": [] }
+            ]
+            """;
+
+        var latest = UpdateChecker.PickLatest(UpdateChecker.ParseReleases(list, windows: true), Enum.Parse<ReleaseStage>(channel));
+
+        Assert.Equal(expected, latest!.Version.ToString());
+    }
 
     [Fact]
     public void FreePath_AddsANumberInsteadOfOverwriting()

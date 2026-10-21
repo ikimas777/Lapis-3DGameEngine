@@ -89,7 +89,7 @@ internal static class UpdateInstaller
             File.Move(file, destination);
             if (!OperatingSystem.IsWindows() && Path.GetExtension(destination).Length == 0)
             {
-                // Linux executables (Lapis.Editor, Player/Lapis.Player) must stay runnable.
+                // Linux executables (Lapis.Editor, Runtime/Lapis.Runtime) must stay runnable.
                 File.SetUnixFileMode(destination, File.GetUnixFileMode(destination)
                     | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
             }
@@ -110,8 +110,8 @@ internal static class UpdateInstaller
         }
 
         foreach (var file in Directory.EnumerateFiles(folder, "*" + OldSuffix + "*", SearchOption.TopDirectoryOnly)
-                     .Concat(Directory.Exists(Path.Combine(folder, "Player"))
-                         ? Directory.EnumerateFiles(Path.Combine(folder, "Player"), "*" + OldSuffix + "*")
+                     .Concat(Directory.Exists(Path.Combine(folder, "Runtime"))
+                         ? Directory.EnumerateFiles(Path.Combine(folder, "Runtime"), "*" + OldSuffix + "*")
                          : []))
         {
             try
@@ -122,6 +122,32 @@ internal static class UpdateInstaller
             {
                 // Still in use (e.g. another editor window); removed on a later start.
             }
+        }
+
+        DeleteLegacyPlayerFolder(folder);
+    }
+
+    /// <summary>
+    /// Versions before 0.6 kept the game runtime in <c>Player/Lapis.Player(.exe)</c>. After an update brought the new
+    /// <c>Runtime</c> folder, the old one is removed if it holds nothing but that program.
+    /// </summary>
+    private static void DeleteLegacyPlayerFolder(string folder)
+    {
+        var legacy = Path.Combine(folder, "Player");
+        if (!Directory.Exists(legacy) || !Directory.Exists(Path.Combine(folder, "Runtime")) ||
+            Directory.EnumerateDirectories(legacy).Any() ||
+            !Directory.EnumerateFiles(legacy).All(file => Path.GetFileName(file).StartsWith("Lapis.Player", StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.Delete(legacy, recursive: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Tried again on the next start.
         }
     }
 

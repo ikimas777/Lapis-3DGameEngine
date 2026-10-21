@@ -34,7 +34,7 @@ Lapis uses physically based shading. A surface has a **Color** (optionally multi
 **Metallic** (0 for plastic, wood, stone; 1 for metal) and **Roughness** (0 = polished, 1 = matte).
 The first directional light is the sun: it casts soft shadows (turn off with **Cast Shadows** on the light or on
 individual Mesh Renderers) and appears as a sun disk in the sky. Sky colours, ambient light and the shadow
-distance are scene settings: click empty space in the Hierarchy to see them in the Inspector.
+distance are scene settings, edited in the **Scene Settings** tab next to the Inspector.
 
 ## Using assets
 

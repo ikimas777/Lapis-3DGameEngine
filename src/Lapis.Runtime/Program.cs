@@ -1,36 +1,36 @@
 using Lapis.Projects;
 
-namespace Lapis.Player;
+namespace Lapis.Runtime;
 
 internal static class Program
 {
     private static int Main(string[] args)
     {
-        PlayerOptions? options;
+        RuntimeOptions? options;
         try
         {
-            options = PlayerOptions.Parse(args);
+            options = RuntimeOptions.Parse(args);
         }
         catch (Exception exception) when (exception is ArgumentException or FormatException)
         {
             Console.Error.WriteLine(exception.Message);
-            Console.Error.WriteLine(PlayerOptions.Usage);
+            Console.Error.WriteLine(RuntimeOptions.Usage);
             return 2;
         }
 
         if (options is null)
         {
-            Console.WriteLine(PlayerOptions.Usage);
+            Console.WriteLine(RuntimeOptions.Usage);
             return 0;
         }
 
         // The exported game has no console window, so messages also go to a log file next to it.
-        using var log = PlayerLog.Open(Path.Combine(options.GameFolder, "log.txt"));
+        using var log = RuntimeLog.Open(Path.Combine(options.GameFolder, "log.txt"));
 
         try
         {
             var manifest = GameManifest.Load(options.DataFolder);
-            using var app = new PlayerApplication(options, manifest);
+            using var app = new RuntimeApplication(options, manifest);
             app.Run();
             return 0;
         }
@@ -43,22 +43,22 @@ internal static class Program
 }
 
 /// <summary>Copies log messages to a text file.</summary>
-internal sealed class PlayerLog : IDisposable
+internal sealed class RuntimeLog : IDisposable
 {
     private readonly StreamWriter _writer;
     private readonly Lock _sync = new();
 
-    private PlayerLog(StreamWriter writer)
+    private RuntimeLog(StreamWriter writer)
     {
         _writer = writer;
         Log.MessageLogged += OnMessage;
     }
 
-    public static PlayerLog? Open(string path)
+    public static RuntimeLog? Open(string path)
     {
         try
         {
-            return new PlayerLog(new StreamWriter(path, append: false) { AutoFlush = true });
+            return new RuntimeLog(new StreamWriter(path, append: false) { AutoFlush = true });
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

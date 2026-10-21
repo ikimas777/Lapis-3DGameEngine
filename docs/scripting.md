@@ -137,7 +137,7 @@ Add a **collider** to give an entity a shape: `BoxCollider`, `SphereCollider`, `
 | Collider + `RigidBody` (Kinematic) | Moved by your script through `transform`; pushes dynamic bodies but is never pushed back: moving platforms, a player you move directly. |
 | Collider with **Is Trigger** | Detects other colliders passing through it without blocking them: pickups, checkpoints. |
 
-Gravity and the physics rate are scene settings: click empty space in the Hierarchy to see them in the Inspector.
+Gravity and the physics rate are scene settings, edited in the **Scene Settings** tab next to the Inspector.
 The Scene view draws collider outlines in green (blue for triggers); Edit > Show Colliders toggles them.
 
 Moving a dynamic body:

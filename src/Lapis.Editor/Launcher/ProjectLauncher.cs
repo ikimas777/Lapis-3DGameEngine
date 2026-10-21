@@ -67,7 +67,7 @@ internal sealed unsafe partial class ProjectLauncher(EditorSettings settings, IL
 
         BigText("Lapis", 40f, EditorTheme.Accent);
         ImGui.Dummy(new Vector2(0, 44));
-        ImGui.TextDisabled($"Version {EngineInfo.Version.ToString(3)}");
+        ImGui.TextDisabled($"Version {ReleaseVersion.Current}");
         DrawUpdateStatus();
         ImGui.Dummy(new Vector2(0, 16));
 

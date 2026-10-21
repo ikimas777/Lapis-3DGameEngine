@@ -4,7 +4,7 @@ namespace Lapis.Simulation;
 
 /// <summary>
 /// A running game: the scripts of a scene plus its physics, stepped together.
-/// Used by the editor's Play mode and by the standalone player.
+/// Used by the editor's Play mode and by the standalone runtime.
 /// </summary>
 public sealed class GameSimulation : IDisposable
 {

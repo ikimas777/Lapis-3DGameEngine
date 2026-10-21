@@ -21,7 +21,7 @@ internal sealed unsafe partial class ProjectLauncher
     private Action? _cancelDownload;
     private float _downloadProgress;
     private string? _downloadedPath;
-    private Version? _installedVersion;
+    private ReleaseVersion? _installedVersion;
     private string? _downloadError;
 
     /// <summary>Starts the automatic check the first time the launcher is shown, and collects finished work.</summary>
@@ -72,7 +72,7 @@ internal sealed unsafe partial class ProjectLauncher
             if (install.IsCompletedSuccessfully)
             {
                 _installedVersion = _checkResult?.Latest?.Version;
-                Log.Info($"Installed Lapis {_installedVersion?.ToString(3)} ({install.Result} files replaced in {UpdateInstaller.InstallFolder}). Restart to use it.");
+                Log.Info($"Installed Lapis {_installedVersion} ({install.Result} files replaced in {UpdateInstaller.InstallFolder}). Restart to use it.");
             }
             else if (!install.IsCanceled && install.Exception?.GetBaseException() is { } error && error is not OperationCanceledException)
             {
@@ -114,7 +114,7 @@ internal sealed unsafe partial class ProjectLauncher
 
         _checkResult = null;
         var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        _check = UpdateChecker.CheckAsync(timeout.Token).ContinueWith(
+        _check = UpdateChecker.CheckAsync(settings.UpdateChannel, timeout.Token).ContinueWith(
             task =>
             {
                 timeout.Dispose();
@@ -135,7 +135,7 @@ internal sealed unsafe partial class ProjectLauncher
         if (_checkResult is { IsNewer: true, Latest: { } latest })
         {
             ImGui.PushStyleColor(ImGuiCol.Text, EditorTheme.Accent);
-            if (ImGui.Selectable($"Update available: {latest.Version.ToString(3)}"))
+            if (ImGui.Selectable($"Update available: {latest.Version}"))
             {
                 _openUpdatePopup = true;
             }
@@ -173,7 +173,7 @@ internal sealed unsafe partial class ProjectLauncher
         }
 
         ImGui.PushTextWrapPos(540);
-        var current = EngineInfo.Version.ToString(3);
+        var current = ReleaseVersion.Current.ToString();
 
         if (_check is not null)
         {
@@ -200,6 +200,8 @@ internal sealed unsafe partial class ProjectLauncher
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
+
+        DrawChannelChoice();
 
         var autoCheck = settings.CheckForUpdates;
         if (ImGui.Checkbox("Check for updates when Lapis starts", ref autoCheck))
@@ -230,6 +232,34 @@ internal sealed unsafe partial class ProjectLauncher
 
         ImGui.PopTextWrapPos();
         ImGui.EndPopup();
+    }
+
+    /// <summary>Stable / Beta / Alpha: which releases the update check offers. Changing it checks again.</summary>
+    private void DrawChannelChoice()
+    {
+        ImGui.TextUnformatted("Update channel:");
+        (ReleaseStage Channel, string Label, string Help)[] channels =
+        [
+            (ReleaseStage.Stable, "Stable", "Finished releases only (recommended)."),
+            (ReleaseStage.Beta, "Beta", "Also betas: new features that are done but may still have bugs."),
+            (ReleaseStage.Alpha, "Alpha", "Everything, including alphas whose features are still changing."),
+        ];
+
+        foreach (var (channel, label, help) in channels)
+        {
+            ImGui.SameLine();
+            if (ImGui.RadioButton(label, settings.UpdateChannel == channel) && settings.UpdateChannel != channel)
+            {
+                settings.UpdateChannel = channel;
+                settings.Save();
+                StartCheck();
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(help);
+            }
+        }
     }
 
     /// <summary>Release notes with Markdown headings shown as coloured lines and bold markers removed.</summary>
@@ -289,7 +319,7 @@ internal sealed unsafe partial class ProjectLauncher
 
         if (_installedVersion is { } installed)
         {
-            ImGui.TextColored(EditorTheme.Accent, $"Lapis {installed.ToString(3)} is installed.");
+            ImGui.TextColored(EditorTheme.Accent, $"Lapis {installed} is installed.");
             ImGui.TextDisabled($"The files in {UpdateInstaller.InstallFolder} were replaced. Restart Lapis to start using the new version. Your projects are not affected.");
             if (ImGui.Button("Restart Now", new Vector2(160, 0)))
             {
@@ -306,7 +336,7 @@ internal sealed unsafe partial class ProjectLauncher
 
         if (UpdateInstaller.CanInstallInPlace)
         {
-            if (ImGui.Button($"Update to {latest.Version.ToString(3)}", new Vector2(200, 0)))
+            if (ImGui.Button($"Update to {latest.Version}", new Vector2(200, 0)))
             {
                 _downloadError = null;
                 _downloadProgress = 0f;
