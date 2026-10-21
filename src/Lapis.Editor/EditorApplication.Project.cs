@@ -91,19 +91,30 @@ internal sealed unsafe partial class EditorApplication
             _scriptNameInput = "NewScript";
         }
 
+        ExplainWhenNoProject(project);
+
         if (ImGui.MenuItem("Recompile Scripts", string.Empty, false, project is not null && !_scripts.IsCompiling))
         {
             _scripts.RequestCompile();
         }
+
+        ExplainWhenNoProject(project);
 
         if (ImGui.MenuItem("Open in VS Code", string.Empty, false, project is not null))
         {
             CodeEditor.OpenFolder(project!.Directory);
         }
 
-        if (project is not null)
+        ExplainWhenNoProject(project);
+
+        ImGui.Separator();
+        if (project is null)
         {
-            ImGui.Separator();
+            ImGui.TextDisabled("No project is open. Scripts need a project:");
+            ImGui.TextDisabled("use New Project... or Open Project... (e.g. samples/Sandbox).");
+        }
+        else
+        {
             ImGui.TextDisabled(project.FilePath);
             if (_scripts.LastCompilation is { Success: false } failed)
             {
@@ -112,6 +123,15 @@ internal sealed unsafe partial class EditorApplication
         }
 
         ImGui.EndMenu();
+    }
+
+    /// <summary>Explains on hover why a project-only menu item is disabled.</summary>
+    private static void ExplainWhenNoProject(LapisProject? project)
+    {
+        if (project is null && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip("Open or create a project first (Project > Open Project... / New Project...).");
+        }
     }
 
     private void DrawProjectPopups(Vector2 center)
