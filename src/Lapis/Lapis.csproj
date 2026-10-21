@@ -12,4 +12,16 @@
     <InternalsVisibleTo Include="Lapis.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.Windowing" />
+    <PackageReference Include="Silk.NET.Input" />
+    <PackageReference Include="Silk.NET.OpenGL" />
+    <PackageReference Include="StbImageWriteSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Built-in shaders are copied next to every app that references the engine -->
+    <None Include="Shaders\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Shaders" />
+  </ItemGroup>
+
 </Project>

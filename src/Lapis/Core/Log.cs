@@ -1,0 +1,62 @@
+namespace Lapis;
+
+/// <summary>Severity of a <see cref="LogEntry"/>.</summary>
+public enum LogLevel
+{
+    /// <summary>General information.</summary>
+    Info,
+
+    /// <summary>Something unexpected that does not stop the engine.</summary>
+    Warning,
+
+    /// <summary>A failure that needs attention.</summary>
+    Error,
+}
+
+/// <summary>A single message written to the <see cref="Log"/>.</summary>
+public readonly record struct LogEntry(LogLevel Level, string Message, DateTime Timestamp);
+
+/// <summary>
+/// Engine-wide log. Messages go to the standard output and to <see cref="MessageLogged"/>
+/// subscribers (for example the editor console).
+/// </summary>
+public static class Log
+{
+    private static readonly Lock Sync = new();
+
+    /// <summary>Raised for every message, on the thread that logged it.</summary>
+    public static event Action<LogEntry>? MessageLogged;
+
+    /// <summary>Logs an informational message.</summary>
+    public static void Info(string message) => Write(LogLevel.Info, message);
+
+    /// <summary>Logs a warning.</summary>
+    public static void Warning(string message) => Write(LogLevel.Warning, message);
+
+    /// <summary>Logs an error.</summary>
+    public static void Error(string message) => Write(LogLevel.Error, message);
+
+    /// <summary>Logs an error with exception details.</summary>
+    public static void Error(Exception exception, string? message = null) =>
+        Write(LogLevel.Error, message is null ? exception.ToString() : $"{message}{Environment.NewLine}{exception}");
+
+    private static void Write(LogLevel level, string message)
+    {
+        var entry = new LogEntry(level, message, DateTime.Now);
+
+        lock (Sync)
+        {
+            var previousColor = Console.ForegroundColor;
+            Console.ForegroundColor = level switch
+            {
+                LogLevel.Warning => ConsoleColor.Yellow,
+                LogLevel.Error => ConsoleColor.Red,
+                _ => previousColor,
+            };
+            Console.WriteLine($"[{entry.Timestamp:HH:mm:ss}] {level,-7} {message}");
+            Console.ForegroundColor = previousColor;
+        }
+
+        MessageLogged?.Invoke(entry);
+    }
+}

@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Games are assembled as scenes in the editor and programmed with C# scripts (`Behaviour`).
 
-> Status: **M0 — setup**. This is a living document; it is updated at the end of every milestone.
+> Status: **M1 — window and renderer** (done). Next: **M2 — scene model**. This is a living document; it is updated at the end of every milestone.
 
 ---
 
@@ -301,6 +301,15 @@ Answers given by the project owner on 2026-10-21.
 | 15 | License? | **Open source, MIT.** |
 | 16 | Language? | **English everywhere**, including documentation. |
 | 17 | References to other engines? | **None.** Lapis must not reference or imitate another engine in its code, API names or documentation. |
+
+---
+
+## 8. Progress log
+
+| Milestone | Result |
+|---|---|
+| M0 | Solution, CI, license, plan. Merged into `main`. |
+| M1 | OpenGL 4.5 window (Silk.NET), `Application` frame loop, `Time`, `Log`, GL debug output, `Shader` loaded from files, DSA `Mesh`, cube / plane / sphere primitives, lit preview scene with orbit camera, `--capture` screenshots. Verified on Intel UHD Graphics 620. |
 
 ### Open items
 - No `origin` remote is configured yet; CI starts running once the repository is pushed to GitHub.
