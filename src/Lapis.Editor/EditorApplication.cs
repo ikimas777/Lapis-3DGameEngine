@@ -409,17 +409,17 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             ImGui.Separator();
             if (_sceneView is { } sceneView)
             {
-                if (ImGui.MenuItem("Move Tool", "W", sceneView.Tool == GizmoTool.Move))
+                if (ImGui.MenuItem("Move Tool", "1", sceneView.Tool == GizmoTool.Move))
                 {
                     sceneView.Tool = GizmoTool.Move;
                 }
 
-                if (ImGui.MenuItem("Rotate Tool", "E", sceneView.Tool == GizmoTool.Rotate))
+                if (ImGui.MenuItem("Rotate Tool", "2", sceneView.Tool == GizmoTool.Rotate))
                 {
                     sceneView.Tool = GizmoTool.Rotate;
                 }
 
-                if (ImGui.MenuItem("Scale Tool", "R", sceneView.Tool == GizmoTool.Scale))
+                if (ImGui.MenuItem("Scale Tool", "3", sceneView.Tool == GizmoTool.Scale))
                 {
                     sceneView.Tool = GizmoTool.Scale;
                 }
