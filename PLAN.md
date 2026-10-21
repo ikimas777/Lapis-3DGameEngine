@@ -259,8 +259,9 @@ Estimates are in **work sessions** (one session ≈ one afternoon: Claude writes
 | **M8** | Assets | Assets panel (icon grid), glTF / GLB / OBJ / STL and texture import, materials, GUID / `.lmeta`, drag & drop into scene and Inspector | 2–3 |
 | **M9** | Visual quality | PCF shadows, skybox, PBR, MSAA, editor ground grid, polished dark theme | 2 |
 | **M10** | Export | `File → Export`: `Lapis.Player.exe` + `Game.dll` + scenes + assets in one folder | 1–2 |
+| **M11** | Project launcher | a start window shown before the editor: list of recent projects (name, path, last opened), open an existing project folder, create a new project from a template (name + location), remove from the list; the editor itself always opens with a project; `Lapis.Editor.exe` starts in the launcher | 1–2 |
 
-**MVP total: about 17–26 sessions.**
+**MVP total: about 18–28 sessions.**
 
 After the MVP: prefabs, audio, animation, in-game UI, particles, editor profiler, Linux / macOS.
 
