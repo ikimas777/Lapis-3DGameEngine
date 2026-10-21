@@ -22,6 +22,12 @@ internal sealed class EditorSettings
     /// </summary>
     public bool FlyOnlyWithRightMouse { get; set; }
 
+    /// <summary>Clear the Console every time Play starts.</summary>
+    public bool ClearConsoleOnPlay { get; set; }
+
+    /// <summary>Look for a newer editor release on GitHub when the project launcher opens.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
     /// <summary>Projects shown in the launcher, most recently opened first.</summary>
     public List<RecentProject> RecentProjects { get; set; } = [];
 

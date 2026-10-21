@@ -244,7 +244,7 @@ internal sealed unsafe partial class EditorApplication
             var project = LapisProject.Create(folder, name);
             File.WriteAllText(
                 Path.Combine(project.AssetsDirectory, "Scripts", "Rotator.cs"),
-                """
+                ScriptProjectFiles.UsingDirectives + "\n" + """
                 /// <summary>Spins the entity at a constant speed.</summary>
                 public class Rotator : Behaviour
                 {

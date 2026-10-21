@@ -28,6 +28,12 @@ MyGame/
 **Project > Create Script...** creates `Assets/Scripts/<Name>.cs` and opens it in VS Code:
 
 ```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using Lapis;
+
 /// <summary>Moves the entity with W A S D or the arrow keys.</summary>
 public class PlayerController : Behaviour
 {
@@ -48,10 +54,34 @@ public class PlayerController : Behaviour
 }
 ```
 
-These namespaces are available in every script without `using`: `Lapis`, `System`,
-`System.Collections.Generic`, `System.Linq`, `System.Numerics`.
-
 Inside a behaviour, `entity` is the entity it is attached to and `transform` is that entity's transform.
+
+## Libraries and `using` lines
+
+Scripts are built against two things:
+
+- **The engine library, `Lapis.dll`** (namespace `Lapis`): `Behaviour`, `Entity`, `Transform`, `Input`, `Time`,
+  `Log`, `RigidBody`, `Physics`, `Camera`, `Light` and the rest of the engine. The editor copies it into
+  `.lapis/Engine/Lapis.dll` (with `Lapis.xml`, the API descriptions) so VS Code can show completion and docs.
+- **The .NET class library**: everything in the `System.*` namespaces, such as `Math`, `List<T>`, LINQ,
+  `StringBuilder` or file access.
+
+Every script the editor creates (Project > Create Script..., Create Script... in the Assets panel, and the example script of a
+new project) starts with the same `using` lines, so it is clear where each type comes from:
+
+| `using` | Gives you |
+|---|---|
+| `using System;` | Basic .NET types: `Math`, `Random`, `Exception`, `DateTime`... |
+| `using System.Collections.Generic;` | `List<T>`, `Dictionary<TKey, TValue>`, `HashSet<T>`... |
+| `using System.Linq;` | `Where`, `Select`, `OrderBy` and other queries on collections |
+| `using System.Numerics;` | `Vector2`, `Vector3`, `Quaternion`, `Matrix4x4` |
+| `using Lapis;` | The engine API |
+
+The editor's compiler also adds these five namespaces to every script automatically, so a script without the
+`using` lines (for example one written for an older version) still compiles. Other parts of .NET need their own
+line, e.g. `using System.Text;` for `StringBuilder` or `using System.IO;` for files.
+
+Libraries from NuGet are not supported yet: scripts can use `Lapis.dll` and the .NET class library only.
 
 ## Compiling and hot reload
 

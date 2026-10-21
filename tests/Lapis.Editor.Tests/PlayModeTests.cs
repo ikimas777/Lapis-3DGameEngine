@@ -7,6 +7,26 @@ namespace Lapis.Editor.Tests;
 public class PlayModeTests
 {
     [Fact]
+    public void Starting_IsRaisedBeforePlay_ButNotWhenResumingFromPause()
+    {
+        var context = new EditorContext(new Scene());
+        var play = new PlayMode(context);
+        var starts = 0;
+        play.Starting += () =>
+        {
+            Assert.False(context.IsPlaying); // the game is not set up yet
+            starts++;
+        };
+
+        play.Play();
+        play.TogglePause();
+        play.Play();
+        play.Stop();
+
+        Assert.Equal(1, starts);
+    }
+
+    [Fact]
     public void Play_RunsScriptsOnACopy_AndStopRestoresTheEditedScene()
     {
         var scene = new Scene();
