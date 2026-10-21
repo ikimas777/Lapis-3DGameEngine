@@ -244,7 +244,7 @@ public class PlayerController : Behaviour
 
 ## 5. Milestones
 
-Estimates are in **work sessions** (one session ≈ one afternoon: Claude writes code, you run and test it).
+Estimates are in **work sessions** (one session ≈ one afternoon of writing code, then running and testing it).
 
 | # | Milestone | Done when | Sessions |
 |---|---|---|---|
@@ -302,7 +302,7 @@ Answers given by the project owner on 2026-10-21.
 | 9 | Model formats? | **glTF, GLB, OBJ, STL.** |
 | 10 | First game genre? | None specific — build **general-purpose tools** first. |
 | 11 | Prefabs and audio in the MVP? | **No**, they can wait until after the MVP. |
-| 12 | Who commits? | **Claude commits** completed steps. |
+| 12 | Who commits? | Completed steps are **committed as they are finished**. |
 | 13 | Branching? | **One branch per milestone**. |
 | 14 | Remote and CI? | **Add GitHub Actions** (build + tests). |
 | 15 | License? | **Open source, MIT.** |
