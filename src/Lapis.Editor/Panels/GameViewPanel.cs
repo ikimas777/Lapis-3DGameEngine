@@ -8,7 +8,7 @@ namespace Lapis.Editor.Panels;
 /// Shows the scene through its main camera, as the game will see it. While playing, keyboard and
 /// mouse input go to the game only when this view has focus.
 /// </summary>
-internal sealed unsafe class GameViewPanel(EditorContext context, SceneRenderer renderer, Framebuffer framebuffer, PlayMode play, GameInput input)
+internal sealed unsafe class GameViewPanel(EditorContext context, SceneRenderer renderer, Framebuffer framebuffer, PlayMode play, Lapis.Platform.InputBridge input)
     : EditorPanel("Game")
 {
     private bool _focusRequested;
