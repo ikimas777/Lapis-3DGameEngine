@@ -1,5 +1,6 @@
 using System.Numerics;
 using Hexa.NET.ImGui;
+using Lapis.Editor.Panels;
 using Lapis.Editor.Scripting;
 using Lapis.Projects;
 using Lapis.Serialization;
@@ -31,6 +32,13 @@ internal sealed unsafe partial class EditorApplication
         }
 
         Log.Info($"Opened project '{project.Name}' from {project.Directory}");
+        // Assets first: scenes opened below refer to models, textures and materials by id.
+        _assetWatcher?.Dispose();
+        var assets = new Lapis.Assets.AssetDatabase(project.AssetsDirectory);
+        Lapis.Assets.AssetDatabase.Active = assets;
+        _assetWatcher = new AssetWatcher(assets);
+        _context.SelectedAsset = null;
+
         _scripts.SetProject(project);
         _sceneFileCacheTime = double.NegativeInfinity;
 
@@ -50,6 +58,24 @@ internal sealed unsafe partial class EditorApplication
         _settings.LastProject = project.FilePath;
         SaveSettings();
         return true;
+    }
+
+    void IAssetsPanelHost.OpenScene(string path)
+    {
+        _play.Stop();
+        _context.OpenScene(path);
+    }
+
+    void IAssetsPanelHost.ShowOpenProject()
+    {
+        _popupToOpen = OpenProjectPopup;
+        _pathInput = string.Empty;
+    }
+
+    void IAssetsPanelHost.ShowNewProject()
+    {
+        _popupToOpen = NewProjectPopup;
+        _pathInput = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Lapis Projects", "MyGame");
     }
 
     private void SaveSettings()

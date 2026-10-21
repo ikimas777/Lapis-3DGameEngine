@@ -29,6 +29,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly GL _gl;
     private readonly Shader _litShader;
     private readonly MeshLibrary _meshes;
+    private readonly TextureLibrary _textures;
     private readonly List<MeshRenderer> _renderers = [];
     private readonly List<Light> _pointLights = [];
     private Light? _directionalLight;
@@ -39,6 +40,7 @@ public sealed class SceneRenderer : IDisposable
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
         _litShader = Shader.LoadBuiltIn(gl, "lit");
         _meshes = new MeshLibrary(gl);
+        _textures = new TextureLibrary(gl);
     }
 
     /// <summary>Number of meshes drawn by the last <see cref="Render"/> call.</summary>
@@ -46,6 +48,9 @@ public sealed class SceneRenderer : IDisposable
 
     /// <summary>GPU meshes used by this renderer; share it with other passes such as <see cref="EntityPicker"/>.</summary>
     public MeshLibrary Meshes => _meshes;
+
+    /// <summary>GPU textures used by this renderer (also handy for asset previews).</summary>
+    public TextureLibrary Textures => _textures;
 
     /// <summary>Clears the current framebuffer and draws the scene from <paramref name="view"/>.</summary>
     public void Render(Scene scene, in RenderView view)
@@ -83,8 +88,10 @@ public sealed class SceneRenderer : IDisposable
             }
 
             shader.Set("u_Model", renderer.transform.LocalToWorld);
-            shader.Set("u_Albedo", renderer.Color.ToLinear().ToVector3());
-            shader.Set("u_Shininess", MathF.Max(renderer.Shininess, 1f));
+            var (color, textureId, shininess) = renderer.ResolveSurface();
+            (_textures.Get(textureId) ?? _textures.White).Bind(0);
+            shader.Set("u_Albedo", color.ToLinear().ToVector3());
+            shader.Set("u_Shininess", MathF.Max(shininess, 1f));
             mesh.Draw();
             DrawCount++;
         }
@@ -94,6 +101,7 @@ public sealed class SceneRenderer : IDisposable
     public void Dispose()
     {
         _meshes.Dispose();
+        _textures.Dispose();
         _litShader.Dispose();
     }
 

@@ -9,6 +9,25 @@
   },
   "entities": [
     {
+      "id": "bc0be6ce-2408-4684-aa8c-069d7fc62701",
+      "name": "Pyramid",
+      "transform": {
+        "position": [2.6, 0, 1.2],
+        "rotation": [0, 0.3826834, 0, 0.9238795],
+        "scale": [1.2, 1.2, 1.2]
+      },
+      "components": [
+        {
+          "type": "Lapis.MeshRenderer",
+          "data": { "meshId": "asset:2d08d3b41a094a5eb816bcbd399c9a28", "color": [0.85, 0.72, 0.45, 1], "shininess": 16 }
+        },
+        {
+          "type": "Lapis.MeshCollider",
+          "data": { "isTrigger": false, "center": [0, 0, 0], "friction": 0.5, "bounciness": 0 }
+        }
+      ]
+    },
+    {
       "id": "d3e565ef-3caf-4b00-ab39-e881c1a0ac3a",
       "name": "Main Camera",
       "transform": {
@@ -64,6 +83,7 @@
           "type": "Lapis.MeshRenderer",
           "data": {
             "meshId": "builtin:plane",
+            "materialId": "asset:0b0ed61a108b48be9de4b161192b9824",
             "color": [0.6509804, 0.4392157, 0.32156864, 1],
             "shininess": 8
           }

@@ -53,8 +53,37 @@ internal sealed class EditorContext
         {
             _selection = value;
             _selectionId = value?.Id;
+            if (value is not null)
+            {
+                SelectedAsset = null;
+            }
         }
     }
+
+    /// <summary>
+    /// The asset selected in the Assets panel, shown in the Inspector instead of an entity. Selecting an
+    /// entity clears it, and selecting an asset clears the entity selection.
+    /// </summary>
+    public Lapis.Assets.AssetInfo? SelectedAsset
+    {
+        get => _selectedAsset;
+        set
+        {
+            _selectedAsset = value;
+            if (value is not null)
+            {
+                _selection = null;
+                _selectionId = null;
+            }
+        }
+    }
+
+    private Lapis.Assets.AssetInfo? _selectedAsset;
+
+    /// <summary>The open project's assets, or null when no project is open.</summary>
+#pragma warning disable CA1822 // an instance property keeps call sites short (context.Assets)
+    public Lapis.Assets.AssetDatabase? Assets => Lapis.Assets.AssetDatabase.Active;
+#pragma warning restore CA1822
 
     /// <summary>Raised when another scene is opened or created.</summary>
     public event Action<Scene>? SceneChanged;

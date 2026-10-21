@@ -74,7 +74,13 @@ internal static unsafe class PropertyGrid
                 newValue = e;
                 break;
             default:
-                if (type == typeof(string))
+                if (type == typeof(string) && member.GetAttribute<Lapis.Assets.AssetReferenceAttribute>() is { } assetReference)
+                {
+                    var reference = (string?)value ?? string.Empty;
+                    changed = AssetSlot(label, ref reference, assetReference.Type, tooltip);
+                    newValue = reference;
+                }
+                else if (type == typeof(string))
                 {
                     var text = (string?)value ?? string.Empty;
                     changed = Text(label, ref text, tooltip);
@@ -243,6 +249,105 @@ internal static unsafe class PropertyGrid
             if (ImGui.MenuItem("Clear"))
             {
                 value = null;
+                changed = true;
+            }
+
+            ImGui.EndPopup();
+        }
+
+        return changed;
+    }
+
+    /// <summary>
+    /// A slot holding an asset reference. Accepts assets dragged from the Assets panel; clicking it opens a
+    /// list of matching assets (plus the built-in shapes for meshes); right-click clears it.
+    /// </summary>
+    public static bool AssetSlot(string label, ref string reference, Lapis.Assets.AssetType type, string? tooltip = null)
+    {
+        Label(label, tooltip);
+        var assets = Lapis.Assets.AssetDatabase.Active;
+
+        var display = reference.Length == 0
+            ? $"None ({type})"
+            : reference.StartsWith("builtin:", StringComparison.Ordinal)
+                ? $"{Nicify(reference["builtin:".Length..])} (built-in)"
+                : assets?.Find(reference) is { } found
+                    ? Path.GetFileName(found.FullPath) + (Lapis.Assets.AssetDatabase.TryParseReference(reference, out _, out var part) && part is not null ? $" #{part}" : string.Empty)
+                    : "Missing asset";
+
+        ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBg]);
+        var open = ImGui.Button($"{display}##slot", new Vector2(-1, 0));
+        ImGui.PopStyleColor();
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Drag an asset here from the Assets panel, or click to choose. Right-click to clear.");
+        }
+
+        var changed = false;
+        if (DragDrop.AcceptAsset(assets) is { } dropped)
+        {
+            if (dropped.Type == type)
+            {
+                reference = dropped.Reference;
+                changed = true;
+            }
+            else
+            {
+                Log.Warning($"'{Path.GetFileName(dropped.FullPath)}' is a {dropped.Type}, but this field needs a {type}.");
+            }
+        }
+
+        if (open)
+        {
+            ImGui.OpenPopup("##choose");
+        }
+
+        if (ImGui.BeginPopup("##choose"))
+        {
+            if (ImGui.Selectable("None"))
+            {
+                reference = string.Empty;
+                changed = true;
+            }
+
+            if (type == Lapis.Assets.AssetType.Model)
+            {
+                foreach (var builtIn in BuiltInMeshes.All)
+                {
+                    if (ImGui.Selectable($"{Nicify(builtIn["builtin:".Length..])} (built-in)", builtIn == reference))
+                    {
+                        reference = builtIn;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (assets is not null)
+            {
+                foreach (var asset in assets.Assets.Where(a => a.Type == type).OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (ImGui.Selectable($"{Path.GetFileName(asset.FullPath)}##{asset.Id}", asset.Reference == reference))
+                    {
+                        reference = asset.Reference;
+                        changed = true;
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip(Path.GetRelativePath(assets.RootDirectory, asset.FullPath));
+                    }
+                }
+            }
+
+            ImGui.EndPopup();
+        }
+
+        if (ImGui.BeginPopupContextItem("##slotContext"))
+        {
+            if (ImGui.MenuItem("Clear"))
+            {
+                reference = string.Empty;
                 changed = true;
             }
 

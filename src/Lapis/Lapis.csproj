@@ -19,6 +19,8 @@
     <PackageReference Include="Silk.NET.OpenGL" />
     <PackageReference Include="StbImageWriteSharp" />
     <PackageReference Include="JoltPhysicsSharp" />
+    <PackageReference Include="SharpGLTF.Core" />
+    <PackageReference Include="StbImageSharp" />
   </ItemGroup>
 
   <ItemGroup>
