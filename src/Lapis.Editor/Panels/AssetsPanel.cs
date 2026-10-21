@@ -178,7 +178,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip("Copy files into this folder. You can also drop files from Explorer onto the editor window.");
+            ImGui.SetTooltip("Copy files into this folder. You can also drop files from your file manager onto the editor window.");
         }
 
         ImGui.SameLine();
@@ -255,7 +255,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
         if (index == 0)
         {
-            ImGui.TextDisabled(searching ? "Nothing matches the search." : "This folder is empty. Right-click to create something, or drop files here from Explorer.");
+            ImGui.TextDisabled(searching ? "Nothing matches the search." : "This folder is empty. Right-click to create something, or drop files here from your file manager.");
         }
 
         // Right-click on empty space: create menu.
@@ -269,9 +269,9 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
                 _popupToOpen = ImportPopup;
             }
 
-            if (ImGui.MenuItem("Show in Explorer"))
+            if (ImGui.MenuItem($"Show in {PlatformShell.FileManagerName}"))
             {
-                ShowInExplorer(folder, select: false);
+                PlatformShell.ShowInFileManager(folder, select: false);
             }
 
             ImGui.EndPopup();
@@ -378,9 +378,9 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
             _popupToOpen = RenamePopup;
         }
 
-        if (ImGui.MenuItem("Show in Explorer"))
+        if (ImGui.MenuItem($"Show in {PlatformShell.FileManagerName}"))
         {
-            ShowInExplorer(path, select: true);
+            PlatformShell.ShowInFileManager(path, select: true);
         }
 
         ImGui.Separator();
@@ -451,7 +451,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
             }
 
             var submitted = ImGui.InputText("##import", ref _importInput, 1024, ImGuiInputTextFlags.EnterReturnsTrue);
-            ImGui.TextDisabled("Tip: drag files from Explorer onto the editor window instead.");
+            ImGui.TextDisabled("Tip: drag files from your file manager onto the editor window instead.");
             if ((ImGui.Button("Import", new Vector2(120, 0)) || submitted) && _importInput.Trim().Length > 0)
             {
                 Import([_importInput.Trim().Trim('"')]);
@@ -630,44 +630,23 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
     private void Delete(string path, bool isFolder)
     {
-        // Deleted assets go to the Recycle Bin so a mistake can be undone from Windows.
+        // Deleted assets go to the Recycle Bin / Trash so a mistake can be undone.
         try
         {
-            if (isFolder)
+            PlatformShell.MoveToTrash(path, isFolder);
+            var meta = path + AssetDatabase.MetaExtension;
+            if (!isFolder && File.Exists(meta))
             {
-                Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(path, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
-            }
-            else
-            {
-                Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(path, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
-                var meta = path + AssetDatabase.MetaExtension;
-                if (File.Exists(meta))
-                {
-                    Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(meta, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
-                }
+                PlatformShell.MoveToTrash(meta, isFolder: false);
             }
 
             context.SelectedAsset = null;
             context.Assets?.Refresh();
-            Log.Info($"Moved '{Path.GetFileName(path)}' to the Recycle Bin.");
+            Log.Info($"Moved '{Path.GetFileName(path)}' to the {PlatformShell.TrashName}.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or OperationCanceledException)
         {
             Log.Error($"Could not delete '{Path.GetFileName(path)}': {exception.Message}");
-        }
-    }
-
-    private static void ShowInExplorer(string path, bool select)
-    {
-        try
-        {
-            var start = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
-            start.ArgumentList.Add(select ? $"/select,{path}" : path);
-            Process.Start(start)?.Dispose();
-        }
-        catch (System.ComponentModel.Win32Exception exception)
-        {
-            Log.Error($"Could not open Explorer: {exception.Message}");
         }
     }
 

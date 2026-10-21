@@ -1,7 +1,7 @@
 # Lapis
 
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
-Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
+Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone app for Windows or Linux.
 
 > **Status:** early development (milestone M11 — project launcher; MVP complete). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
@@ -24,7 +24,7 @@ public class PlayerController : Behaviour
 
 ## Requirements
 
-- Windows 10/11 x64
+- Windows 10/11 x64, or 64-bit Linux (X11 or Wayland with XWayland)
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - GPU with OpenGL 4.5 support
 
@@ -38,7 +38,18 @@ dotnet build Lapis.slnx
 dotnet test --solution Lapis.slnx
 ```
 
-## Editor executable
+## Download
+
+Ready-to-run builds for both systems are on the [Releases](../../releases) page. They include .NET, so
+nothing else needs to be installed:
+
+- **Windows:** `Lapis-Windows-x64.zip` — unzip and run `Lapis.Editor.exe`.
+- **Linux:** `Lapis-Linux-x64.tar.gz` — extract (`tar -xzf Lapis-Linux-x64.tar.gz`) and run `Lapis/Lapis.Editor`.
+  Optional: install `zenity` (or `kdialog`) for the folder chooser and `code` (VS Code) for editing scripts.
+
+Keep the `Player` folder next to the editor: exported games are built from it.
+
+## Editor executable (Windows)
 
 A ready-to-run editor is committed in the repository root: double-click **`Lapis.Editor.exe`**
 (it includes .NET and runs on any 64-bit Windows 10/11 PC). Keep the `Player` folder next to it: exported games
@@ -53,6 +64,26 @@ To rebuild it after changing the code:
 Without `-RepoRoot` the build only goes to `publish\Lapis.Editor`. Add `-Shortcut` to also put a
 "Lapis Editor" shortcut on the desktop. The executable has no console window; its messages are shown in the
 Console panel and written to `%LOCALAPPDATA%\Lapis\editor.log`.
+
+On Linux, build the editor with:
+
+```bash
+./scripts/publish-editor.sh
+```
+
+The result is `publish/Lapis.Editor-linux/Lapis.Editor` (messages go to `~/.local/share/Lapis/editor.log`).
+
+### Publishing a release
+
+Pushing a version tag builds Windows and Linux packages on GitHub Actions and attaches them to a new release:
+
+```bash
+git tag v0.2.0
+```
+
+```bash
+git push origin v0.2.0
+```
 
 ## Running
 
@@ -90,12 +121,13 @@ made during play are thrown away on **Stop**, and the scene returns to exactly h
 ### Assets
 
 Models (glTF, GLB, OBJ, STL), textures and materials live in the project's `Assets` folder and are managed
-in the **Assets** panel: drag files in from Explorer, then drag assets into the scene or onto Inspector fields.
+in the **Assets** panel: drag files in from Explorer (or your Linux file manager), then drag assets into the scene or onto Inspector fields.
 See the [assets guide](docs/assets.md).
 
 ### Exporting
 
-**File > Export Game...** builds a standalone `.exe` of the open project that runs on any 64-bit Windows PC
+**File > Export Game...** builds a standalone executable of the open project for the system the editor runs on
+(a Windows `.exe`, or a Linux executable)
 without the editor or .NET. See the [export guide](docs/export.md).
 
 ### Physics

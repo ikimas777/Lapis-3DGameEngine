@@ -1,8 +1,12 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Lapis.Editor;
 
-/// <summary>Shows the standard Windows "Browse for folder" dialog.</summary>
+/// <summary>
+/// Shows the system's folder chooser: the "Browse for folder" dialog on Windows, and zenity or kdialog
+/// (whichever is installed) on Linux.
+/// </summary>
 internal static partial class FolderPicker
 {
     private const uint ReturnOnlyFileSystemDirectories = 0x0001;
@@ -13,9 +17,50 @@ internal static partial class FolderPicker
     /// <summary>
     /// Asks the user to choose a folder. Blocks until the dialog closes; returns null when it was cancelled.
     /// </summary>
-    /// <param name="owner">Window handle the dialog belongs to (0 for none).</param>
+    /// <param name="owner">Window handle the dialog belongs to (0 for none; Windows only).</param>
     /// <param name="title">Text shown above the folder tree.</param>
-    public static string? Pick(nint owner, string title)
+    public static string? Pick(nint owner, string title) =>
+        OperatingSystem.IsWindows() ? PickWindows(owner, title) : PickLinux(title);
+
+    private static string? PickLinux(string title)
+    {
+        (string File, string[] Arguments)[] dialogs =
+        [
+            ("zenity", ["--file-selection", "--directory", $"--title={title}"]),
+            ("kdialog", ["--getexistingdirectory", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "--title", title]),
+        ];
+
+        foreach (var (file, arguments) in dialogs)
+        {
+            var start = new ProcessStartInfo(file) { UseShellExecute = false, RedirectStandardOutput = true };
+            foreach (var argument in arguments)
+            {
+                start.ArgumentList.Add(argument);
+            }
+
+            try
+            {
+                using var process = Process.Start(start);
+                if (process is null)
+                {
+                    continue;
+                }
+
+                var output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit();
+                return process.ExitCode == 0 && output.Length > 0 ? output : null; // non-zero: cancelled
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // Not installed: try the next one.
+            }
+        }
+
+        Log.Warning("No folder chooser found (install zenity or kdialog). Type the folder path instead.");
+        return null;
+    }
+
+    private static string? PickWindows(nint owner, string title)
     {
         var titlePointer = Marshal.StringToHGlobalUni(title);
         var buffer = Marshal.AllocHGlobal(MaxPath * sizeof(char));

@@ -6,13 +6,17 @@ namespace Lapis.Editor.Export;
 /// Finds the Lapis player executable that exported games are based on.
 /// </summary>
 /// <remarks>
-/// The published editor ships it in a <c>Player</c> folder next to <c>Lapis.Editor.exe</c>
-/// (see <c>scripts/publish-editor.ps1</c>). When the editor runs from the source repository instead,
+/// The published editor ships it in a <c>Player</c> folder next to the editor executable
+/// (see <c>scripts/publish-editor.ps1</c> and <c>scripts/publish-editor.sh</c>). When the editor runs from the source repository instead,
 /// the player is published on first use into <c>artifacts/player</c> with the .NET SDK.
 /// </remarks>
 internal static class PlayerRuntime
 {
-    private const string ExecutableName = "Lapis.Player.exe";
+    /// <summary>The player's file name on this system: <c>Lapis.Player.exe</c> on Windows, <c>Lapis.Player</c> on Linux.</summary>
+    public static string ExecutableName => OperatingSystem.IsWindows() ? "Lapis.Player.exe" : "Lapis.Player";
+
+    /// <summary>.NET runtime identifier the player is published for (the system the editor runs on).</summary>
+    public static string RuntimeIdentifier => OperatingSystem.IsWindows() ? "win-x64" : "linux-x64";
 
     /// <summary>Returns the player executable, building it first when running from source.</summary>
     /// <exception cref="ExportException">No player was found and it could not be built.</exception>
@@ -27,7 +31,7 @@ internal static class PlayerRuntime
 
         var repository = FindRepository(editorFolder) ?? FindRepository(AppContext.BaseDirectory)
             ?? throw new ExportException(
-                $"The player runtime was not found. Expected '{bundled}'. Rebuild the editor with scripts/publish-editor.ps1, which includes it.");
+                $"The player runtime was not found. Expected '{bundled}'. Rebuild the editor with scripts/publish-editor.ps1 (or .sh on Linux), which includes it.");
 
         var cached = Path.Combine(repository, "artifacts", "player", ExecutableName);
         var engine = typeof(Entity).Assembly.Location;
@@ -38,7 +42,7 @@ internal static class PlayerRuntime
 
         progress?.Report("Building the player (first export only, may take a minute)...");
         Publish(Path.Combine(repository, "src", "Lapis.Player", "Lapis.Player.csproj"), Path.GetDirectoryName(cached)!);
-        return File.Exists(cached) ? cached : throw new ExportException("Building the player did not produce Lapis.Player.exe.");
+        return File.Exists(cached) ? cached : throw new ExportException($"Building the player did not produce {ExecutableName}.");
     }
 
     private static string? FindRepository(string start)
@@ -67,7 +71,7 @@ internal static class PlayerRuntime
 
         foreach (var argument in new[]
         {
-            "publish", project, "--configuration", "Release", "--runtime", "win-x64", "--self-contained", "true",
+            "publish", project, "--configuration", "Release", "--runtime", RuntimeIdentifier, "--self-contained", "true",
             "--output", output, "-p:LapisWindowedApp=true", "-p:PublishSingleFile=true",
             "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:IncludeAllContentForSelfExtract=true",
             "-p:EnableCompressionInSingleFile=true", "-p:DebugType=none",
