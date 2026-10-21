@@ -150,6 +150,23 @@ internal sealed class EditorContext
         }
     }
 
+    /// <summary>
+    /// Swaps in a reloaded copy of the current scene (after scripts were recompiled). The file path,
+    /// unsaved-changes state and selection are kept; the undo history is cleared because it may refer
+    /// to the old script types.
+    /// </summary>
+    public void ReplaceScene(Scene scene)
+    {
+        var wasDirty = IsDirty;
+        var selectedId = _selectionId;
+
+        Scene = scene;
+        History.Clear();
+        _savedStateId = History.StateId;
+        _unrecordedChanges = wasDirty;
+        _selection = selectedId is { } id ? scene.FindById(id) : null;
+    }
+
     private void SetScene(Scene scene, string? path)
     {
         Scene = scene;

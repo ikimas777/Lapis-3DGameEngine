@@ -1,0 +1,7 @@
+{
+  "format": "lapis.project",
+  "version": 1,
+  "name": "Sandbox",
+  "engineVersion": "0.1.0",
+  "startScene": "Assets/Scenes/Demo.lscene"
+}

@@ -33,7 +33,13 @@ public static partial class SceneSerializer
     public const string FileExtension = ".lscene";
 
     /// <summary>JSON settings used for member values.</summary>
-    public static JsonSerializerOptions JsonOptions { get; } = CreateOptions();
+    public static JsonSerializerOptions JsonOptions { get; private set; } = CreateOptions();
+
+    /// <summary>
+    /// Replaces <see cref="JsonOptions"/>. The options cache metadata for every type they have seen, so this
+    /// lets an unloaded script assembly be collected.
+    /// </summary>
+    internal static void ResetJsonOptions() => JsonOptions = CreateOptions();
 
     /// <summary>Writes the scene to a file.</summary>
     public static void Save(Scene scene, string path) => File.WriteAllText(path, ToJson(scene));

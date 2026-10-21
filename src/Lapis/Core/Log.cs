@@ -13,8 +13,11 @@ public enum LogLevel
     Error,
 }
 
-/// <summary>A single message written to the <see cref="Log"/>.</summary>
-public readonly record struct LogEntry(LogLevel Level, string Message, DateTime Timestamp);
+/// <summary>
+/// A single message written to the <see cref="Log"/>. <see cref="FilePath"/> and <see cref="Line"/> point
+/// at the source of the problem when known (for example a script compile error).
+/// </summary>
+public readonly record struct LogEntry(LogLevel Level, string Message, DateTime Timestamp, string? FilePath = null, int Line = 0);
 
 /// <summary>
 /// Engine-wide log. Messages go to the standard output and to <see cref="MessageLogged"/>
@@ -33,16 +36,22 @@ public static class Log
     /// <summary>Logs a warning.</summary>
     public static void Warning(string message) => Write(LogLevel.Warning, message);
 
+    /// <summary>Logs a warning about a location in a file (1-based line).</summary>
+    public static void Warning(string message, string filePath, int line) => Write(LogLevel.Warning, message, filePath, line);
+
     /// <summary>Logs an error.</summary>
     public static void Error(string message) => Write(LogLevel.Error, message);
+
+    /// <summary>Logs an error about a location in a file (1-based line).</summary>
+    public static void Error(string message, string filePath, int line) => Write(LogLevel.Error, message, filePath, line);
 
     /// <summary>Logs an error with exception details.</summary>
     public static void Error(Exception exception, string? message = null) =>
         Write(LogLevel.Error, message is null ? exception.ToString() : $"{message}{Environment.NewLine}{exception}");
 
-    private static void Write(LogLevel level, string message)
+    private static void Write(LogLevel level, string message, string? filePath = null, int line = 0)
     {
-        var entry = new LogEntry(level, message, DateTime.Now);
+        var entry = new LogEntry(level, message, DateTime.Now, filePath, line);
 
         lock (Sync)
         {

@@ -46,8 +46,11 @@ internal sealed class LogBuffer : IDisposable
     private void OnMessageLogged(LogEntry entry) => _incoming.Enqueue(entry);
 }
 
-/// <summary>Shows log messages with level filters and a text search.</summary>
-internal sealed class ConsolePanel(LogBuffer buffer) : EditorPanel("Console")
+/// <summary>
+/// Shows log messages with level filters and a text search. Messages that point at a file (such as
+/// script compile errors) open that file when double-clicked.
+/// </summary>
+internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFile) : EditorPanel("Console")
 {
     private bool _showInfo = true;
     private bool _showWarnings = true;
@@ -102,6 +105,15 @@ internal sealed class ConsolePanel(LogBuffer buffer) : EditorPanel("Console")
             ImGui.PushStyleColor(ImGuiCol.Text, color);
             ImGui.TextUnformatted(entry.Message);
             ImGui.PopStyleColor();
+
+            if (entry.FilePath is { } file && ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip($"Double-click to open {Path.GetFileName(file)} at line {entry.Line}");
+                if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                {
+                    openFile(file, entry.Line);
+                }
+            }
         }
 
         if (newMessages && wasAtBottom)
