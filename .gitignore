@@ -69,3 +69,7 @@ Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
 ._*
+
+# ===== Private working notes (kept locally, never published) =====
+PLAN.md
+/notes/

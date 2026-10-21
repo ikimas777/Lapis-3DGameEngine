@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone app for Windows or Linux.
 
-> **Status:** early development (milestone M12 — Linux support; MVP complete). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development — the editor, C# scripting, physics, assets and export work on Windows and Linux.
 
 ## Quick start
 
