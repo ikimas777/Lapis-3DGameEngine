@@ -17,9 +17,11 @@ internal sealed unsafe partial class ProjectLauncher
     private bool _openUpdatePopup;
 
     private Task<string>? _download;
+    private Task<int>? _install;
     private Action? _cancelDownload;
     private float _downloadProgress;
     private string? _downloadedPath;
+    private Version? _installedVersion;
     private string? _downloadError;
 
     /// <summary>Starts the automatic check the first time the launcher is shown, and collects finished work.</summary>
@@ -38,6 +40,7 @@ internal sealed unsafe partial class ProjectLauncher
         {
             _checkResult = check.Result;
             _check = null;
+
 
             // An update found by the automatic check opens the popup once per session.
             if (_checkResult.IsNewer && !_autoPopupShown)
@@ -63,6 +66,43 @@ internal sealed unsafe partial class ProjectLauncher
             _download = null;
             _cancelDownload = null;
         }
+
+        if (_install is { IsCompleted: true } install)
+        {
+            if (install.IsCompletedSuccessfully)
+            {
+                _installedVersion = _checkResult?.Latest?.Version;
+                Log.Info($"Installed Lapis {_installedVersion?.ToString(3)} ({install.Result} files replaced in {UpdateInstaller.InstallFolder}). Restart to use it.");
+            }
+            else if (!install.IsCanceled && install.Exception?.GetBaseException() is { } error && error is not OperationCanceledException)
+            {
+                _downloadError = $"Update failed: {error.Message}";
+                Log.Error(_downloadError);
+            }
+
+            _install = null;
+            _cancelDownload = null;
+        }
+    }
+
+    /// <summary>A cancellation source whose cancel is safe to call after the work finished; disposed with the task.</summary>
+    private CancellationToken StartCancellable(Func<CancellationToken, Task> start)
+    {
+        var cancel = new CancellationTokenSource();
+        _cancelDownload = () =>
+        {
+            try
+            {
+                cancel.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The work already finished.
+            }
+        };
+
+        start(cancel.Token).ContinueWith(_ => cancel.Dispose(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        return cancel.Token;
     }
 
     private void StartCheck()
@@ -232,17 +272,54 @@ internal sealed unsafe partial class ProjectLauncher
         var size = asset.Size > 0 ? string.Create(CultureInfo.InvariantCulture, $" ({asset.Size / (1024.0 * 1024.0):0.0} MB)") : string.Empty;
         ImGui.TextUnformatted($"Package: {asset.Name}{size}");
 
-        if (_download is not null)
+        if (_download is not null || _install is not null)
         {
-            ImGui.ProgressBar(_downloadProgress, new Vector2(400, 0));
+            var installing = _install is not null && _downloadProgress >= 1f;
+            ImGui.ProgressBar(_downloadProgress, new Vector2(400, 0), installing ? "Installing..." : null);
             ImGui.SameLine();
+            ImGui.BeginDisabled(installing);
             if (ImGui.Button("Cancel"))
             {
                 _cancelDownload?.Invoke();
             }
 
+            ImGui.EndDisabled();
             return;
         }
+
+        if (_installedVersion is { } installed)
+        {
+            ImGui.TextColored(EditorTheme.Accent, $"Lapis {installed.ToString(3)} is installed.");
+            ImGui.TextDisabled($"The files in {UpdateInstaller.InstallFolder} were replaced. Restart Lapis to start using the new version. Your projects are not affected.");
+            if (ImGui.Button("Restart Now", new Vector2(160, 0)))
+            {
+                host.Restart(UpdateInstaller.EditorExecutable);
+            }
+
+            return;
+        }
+
+        if (_downloadError is { } installError && UpdateInstaller.CanInstallInPlace)
+        {
+            ImGui.TextColored(EditorTheme.Error, installError);
+        }
+
+        if (UpdateInstaller.CanInstallInPlace)
+        {
+            if (ImGui.Button($"Update to {latest.Version.ToString(3)}", new Vector2(200, 0)))
+            {
+                _downloadError = null;
+                _downloadProgress = 0f;
+                StartCancellable(token => _install = UpdateInstaller.InstallAsync(asset, new Progress<float>(value => _downloadProgress = value), token));
+            }
+
+            ImGui.SameLine();
+            ImGui.TextDisabled($"replaces the files in {UpdateInstaller.InstallFolder}");
+            return;
+        }
+
+        // Running from source (dotnet run): the repository is updated with git, so only a download is offered.
+        ImGui.TextDisabled("This editor runs from source code; update it with  git pull  instead. You can still download the package:");
 
         if (_downloadedPath is { } path && File.Exists(path))
         {
@@ -267,21 +344,7 @@ internal sealed unsafe partial class ProjectLauncher
         {
             _downloadError = null;
             _downloadProgress = 0f;
-            var cancel = new CancellationTokenSource();
-            _cancelDownload = () =>
-            {
-                try
-                {
-                    cancel.Cancel();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // The download already finished.
-                }
-            };
-            var progress = new Progress<float>(value => _downloadProgress = value);
-            _download = UpdateChecker.DownloadAsync(asset, UpdateChecker.DownloadsFolder, progress, cancel.Token);
-            _download.ContinueWith(_ => cancel.Dispose(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            StartCancellable(token => _download = UpdateChecker.DownloadAsync(asset, UpdateChecker.DownloadsFolder, new Progress<float>(value => _downloadProgress = value), token));
         }
 
         ImGui.SameLine();

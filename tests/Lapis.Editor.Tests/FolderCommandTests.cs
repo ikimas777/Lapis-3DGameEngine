@@ -120,6 +120,40 @@ public class FolderCommandTests
         Assert.Equal(["A", "B", "C"], scene.Folders.Select(folder => folder.Name));
     }
 
+    [Fact]
+    public void SetColor_MergesWithinAGesture_AndUndoRestoresTheOldColor()
+    {
+        var scene = new Scene();
+        var folder = AddFolder(scene, "Enemies");
+        var history = new UndoStack();
+
+        history.BeginGesture();
+        folder.Color = new Color(1, 0, 0);
+        history.Record(new SetFolderColorCommand(folder, null, folder.Color));
+        folder.Color = new Color(0, 0, 1);
+        history.Record(new SetFolderColorCommand(folder, new Color(1, 0, 0), folder.Color));
+
+        Assert.Equal(1, history.Count);
+        history.Undo(scene);
+        Assert.Null(folder.Color);
+        history.Redo(scene);
+        Assert.Equal(new Color(0, 0, 1), folder.Color);
+    }
+
+    [Fact]
+    public void UndoDeleteFolder_KeepsItsColor()
+    {
+        var scene = new Scene();
+        var folder = AddFolder(scene, "Lights");
+        folder.Color = new Color(0.4f, 0.8f, 0.4f);
+        var history = new UndoStack();
+
+        history.Execute(new DeleteFolderCommand(scene, folder), scene);
+        history.Undo(scene);
+
+        Assert.Equal(new Color(0.4f, 0.8f, 0.4f), scene.FindFolder(folder.Id)!.Color);
+    }
+
     private static SceneFolder AddFolder(Scene scene, string name, Guid? parentId = null)
     {
         var folder = new SceneFolder(Guid.NewGuid(), name, parentId);

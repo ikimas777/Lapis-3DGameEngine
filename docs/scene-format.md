@@ -21,7 +21,7 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 | `version` | Format version. Files with a newer version than the engine supports are rejected. |
 | `name` | Scene name. |
 | `environment` | Scene-wide lighting (`SceneEnvironment`). |
-| `folders` | Hierarchy folders, in display order: `{ "id", "name", "parent" }` (`parent` is the id of the folder it is inside, omitted at the top level). Omitted when the scene has no folders. Folders only organise the editor's Hierarchy and do not affect the game. |
+| `folders` | Hierarchy folders, in display order: `{ "id", "name", "parent", "color" }` (`parent` is the id of the folder it is inside, omitted at the top level; `color` is an sRGB `[r, g, b, a]`, omitted for the default colour). Omitted when the scene has no folders. Folders only organise the editor's Hierarchy and do not affect the game. |
 | `entities` | Every entity, depth-first: a parent always comes before its children, and siblings keep their order. |
 
 ## Entity
