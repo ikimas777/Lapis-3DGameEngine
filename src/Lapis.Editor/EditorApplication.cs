@@ -65,9 +65,10 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         {
             _context.OpenScene(scenePath);
         }
-        else if (launchOptions.CapturePath is null && _settings.LastProject is { } lastProject && File.Exists(lastProject))
+        else if (launchOptions.ExportPath is null)
         {
-            OpenProject(lastProject, _settings.LastScene);
+            // Without a project or scene on the command line the editor starts with the project launcher.
+            _inLauncher = true;
         }
 
         if (launchOptions.SaveScenePath is { } savePath)
@@ -153,13 +154,19 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             var dirty = _context.IsDirty ? "*" : string.Empty;
             var project = _scripts.Project is { } open ? $" — {open.Name}" : string.Empty;
             var compiling = _scripts.IsCompiling ? " — compiling scripts..." : string.Empty;
-            Window.Title = $"{_context.Scene.Name}{dirty}{project}{compiling} — {EngineInfo.Name} Editor";
+            Window.Title = _inLauncher ? $"{EngineInfo.Name} — Projects" : $"{_context.Scene.Name}{dirty}{project}{compiling} — {EngineInfo.Name} Editor";
         }
     }
 
     protected override void OnRender()
     {
         _imgui!.NewFrame(Time.DeltaTime);
+
+        if (_inLauncher)
+        {
+            RenderLauncher();
+            return;
+        }
 
         // A new active widget starts a new gesture, so edits made with different widgets never merge.
         var activeId = ImGuiP.GetActiveID();
@@ -545,6 +552,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         DrawProjectPopups(center);
         DrawExportPopup(center);
+        DrawUnsavedChangesPopup(center);
 
         if (_showAbout)
         {
