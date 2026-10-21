@@ -130,8 +130,8 @@ internal sealed unsafe class SceneViewPanel(
     }
 
     /// <summary>
-    /// A model dropped on the view is placed at the camera's focus point; a material or texture is applied
-    /// to the object under the cursor.
+    /// A model dropped on the view is placed where the cursor points at the ground; a script is added to, and a
+    /// material or texture applied to, the object under the cursor.
     /// </summary>
     private void DropAsset(Lapis.Assets.AssetInfo asset, in RenderView view, Vector2 origin, Vector2 size)
     {
@@ -140,10 +140,19 @@ internal sealed unsafe class SceneViewPanel(
             case Lapis.Assets.AssetType.Model:
                 EditorActions.InstantiateModel(context, asset, null, GroundPointAt(ImGui.GetMousePos()));
                 break;
+            case Lapis.Assets.AssetType.Script:
+                if (PickAt(ImGui.GetMousePos(), view, origin, size) is { } scriptTarget)
+                {
+                    EditorActions.AddScript(context, scriptTarget, asset);
+                }
+                else
+                {
+                    Log.Warning($"Drop '{asset.Name}' onto an object in the scene (or onto it in the Hierarchy).");
+                }
+
+                break;
             case Lapis.Assets.AssetType.Material or Lapis.Assets.AssetType.Texture:
-                var mouse = ImGui.GetMousePos() - origin;
-                var target = picker.Pick(context.Scene, view, framebuffer.Width, framebuffer.Height,
-                    (int)(mouse.X / size.X * framebuffer.Width), (int)(mouse.Y / size.Y * framebuffer.Height));
+                var target = PickAt(ImGui.GetMousePos(), view, origin, size);
                 if (target is null || !EditorActions.AssignToRenderer(context, target, asset))
                 {
                     Log.Warning($"Drop '{asset.Name}' onto an object that has a Mesh Renderer.");
@@ -158,6 +167,14 @@ internal sealed unsafe class SceneViewPanel(
                 Log.Info("Double-click a scene in the Assets panel to open it.");
                 break;
         }
+    }
+
+    /// <summary>The entity drawn at a point in window coordinates, or null.</summary>
+    private Entity? PickAt(Vector2 screenPoint, in RenderView view, Vector2 origin, Vector2 size)
+    {
+        var mouse = screenPoint - origin;
+        return picker.Pick(context.Scene, view, framebuffer.Width, framebuffer.Height,
+            (int)(mouse.X / size.X * framebuffer.Width), (int)(mouse.Y / size.Y * framebuffer.Height));
     }
 
     /// <summary>True when a point in window coordinates lies over the rendered scene.</summary>

@@ -61,6 +61,32 @@ internal static class EditorActions
     /// Applies a material or texture asset to the entity's <see cref="MeshRenderer"/> (as an undoable change).
     /// Returns false when the asset type does not fit or the entity has no renderer.
     /// </summary>
+    /// <summary>
+    /// Adds the behaviour defined in a script asset to <paramref name="entity"/> (undoable) and selects the entity.
+    /// The class must have the same name as the file, as scripts created by the editor do. Logs why when it cannot.
+    /// </summary>
+    public static bool AddScript(EditorContext context, Entity entity, Lapis.Assets.AssetInfo asset)
+    {
+        var className = Path.GetFileNameWithoutExtension(asset.FullPath);
+        // The class may also be inside a namespace, so match on the type name.
+        var type = ComponentTypes.ScriptAssembly?.GetTypes()
+            .FirstOrDefault(t => t.Name == className && typeof(Behaviour).IsAssignableFrom(t) && !t.IsAbstract);
+        if (type is null)
+        {
+            Log.Warning(ComponentTypes.ScriptAssembly is null
+                ? $"Cannot add '{className}': the scripts are not compiled yet or have errors (see the Console)."
+                : $"Cannot add '{className}': no Behaviour class named '{className}' was found. The class name must match the file name, and the scripts must compile without errors.");
+            return false;
+        }
+
+        var component = entity.AddComponent(type);
+        context.History.BeginGesture();
+        context.Record(ComponentLifetimeCommand.Added(component));
+        context.Selection = entity;
+        Log.Info($"Added {className} to '{entity.Name}'.");
+        return true;
+    }
+
     public static bool AssignToRenderer(EditorContext context, Entity entity, Lapis.Assets.AssetInfo asset)
     {
         var key = asset.Type switch

@@ -59,13 +59,11 @@ internal sealed class LogBuffer : IDisposable
 
 /// <summary>
 /// Shows log messages with level filters and a text search. Messages can be selected and copied
-/// (Ctrl+C, right-click menu, or part of the text in the details box below the list). Messages that point at a
+/// (Ctrl+C or the right-click menu), and any part of a message can be selected with the mouse and copied. Messages that point at a
 /// file (such as script compile errors) open that file when double-clicked.
 /// </summary>
 internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFile) : EditorPanel("Console")
 {
-    private const float DetailsHeight = 72f;
-
     private readonly HashSet<long> _selected = [];
     private long? _anchor;
     private bool _showInfo = true;
@@ -108,10 +106,8 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
         ImGui.Separator();
 
         var visible = buffer.Lines.Where(line => IsVisible(line.Entry)).ToList();
-        var details = _selected.Count == 1 ? visible.FirstOrDefault(line => _selected.Contains(line.Id)) : default;
-        var listHeight = details.Id != 0 ? -DetailsHeight - ImGui.GetStyle().ItemSpacing.Y : 0f;
 
-        if (ImGui.BeginChild("##log", new Vector2(0, listHeight), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        if (ImGui.BeginChild("##log", Vector2.Zero, ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
         {
             var wasAtBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 1f;
             DrawLines(visible);
@@ -124,11 +120,6 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
         }
 
         ImGui.EndChild();
-
-        if (details.Id != 0)
-        {
-            DrawDetails(details.Entry);
-        }
     }
 
     private void DrawToolbar()
@@ -169,9 +160,26 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
 
     private void DrawLines(List<ConsoleLine> visible)
     {
+        var lineHeight = ImGui.GetTextLineHeight();
+        var spacing = ImGui.GetStyle().ItemSpacing.Y;
+        var viewTop = ImGui.GetScrollY();
+        var viewBottom = viewTop + ImGui.GetWindowHeight();
+        var timeWidth = ImGui.CalcTextSize("00:00:00").X + ImGui.GetStyle().ItemSpacing.X;
+
         for (var index = 0; index < visible.Count; index++)
         {
             var (id, entry) = visible[index];
+            var lineCount = 1 + entry.Message.Count(c => c == '\n');
+            var rowHeight = lineCount * lineHeight;
+
+            // Rows outside the scrolled view only reserve their space, so long logs stay fast.
+            var start = ImGui.GetCursorPos();
+            if (start.Y + rowHeight < viewTop || start.Y > viewBottom)
+            {
+                ImGui.Dummy(new Vector2(1, rowHeight));
+                continue;
+            }
+
             var color = entry.Level switch
             {
                 LogLevel.Warning => EditorTheme.Warning,
@@ -179,15 +187,16 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
                 _ => ImGui.GetStyle().Colors[(int)ImGuiCol.Text],
             };
 
-            // The row is a selectable spanning the line; time and message are drawn on top of it.
-            var start = ImGui.GetCursorPos();
+            // The row is a selectable spanning the line (click the time or the empty space to select the message);
+            // the message itself is read-only text in which words and letters can be selected with the mouse.
             var selected = _selected.Contains(id);
             if (selected)
             {
                 ImGui.PushStyleColor(ImGuiCol.Header, EditorTheme.Selection);
             }
 
-            if (ImGui.Selectable($"##line{id}", selected, ImGuiSelectableFlags.AllowDoubleClick, new Vector2(0, ImGui.GetTextLineHeight())))
+            ImGui.SetNextItemAllowOverlap();
+            if (ImGui.Selectable($"##line{id}", selected, ImGuiSelectableFlags.AllowDoubleClick, new Vector2(0, rowHeight)))
             {
                 Select(visible, index);
                 if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && entry.FilePath is { } file)
@@ -221,11 +230,48 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
 
             ImGui.SetCursorPos(start);
             ImGui.TextColored(EditorTheme.TextDim, entry.Timestamp.ToString("HH:mm:ss", CultureInfo.InvariantCulture));
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Text, color);
-            ImGui.TextUnformatted(entry.Message);
-            ImGui.PopStyleColor();
+            ImGui.SetCursorPos(start + new Vector2(timeWidth, 0));
+            DrawSelectableText(id, entry.Message, color, rowHeight);
+            if (ImGui.BeginPopupContextItem($"##textMenu{id}"))
+            {
+                DrawCopyMenu(visible, entry);
+                ImGui.EndPopup();
+            }
+
+            ImGui.SetCursorPos(start + new Vector2(0, rowHeight + spacing));
         }
+
+        // Moving the cursor alone does not grow the scrollable area; an item after the last row does.
+        ImGui.Dummy(Vector2.Zero);
+    }
+
+    /// <summary>
+    /// Read-only text that looks like a label but lets the user select any part with the mouse
+    /// (double-click selects a word) and copy it with Ctrl+C.
+    /// </summary>
+    private static void DrawSelectableText(long id, string message, Vector4 color, float height)
+    {
+        var text = message;
+        var size = (nuint)(Encoding.UTF8.GetByteCount(text) + 1);
+        var width = ImGui.CalcTextSize(text).X + 4f;
+
+        ImGui.PushStyleColor(ImGuiCol.Text, color);
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, Vector4.Zero);
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, Vector2.Zero);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0f);
+        if (text.Contains('\n', StringComparison.Ordinal))
+        {
+            ImGui.InputTextMultiline($"##text{id}", ref text, size, new Vector2(width + ImGui.GetStyle().ScrollbarSize, height),
+                ImGuiInputTextFlags.ReadOnly | ImGuiInputTextFlags.NoHorizontalScroll);
+        }
+        else
+        {
+            ImGui.SetNextItemWidth(width);
+            ImGui.InputText($"##text{id}", ref text, size, ImGuiInputTextFlags.ReadOnly);
+        }
+
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor(2);
     }
 
     private void DrawCopyMenu(List<ConsoleLine> visible, LogEntry clicked)
@@ -325,15 +371,6 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
         {
             ImGui.SetClipboardText(FormatForCopy(entries));
         }
-    }
-
-    /// <summary>The full text of the selected message, in a read-only box where any part can be selected and copied.</summary>
-    private static void DrawDetails(LogEntry entry)
-    {
-        var text = entry.FilePath is { } file ? $"{entry.Message}\n{file}:{entry.Line}" : entry.Message;
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, ImGui.GetStyle().Colors[(int)ImGuiCol.ChildBg] with { W = 1f });
-        ImGui.InputTextMultiline("##details", ref text, (nuint)(text.Length + 1), new Vector2(-1, DetailsHeight), ImGuiInputTextFlags.ReadOnly);
-        ImGui.PopStyleColor();
     }
 
     private bool IsVisible(LogEntry entry)

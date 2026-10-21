@@ -116,6 +116,40 @@ public sealed class ScriptCompilerTests : IDisposable
         Assert.DoesNotContain(result.Diagnostics, d => !d.IsError);
     }
 
+    [Fact]
+    public void EventMethodsWithWrongCaseOrNoOverride_GetAWarning()
+    {
+        var file = Write("Test.cs", """
+            public class Test : Behaviour
+            {
+                public void start()
+                {
+                }
+
+                public void OnTriggerBegin(Collider other)
+                {
+                }
+
+                public override void Update()
+                {
+                }
+
+                private void Helper()
+                {
+                }
+            }
+            """);
+
+        var result = ScriptCompiler.Compile([file]);
+
+        Assert.True(result.Success);
+        var warnings = result.Diagnostics.Where(d => d.Id == ScriptCompiler.MisnamedEventId).ToList();
+        Assert.Equal(2, warnings.Count);
+        Assert.Contains("Declare it as 'public override void Start()'", warnings[0].Message, StringComparison.Ordinal);
+        Assert.Equal((file, 3), (warnings[0].FilePath, warnings[0].Line));
+        Assert.Contains("'public override void OnTriggerBegin(Collider other)'", warnings[1].Message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("Player", true)]
     [InlineData("_hidden", true)]
