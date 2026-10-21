@@ -28,6 +28,12 @@ internal sealed class EditorSettings
     /// <summary>Look for a newer editor release on GitHub when the project launcher opens.</summary>
     public bool CheckForUpdates { get; set; } = true;
 
+    /// <summary>
+    /// Which releases the update check offers: Stable only, Beta (betas and stable) or Alpha (everything).
+    /// </summary>
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<Launcher.ReleaseStage>))]
+    public Launcher.ReleaseStage UpdateChannel { get; set; } = Launcher.ReleaseStage.Stable;
+
     /// <summary>Projects shown in the launcher, most recently opened first.</summary>
     public List<RecentProject> RecentProjects { get; set; } = [];
 

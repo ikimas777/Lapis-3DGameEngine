@@ -4,8 +4,8 @@
     <OutputType>Exe</OutputType>
     <!-- Exported games are windowed apps without a console window. -->
     <OutputType Condition="'$(LapisWindowedApp)' == 'true'">WinExe</OutputType>
-    <RootNamespace>Lapis.Player</RootNamespace>
-    <AssemblyTitle>Lapis Player</AssemblyTitle>
+    <RootNamespace>Lapis.Runtime</RootNamespace>
+    <AssemblyTitle>Lapis Runtime</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>

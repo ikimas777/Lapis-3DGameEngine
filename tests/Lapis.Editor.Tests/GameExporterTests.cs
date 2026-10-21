@@ -9,7 +9,7 @@ public sealed class GameExporterTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-export-tests", Guid.NewGuid().ToString("N"));
     private readonly LapisProject _project;
-    private readonly string _player;
+    private readonly string _runtime;
 
     public GameExporterTests()
     {
@@ -20,8 +20,8 @@ public sealed class GameExporterTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_project.AssetsDirectory, "Textures"));
         File.WriteAllText(Path.Combine(_project.AssetsDirectory, "Textures", "a.png"), "image");
 
-        _player = Path.Combine(_root, "Lapis.Player.exe");
-        File.WriteAllText(_player, "player");
+        _runtime = Path.Combine(_root, "Lapis.Runtime.exe");
+        File.WriteAllText(_runtime, "player");
     }
 
     public void Dispose() => Directory.Delete(_root, recursive: true);
@@ -31,7 +31,7 @@ public sealed class GameExporterTests : IDisposable
     {
         var output = Path.Combine(_root, "Out");
 
-        var result = GameExporter.Export(new ExportSettings(_project, output, _project.StartScene!, "My Game"), _player);
+        var result = GameExporter.Export(new ExportSettings(_project, output, _project.StartScene!, "My Game"), _runtime);
 
         Assert.Equal(Path.Combine(output, "My Game.exe"), result.ExecutablePath);
         Assert.Equal("player", File.ReadAllText(result.ExecutablePath));
@@ -54,10 +54,10 @@ public sealed class GameExporterTests : IDisposable
     {
         var output = Path.Combine(_root, "Out");
         var settings = new ExportSettings(_project, output, _project.StartScene!, "Game");
-        GameExporter.Export(settings, _player);
+        GameExporter.Export(settings, _runtime);
         File.Delete(Path.Combine(_project.AssetsDirectory, "Textures", "a.png"));
 
-        GameExporter.Export(settings, _player);
+        GameExporter.Export(settings, _runtime);
 
         Assert.False(File.Exists(Path.Combine(output, "Data", "Assets", "Textures", "a.png")));
     }
@@ -68,7 +68,7 @@ public sealed class GameExporterTests : IDisposable
         File.WriteAllText(Path.Combine(_project.AssetsDirectory, "Scripts", "Broken.cs"), "public class Broken : Behaviour { void X() { nope(); } }");
 
         var exception = Assert.Throws<ExportException>(() =>
-            GameExporter.Export(new ExportSettings(_project, Path.Combine(_root, "Out"), _project.StartScene!, "Game"), _player));
+            GameExporter.Export(new ExportSettings(_project, Path.Combine(_root, "Out"), _project.StartScene!, "Game"), _runtime));
 
         Assert.Contains("error", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -77,13 +77,13 @@ public sealed class GameExporterTests : IDisposable
     public void Export_IntoAssetsFolder_IsRefused()
     {
         Assert.Throws<ExportException>(() =>
-            GameExporter.Export(new ExportSettings(_project, Path.Combine(_project.AssetsDirectory, "Build"), _project.StartScene!, "Game"), _player));
+            GameExporter.Export(new ExportSettings(_project, Path.Combine(_project.AssetsDirectory, "Build"), _project.StartScene!, "Game"), _runtime));
     }
 
     [Fact]
     public void Export_WithMissingScene_IsRefused()
     {
         Assert.Throws<ExportException>(() =>
-            GameExporter.Export(new ExportSettings(_project, Path.Combine(_root, "Out"), "Assets/Scenes/Nope.lscene", "Game"), _player));
+            GameExporter.Export(new ExportSettings(_project, Path.Combine(_root, "Out"), "Assets/Scenes/Nope.lscene", "Game"), _runtime));
     }
 }

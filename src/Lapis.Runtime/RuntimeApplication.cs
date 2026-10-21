@@ -9,13 +9,13 @@ using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace Lapis.Player;
+namespace Lapis.Runtime;
 
 /// <summary>
 /// Runs an exported game: loads the compiled scripts and the start scene, then simulates and renders it
 /// through the scene's main camera.
 /// </summary>
-internal sealed class PlayerApplication(PlayerOptions options, GameManifest manifest)
+internal sealed class RuntimeApplication(RuntimeOptions options, GameManifest manifest)
     : Application(new ApplicationOptions
     {
         Title = manifest.Name,

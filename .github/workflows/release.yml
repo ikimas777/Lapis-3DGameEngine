@@ -1,7 +1,8 @@
 name: Release
 
-# Pushing a version tag (for example v0.2.0) builds the editor for Windows and Linux
-# and publishes both on the repository's Releases page.
+# Pushing a version tag (for example v0.7.0, v0.7.0-beta.1 or v0.7.0-alpha.2) builds the editor for Windows
+# and Linux and publishes both on the repository's Releases page. The version inside the programs comes from the
+# tag, so it always matches the release.
 on:
   push:
     tags: ["v*"]
@@ -20,7 +21,7 @@ jobs:
 
       - name: Publish
         shell: pwsh
-        run: ./scripts/publish-editor.ps1 -Output publish/Lapis
+        run: ./scripts/publish-editor.ps1 -Output publish/Lapis -Version ("${{ github.ref_name }}".TrimStart("v"))
 
       - name: Package
         shell: pwsh
@@ -40,7 +41,7 @@ jobs:
           global-json-file: global.json
 
       - name: Publish
-        run: ./scripts/publish-editor.sh publish/Lapis
+        run: LAPIS_VERSION="${GITHUB_REF_NAME#v}" ./scripts/publish-editor.sh publish/Lapis
 
       - name: Package
         # tar keeps the executable permissions.
@@ -62,9 +63,12 @@ jobs:
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "${{ github.ref_name }}"
-          Lapis-Windows-x64.zip Lapis-Linux-x64.tar.gz
-          --repo "${{ github.repository }}"
-          --title "Lapis ${{ github.ref_name }}"
-          --generate-notes
+          TAG: ${{ github.ref_name }}
+        # Tags such as v0.7.0-alpha.1 or v0.7.0-beta.2 become pre-releases, so only stable versions are "Latest".
+        run: |
+          prerelease=""
+          if [[ "$TAG" == *-* ]]; then prerelease="--prerelease"; fi
+          gh release create "$TAG" Lapis-Windows-x64.zip Lapis-Linux-x64.tar.gz \
+            --repo "${{ github.repository }}" \
+            --title "Lapis $TAG" \
+            --generate-notes $prerelease

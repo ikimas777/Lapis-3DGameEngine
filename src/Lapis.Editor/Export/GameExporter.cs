@@ -25,10 +25,10 @@ internal static class GameExporter
 {
     /// <summary>Exports the game. Safe to call from a background thread.</summary>
     /// <param name="settings">What to export.</param>
-    /// <param name="playerExecutable">The Lapis player to copy as the game's executable.</param>
+    /// <param name="runtimeExecutable">The Lapis runtime to copy as the game's executable.</param>
     /// <param name="progress">Receives short status messages.</param>
     /// <exception cref="ExportException">The game could not be exported; the message says why.</exception>
-    public static ExportResult Export(ExportSettings settings, string playerExecutable, IProgress<string>? progress = null)
+    public static ExportResult Export(ExportSettings settings, string runtimeExecutable, IProgress<string>? progress = null)
     {
         var project = settings.Project;
         var startScene = Path.Combine(project.Directory, settings.StartScene.Replace('/', Path.DirectorySeparatorChar));
@@ -37,9 +37,9 @@ internal static class GameExporter
             throw new ExportException($"The start scene '{settings.StartScene}' does not exist.");
         }
 
-        if (!File.Exists(playerExecutable))
+        if (!File.Exists(runtimeExecutable))
         {
-            throw new ExportException($"The player runtime was not found at '{playerExecutable}'.");
+            throw new ExportException($"The game runtime was not found at '{runtimeExecutable}'.");
         }
 
         if (string.IsNullOrWhiteSpace(settings.ExecutableName) || settings.ExecutableName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -71,10 +71,10 @@ internal static class GameExporter
                 Directory.Delete(data, recursive: true); // only our own data; anything else in the folder is left alone
             }
 
-            progress?.Report("Copying the player...");
-            // Same extension as the player: ".exe" on Windows, none on Linux.
-            var executable = Path.Combine(output, settings.ExecutableName + Path.GetExtension(playerExecutable));
-            File.Copy(playerExecutable, executable, overwrite: true);
+            progress?.Report("Copying the runtime...");
+            // Same extension as the runtime: ".exe" on Windows, none on Linux.
+            var executable = Path.Combine(output, settings.ExecutableName + Path.GetExtension(runtimeExecutable));
+            File.Copy(runtimeExecutable, executable, overwrite: true);
             if (!OperatingSystem.IsWindows())
             {
                 File.SetUnixFileMode(executable, File.GetUnixFileMode(executable)

@@ -11,7 +11,7 @@ editor and without installing .NET.
 
 ```
 MyGame/
-├─ MyGame.exe        the game (the Lapis player, renamed)
+├─ MyGame.exe        the game (the Lapis game runtime, renamed)
 ├─ Game.dll          your compiled scripts (+ Game.pdb for readable error messages)
 ├─ Data/
 │  ├─ game.json      game name and start scene
@@ -38,11 +38,11 @@ Lapis.Editor.exe --project path/to/MyGame --export path/to/output
 
 This exports the project's start scene and returns exit code 1 when the export fails.
 
-## Where the player comes from
+## Where the game runtime comes from
 
-The published editor (`scripts/publish-editor.ps1`) includes `Player/Lapis.Player.exe` next to
-`Lapis.Editor.exe`. When the editor runs from source with `dotnet run`, the first export builds the player into
-`artifacts/player` (this needs the .NET SDK and takes about a minute; later exports reuse it).
+The published editor (`scripts/publish-editor.ps1`) includes `Runtime/Lapis.Runtime.exe` (the engine without the editor) next to
+`Lapis.Editor.exe`. When the editor runs from source with `dotnet run`, the first export builds the runtime into
+`artifacts/runtime` (this needs the .NET SDK and takes about a minute; later exports reuse it).
 
 ## Linux
 
@@ -51,4 +51,4 @@ instead of `MyGame.exe`) and is marked executable; give players the folder as a 
 kept (`tar -czf MyGame.tar.gz MyGame`). To make a Windows build of a game, export it from the Windows editor,
 and the other way round.
 
-The Linux editor ships `Player/Lapis.Player`; build it with `scripts/publish-editor.sh`.
+The Linux editor ships `Runtime/Lapis.Runtime`; build it with `scripts/publish-editor.sh`.

@@ -33,8 +33,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
         if (context.Selection is not { } entity)
         {
-            _eulerOwner = null; // do not keep a reloaded scene alive
-            DrawSceneSettings(context.Scene);
+            _eulerOwner = null; // do not keep a reloaded scene alive; nothing selected shows an empty Inspector
             return;
         }
 
@@ -73,38 +72,6 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         DrawAddComponent(entity);
 
         ImGui.PopID();
-    }
-
-    /// <summary>Scene-wide settings, shown when nothing is selected. These edits are not in the undo history.</summary>
-    private void DrawSceneSettings(Scene scene)
-    {
-        ImGui.TextDisabled("Nothing selected. Scene settings:");
-        ImGui.Spacing();
-
-        if (ImGui.CollapsingHeader("Environment", ImGuiTreeNodeFlags.DefaultOpen))
-        {
-            DrawObjectMembers(scene.Environment, scene);
-        }
-
-        if (ImGui.CollapsingHeader("Physics", ImGuiTreeNodeFlags.DefaultOpen))
-        {
-            DrawObjectMembers(scene.Physics, scene);
-        }
-    }
-
-    private void DrawObjectMembers(object target, Scene scene)
-    {
-        ImGui.PushID(target.GetType().Name);
-        foreach (var member in SerializedMember.For(target.GetType()))
-        {
-            if (PropertyGrid.Member(target, member, scene))
-            {
-                context.MarkDirty();
-            }
-        }
-
-        ImGui.PopID();
-        ImGui.Spacing();
     }
 
     private void DrawHeader(Entity entity)

@@ -115,7 +115,9 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
                 Log.Warning("Play mode was stopped because the scripts changed.");
             }
         };
-        _panels.Add(new InspectorPanel(_context, _scripts, new AssetInspector(_context, _renderer.Textures, this, () => _camera.Pivot)));
+        var inspector = new InspectorPanel(_context, _scripts, new AssetInspector(_context, _renderer.Textures, this, () => _camera.Pivot));
+        _panels.Add(inspector);
+        _panels.Add(new SceneSettingsPanel(_context, () => inspector.DockId));
         var console = new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory))
         {
             ClearOnPlay = _settings.ClearConsoleOnPlay,
@@ -170,10 +172,12 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         if (_titleTimer >= 0.25)
         {
             _titleTimer = 0;
+            // "MyGame* — Lapis Editor 0.6.0": the project (* = unsaved changes), the editor and the engine version.
+            var editor = $"{EngineInfo.Name} Editor {Launcher.ReleaseVersion.Current}";
             var dirty = _context.IsDirty ? "*" : string.Empty;
-            var project = _scripts.Project is { } open ? $" — {open.Name}" : string.Empty;
+            var project = _scripts.Project?.Name ?? _context.Scene.Name;
             var compiling = _scripts.IsCompiling ? " — compiling scripts..." : string.Empty;
-            Window.Title = _inLauncher ? $"{EngineInfo.Name} — Projects" : $"{_context.Scene.Name}{dirty}{project}{compiling} — {EngineInfo.Name} Editor";
+            Window.Title = _inLauncher ? $"Projects — {editor}" : $"{project}{dirty}{compiling} — {editor}";
         }
     }
 
@@ -199,6 +203,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         DrawMainMenu();
 
         var dockSpaceId = ImGui.GetID(DockSpaceName);
+        var layoutWasReset = _resetLayout;
         if (_resetLayout)
         {
             BuildDefaultLayout(dockSpaceId);
@@ -210,6 +215,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         foreach (var panel in _panels)
         {
             panel.Draw();
+        }
+
+        if (layoutWasReset)
+        {
+            ImGui.SetWindowFocus("Inspector"); // the Inspector tab in front of Scene Settings
         }
 
         if (_gameInput is not null && _gameView is not null)
@@ -700,6 +710,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         ImGuiP.DockBuilderDockWindow("Hierarchy", left);
         ImGuiP.DockBuilderDockWindow("Inspector", right);
+        ImGuiP.DockBuilderDockWindow(Panels.SceneSettingsPanel.PanelTitle, right);
         ImGuiP.DockBuilderDockWindow("Assets", bottom);
         ImGuiP.DockBuilderDockWindow("Console", bottom);
         ImGuiP.DockBuilderDockWindow("Scene", center);

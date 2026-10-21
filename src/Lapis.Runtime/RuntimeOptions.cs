@@ -1,15 +1,15 @@
 using System.Globalization;
 using Lapis.Projects;
 
-namespace Lapis.Player;
+namespace Lapis.Runtime;
 
-/// <summary>Command-line options of the player.</summary>
+/// <summary>Command-line options of the game runtime.</summary>
 /// <param name="GameFolder">Folder with the executable, <c>Game.dll</c> and <c>Data</c>.</param>
 /// <param name="ScenePath">Scene to start instead of the manifest's start scene (relative to <c>Data</c>).</param>
 /// <param name="Fullscreen">Start in fullscreen mode.</param>
 /// <param name="CapturePath">When set, save a screenshot to this PNG file and exit.</param>
 /// <param name="CaptureAfterFrames">Frames to run before capturing.</param>
-internal sealed record PlayerOptions(
+internal sealed record RuntimeOptions(
     string GameFolder,
     string? ScenePath = null,
     bool Fullscreen = false,
@@ -30,10 +30,10 @@ internal sealed record PlayerOptions(
     public string DataFolder => Path.Combine(GameFolder, GameManifest.DataFolderName);
 
     /// <summary>Parses arguments; returns null when the help text should be shown.</summary>
-    public static PlayerOptions? Parse(string[] args)
+    public static RuntimeOptions? Parse(string[] args)
     {
         // The executable may be a single-file bundle extracted to a temporary folder, so use the real path.
-        var options = new PlayerOptions(Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory);
+        var options = new RuntimeOptions(Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory);
 
         for (var i = 0; i < args.Length; i++)
         {

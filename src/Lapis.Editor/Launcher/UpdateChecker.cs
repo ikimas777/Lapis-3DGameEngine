@@ -12,12 +12,12 @@ namespace Lapis.Editor.Launcher;
 internal sealed record ReleaseAsset(string Name, string DownloadUrl, long Size);
 
 /// <summary>A published editor release.</summary>
-/// <param name="Version">Version from the release tag (<c>v0.3.0</c> → 0.3.0).</param>
+/// <param name="Version">Version from the release tag (<c>v0.7.0-beta.1</c> → 0.7.0-beta.1).</param>
 /// <param name="Title">Release title.</param>
 /// <param name="Notes">Release notes (Markdown as written on GitHub).</param>
 /// <param name="PageUrl">The release's web page.</param>
 /// <param name="Asset">The package for the system the editor runs on, or null when the release has none.</param>
-internal sealed record ReleaseInfo(Version Version, string Title, string Notes, string PageUrl, ReleaseAsset? Asset);
+internal sealed record ReleaseInfo(ReleaseVersion Version, string Title, string Notes, string PageUrl, ReleaseAsset? Asset);
 
 /// <summary>Outcome of <see cref="UpdateChecker.CheckAsync"/>.</summary>
 internal sealed record UpdateCheckResult(ReleaseInfo? Latest, bool IsNewer, string? Error);
@@ -45,12 +45,16 @@ internal static class UpdateChecker
     /// <summary>Package name for Windows or Linux.</summary>
     internal static string PackageNameFor(bool windows) => windows ? "Lapis-Windows-x64.zip" : "Lapis-Linux-x64.tar.gz";
 
-    /// <summary>Asks GitHub for the latest release. Never throws for network problems; they end up in <see cref="UpdateCheckResult.Error"/>.</summary>
-    public static async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Asks GitHub for the newest release on <paramref name="channel"/>: Stable gets stable releases only, Beta also
+    /// gets betas, Alpha gets everything. Never throws for network problems; they end up in <see cref="UpdateCheckResult.Error"/>.
+    /// </summary>
+    public static async Task<UpdateCheckResult> CheckAsync(ReleaseStage channel, CancellationToken cancellationToken = default)
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"https://api.github.com/repos/{Repository}/releases/latest"));
+            // The list includes pre-releases, which /releases/latest leaves out.
+            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri($"https://api.github.com/repos/{Repository}/releases?per_page=50"));
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
             using var response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -64,10 +68,10 @@ internal static class UpdateChecker
             }
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var latest = ParseRelease(json, OperatingSystem.IsWindows());
+            var latest = PickLatest(ParseReleases(json, OperatingSystem.IsWindows()), channel);
             return latest is null
-                ? new UpdateCheckResult(null, false, "The latest release has no version number in its tag.")
-                : new UpdateCheckResult(latest, IsNewer(latest.Version, EngineInfo.Version), null);
+                ? new UpdateCheckResult(null, false, $"No {channel.ToString().ToLowerInvariant()} release has been published yet.")
+                : new UpdateCheckResult(latest, latest.Version > ReleaseVersion.Current, null);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
@@ -75,10 +79,35 @@ internal static class UpdateChecker
         }
     }
 
-    /// <summary>Reads a release from the GitHub API's JSON; null when its tag is not a version.</summary>
-    internal static ReleaseInfo? ParseRelease(string json, bool windows)
+    /// <summary>The newest release whose stage the channel accepts, or null.</summary>
+    internal static ReleaseInfo? PickLatest(IEnumerable<ReleaseInfo> releases, ReleaseStage channel) =>
+        releases.Where(release => release.Version.Stage >= channel).MaxBy(release => release.Version);
+
+    /// <summary>Reads the GitHub API's list of releases, skipping drafts and tags that are not versions.</summary>
+    internal static List<ReleaseInfo> ParseReleases(string json, bool windows)
     {
-        if (JsonNode.Parse(json) is not JsonObject release || ParseVersion((string?)release["tag_name"]) is not { } version)
+        var releases = new List<ReleaseInfo>();
+        if (JsonNode.Parse(json) is JsonArray list)
+        {
+            foreach (var node in list)
+            {
+                if (node is JsonObject release && (bool?)release["draft"] != true && ParseRelease(release, windows) is { } info)
+                {
+                    releases.Add(info);
+                }
+            }
+        }
+
+        return releases;
+    }
+
+    /// <summary>Reads one release from the GitHub API's JSON; null when its tag is not a version.</summary>
+    internal static ReleaseInfo? ParseRelease(string json, bool windows) =>
+        JsonNode.Parse(json) is JsonObject release ? ParseRelease(release, windows) : null;
+
+    private static ReleaseInfo? ParseRelease(JsonObject release, bool windows)
+    {
+        if (ReleaseVersion.Parse((string?)release["tag_name"]) is not { } version)
         {
             return null;
         }
@@ -97,26 +126,10 @@ internal static class UpdateChecker
             }
         }
 
-        var title = (string?)release["name"] is { Length: > 0 } name ? name : $"Lapis {version.ToString(3)}";
+        var title = (string?)release["name"] is { Length: > 0 } name ? name : $"Lapis {version}";
         var page = (string?)release["html_url"] ?? ReleasesPage;
         return new ReleaseInfo(version, title, (string?)release["body"] ?? string.Empty, page, asset);
     }
-
-    /// <summary>"v1.2.3" or "1.2" → a version with three parts; null for anything else.</summary>
-    internal static Version? ParseVersion(string? tag)
-    {
-        var text = tag?.Trim().TrimStart('v', 'V');
-        if (string.IsNullOrEmpty(text) || !Version.TryParse(text.Split('-', '+')[0], out var version))
-        {
-            return null;
-        }
-
-        return new Version(version.Major, version.Minor, Math.Max(version.Build, 0));
-    }
-
-    /// <summary>True when <paramref name="latest"/> is newer than <paramref name="current"/> (comparing major.minor.patch).</summary>
-    internal static bool IsNewer(Version latest, Version current) =>
-        new Version(latest.Major, latest.Minor, Math.Max(latest.Build, 0)) > new Version(current.Major, current.Minor, Math.Max(current.Build, 0));
 
     /// <summary>The user's Downloads folder (or the temp folder when it does not exist).</summary>
     public static string DownloadsFolder

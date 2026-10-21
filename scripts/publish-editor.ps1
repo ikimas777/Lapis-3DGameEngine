@@ -3,10 +3,11 @@
     Builds the Lapis editor as a single self-contained Windows executable.
 
 .DESCRIPTION
-    The result is publish\Lapis.Editor\Lapis.Editor.exe, plus Player\Lapis.Player.exe that File > Export Game
-    copies into every exported game. Both include the .NET runtime, the native
-    libraries and the built-in shaders, so it runs on any 64-bit Windows 10/11 PC without installing .NET.
-    It is a windowed app (no console window); messages go to %LOCALAPPDATA%\Lapis\editor.log.
+    The result is publish\Lapis.Editor\Lapis.Editor.exe, plus Runtime\Lapis.Runtime.exe (the game runtime that
+    File > Export Game turns into every exported game), Docs\, README.txt and LICENSE.txt. Both programs include
+    the .NET runtime, the native libraries and the built-in shaders, so they run on any 64-bit Windows 10/11 PC
+    without installing .NET. The editor is a windowed app (no console window); messages go to
+    %LOCALAPPDATA%\Lapis\editor.log.
 
 .PARAMETER Output
     Folder to write the executable to.
@@ -15,7 +16,7 @@
     Also create a "Lapis Editor" shortcut on the desktop.
 
 .PARAMETER RepoRoot
-    Also copy Lapis.Editor.exe and Player\Lapis.Player.exe into the repository root, where they are committed
+    Also copy Lapis.Editor.exe and Runtime\Lapis.Runtime.exe into the repository root, where they are committed
     so the editor can be started right after cloning.
 
     On Linux use scripts/publish-editor.sh instead.
@@ -29,10 +30,13 @@
 param(
     [string]$Output = (Join-Path $PSScriptRoot "..\publish\Lapis.Editor"),
     [switch]$Shortcut,
-    [switch]$RepoRoot
+    [switch]$RepoRoot,
+    # Overrides the version from Directory.Build.props, e.g. 0.7.0-beta.1 (the release workflow passes the tag).
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
+$versionArgument = @(if ($Version) { "-p:Version=$Version" }) # empty array: nothing is passed
 $project = Join-Path $PSScriptRoot "..\src\Lapis.Editor\Lapis.Editor.csproj"
 
 dotnet publish $project `
@@ -45,39 +49,47 @@ dotnet publish $project `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:IncludeAllContentForSelfExtract=true `
     -p:EnableCompressionInSingleFile=true `
-    -p:DebugType=none
+    -p:DebugType=none `
+    $versionArgument
 
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-# The player runtime, copied into every exported game (File > Export Game).
-$player = Join-Path $PSScriptRoot "..\src\Lapis.Player\Lapis.Player.csproj"
-dotnet publish $player `
+# The game runtime, copied into every exported game (File > Export Game).
+$runtime = Join-Path $PSScriptRoot "..\src\Lapis.Runtime\Lapis.Runtime.csproj"
+dotnet publish $runtime `
     --configuration Release `
     --runtime win-x64 `
     --self-contained true `
-    --output (Join-Path $Output "Player") `
+    --output (Join-Path $Output "Runtime") `
     -p:LapisWindowedApp=true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:IncludeAllContentForSelfExtract=true `
     -p:EnableCompressionInSingleFile=true `
-    -p:DebugType=none
+    -p:DebugType=none `
+    $versionArgument
 
 if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish of the player failed with exit code $LASTEXITCODE."
+    throw "dotnet publish of the runtime failed with exit code $LASTEXITCODE."
 }
+
+# Documentation, a short read-me and the licence next to the programs.
+$repository = Resolve-Path (Join-Path $PSScriptRoot "..")
+New-Item -ItemType Directory -Force (Join-Path $Output "Docs") | Out-Null
+Copy-Item (Join-Path $repository "docs\*") (Join-Path $Output "Docs") -Recurse -Force
+Copy-Item (Join-Path $repository "scripts\package\README.txt") (Join-Path $Output "README.txt") -Force
+Copy-Item (Join-Path $repository "LICENSE") (Join-Path $Output "LICENSE.txt") -Force
 
 $exe = Resolve-Path (Join-Path $Output "Lapis.Editor.exe")
 Write-Host "Editor published to $exe"
 
 if ($RepoRoot) {
-    $root = Resolve-Path (Join-Path $PSScriptRoot "..")
-    New-Item -ItemType Directory -Force (Join-Path $root "Player") | Out-Null
-    Copy-Item $exe (Join-Path $root "Lapis.Editor.exe") -Force
-    Copy-Item (Join-Path $Output "Player\Lapis.Player.exe") (Join-Path $root "Player\Lapis.Player.exe") -Force
-    Write-Host "Copied Lapis.Editor.exe and Player\Lapis.Player.exe to $root"
+    New-Item -ItemType Directory -Force (Join-Path $repository "Runtime") | Out-Null
+    Copy-Item $exe (Join-Path $repository "Lapis.Editor.exe") -Force
+    Copy-Item (Join-Path $Output "Runtime\Lapis.Runtime.exe") (Join-Path $repository "Runtime\Lapis.Runtime.exe") -Force
+    Write-Host "Copied Lapis.Editor.exe and Runtime\Lapis.Runtime.exe to $repository"
 }
 
 if ($Shortcut) {
