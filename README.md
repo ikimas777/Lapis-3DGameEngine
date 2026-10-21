@@ -111,8 +111,8 @@ See the [physics section of the scripting guide](docs/scripting.md#physics).
 | Input | Action |
 |---|---|
 | Left click | Select the object under the cursor |
-| Right mouse + drag | Look around |
-| Right mouse + W A S D / Q E | Fly (hold Shift to go faster) |
+| W A S D / Q E | Fly (hold Shift to go faster) — no mouse button needed |
+| Right mouse + drag | Look around (flying keeps working while you hold it) |
 | Alt + left mouse + drag | Orbit around the focus point |
 | Middle mouse + drag | Pan |
 | Mouse wheel | Zoom |
@@ -129,7 +129,7 @@ See the [physics section of the scripting guide](docs/scripting.md#physics).
 | Ctrl+D | Duplicate the selected entity |
 | Ctrl+P / Ctrl+Shift+P / Ctrl+Alt+P | Play or stop / Pause / Step |
 | Delete | Delete the selected entity |
-| W / E / R (Scene view) | Move / Rotate / Scale tool |
+| 1 / 2 / 3 (Scene view) | Move / Rotate / Scale tool |
 | Ctrl while dragging the gizmo | Toggle snapping |
 
 Drag entities in the Hierarchy to re-parent them, or drop an entity onto an entity / component field in the Inspector to assign it.

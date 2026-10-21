@@ -17,9 +17,9 @@ internal enum GizmoTool
 
 /// <summary>
 /// Renders the scene through the editor camera, with a transform gizmo for the selection.
-/// Left click: select; right mouse: look around (+ WASD / Q / E to fly, Shift = faster);
+/// Left click: select; WASD / Q / E: fly (Shift = faster); right mouse: look around;
 /// Alt + left mouse: orbit; middle mouse: pan; wheel: zoom; F: focus the selection;
-/// W / E / R: move / rotate / scale tool; hold Ctrl to snap.
+/// 1 / 2 / 3: move / rotate / scale tool; hold Ctrl to snap.
 /// </summary>
 internal sealed unsafe class SceneViewPanel(
     EditorContext context, SceneRenderer renderer, EntityPicker picker, LineRenderer lines, GridRenderer grid, Framebuffer framebuffer, EditorCamera camera)
@@ -311,11 +311,11 @@ internal sealed unsafe class SceneViewPanel(
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(2, 0));
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8, 4));
 
-        ToolButton("Move", "W", GizmoTool.Move);
+        ToolButton("Move", "1", GizmoTool.Move);
         ImGui.SameLine();
-        ToolButton("Rotate", "E", GizmoTool.Rotate);
+        ToolButton("Rotate", "2", GizmoTool.Rotate);
         ImGui.SameLine();
-        ToolButton("Scale", "R", GizmoTool.Scale);
+        ToolButton("Scale", "3", GizmoTool.Scale);
 
         ImGui.SameLine(0, 10);
         if (ToggleButton(LocalSpace ? "Local" : "World", false, "Move and rotate along the entity's axes (Local) or the world axes (World)"))
@@ -359,20 +359,20 @@ internal sealed unsafe class SceneViewPanel(
     private void HandleShortcuts()
     {
         var io = ImGui.GetIO();
-        if (!ImGui.IsWindowFocused() || io.WantTextInput || io.KeyCtrl || _mode == NavigationMode.Look)
+        if (!ImGui.IsWindowFocused() || io.WantTextInput || io.KeyCtrl)
         {
             return;
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.W, false))
+        if (ImGui.IsKeyPressed(ImGuiKey.Key1, false))
         {
             Tool = GizmoTool.Move;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.E, false))
+        else if (ImGui.IsKeyPressed(ImGuiKey.Key2, false))
         {
             Tool = GizmoTool.Rotate;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.R, false))
+        else if (ImGui.IsKeyPressed(ImGuiKey.Key3, false))
         {
             Tool = GizmoTool.Scale;
         }
@@ -412,7 +412,6 @@ internal sealed unsafe class SceneViewPanel(
         {
             case NavigationMode.Look when ImGui.IsMouseDown(ImGuiMouseButton.Right):
                 camera.Look(delta);
-                camera.Fly(ReadFlyInput(), io.KeyShift ? 15f : 5f, io.DeltaTime);
                 break;
             case NavigationMode.Orbit when ImGui.IsMouseDown(ImGuiMouseButton.Left):
                 camera.Orbit(delta);
@@ -423,6 +422,13 @@ internal sealed unsafe class SceneViewPanel(
             default:
                 _mode = NavigationMode.None;
                 break;
+        }
+
+        // WASD / Q / E fly whenever the Scene view has keyboard focus, with or without the right mouse button.
+        // Ctrl and Alt combinations are left to shortcuts (Ctrl+S, Ctrl+D...).
+        if ((ImGui.IsWindowFocused() || _mode == NavigationMode.Look) && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt)
+        {
+            camera.Fly(ReadFlyInput(), io.KeyShift ? 15f : 5f, io.DeltaTime);
         }
 
         if (hovered && io.MouseWheel != 0f)
@@ -475,7 +481,7 @@ internal sealed unsafe class SceneViewPanel(
             NavigationMode.Look => "Look  ·  WASD / Q / E to fly, Shift = faster",
             NavigationMode.Orbit => "Orbit",
             NavigationMode.Pan => "Pan",
-            _ => "Click select  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
+            _ => "Click select  ·  WASD / Q / E fly  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
         };
 
         var textSize = ImGui.CalcTextSize(text);
