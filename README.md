@@ -118,6 +118,10 @@ See the [physics section of the scripting guide](docs/scripting.md#physics).
 | Mouse wheel | Zoom |
 | F | Focus the selected entity |
 
+**Options > Keybindings** lists every shortcut and lets you choose how flying works: with W A S D / Q E at any
+time (the default), or only while holding the right mouse button — then W / E / R also pick the
+Move / Rotate / Scale tools.
+
 ### Editor shortcuts
 
 | Keys | Action |

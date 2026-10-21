@@ -17,8 +17,8 @@ internal enum GizmoTool
 
 /// <summary>
 /// Renders the scene through the editor camera, with a transform gizmo for the selection.
-/// Left click: select; WASD / Q / E: fly (Shift = faster); right mouse: look around;
-/// Alt + left mouse: orbit; middle mouse: pan; wheel: zoom; F: focus the selection;
+/// Left click: select; WASD / Q / E: fly (Shift = faster; optionally only with the right mouse button);
+/// right mouse: look around; Alt + left mouse: orbit; middle mouse: pan; wheel: zoom; F: focus the selection;
 /// 1 / 2 / 3: move / rotate / scale tool; hold Ctrl to snap.
 /// </summary>
 internal sealed unsafe class SceneViewPanel(
@@ -49,6 +49,9 @@ internal sealed unsafe class SceneViewPanel(
 
     /// <summary>Draw the ground grid.</summary>
     public bool ShowGrid { get; set; } = true;
+
+    /// <summary>WASD / Q / E fly only while the right mouse button is held; W / E / R then also pick the tools.</summary>
+    public bool FlyOnlyWithRightMouse { get; set; }
 
     /// <summary>True to move and rotate along the entity's own axes instead of the world axes.</summary>
     public bool LocalSpace { get; set; }
@@ -359,20 +362,22 @@ internal sealed unsafe class SceneViewPanel(
     private void HandleShortcuts()
     {
         var io = ImGui.GetIO();
-        if (!ImGui.IsWindowFocused() || io.WantTextInput || io.KeyCtrl)
+        if (!ImGui.IsWindowFocused() || io.WantTextInput || io.KeyCtrl || _mode == NavigationMode.Look)
         {
             return;
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.Key1, false))
+        // W / E / R are free for the tools when flying needs the right mouse button.
+        var letters = FlyOnlyWithRightMouse;
+        if (ImGui.IsKeyPressed(ImGuiKey.Key1, false) || (letters && ImGui.IsKeyPressed(ImGuiKey.W, false)))
         {
             Tool = GizmoTool.Move;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Key2, false))
+        else if (ImGui.IsKeyPressed(ImGuiKey.Key2, false) || (letters && ImGui.IsKeyPressed(ImGuiKey.E, false)))
         {
             Tool = GizmoTool.Rotate;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Key3, false))
+        else if (ImGui.IsKeyPressed(ImGuiKey.Key3, false) || (letters && ImGui.IsKeyPressed(ImGuiKey.R, false)))
         {
             Tool = GizmoTool.Scale;
         }
@@ -424,9 +429,10 @@ internal sealed unsafe class SceneViewPanel(
                 break;
         }
 
-        // WASD / Q / E fly whenever the Scene view has keyboard focus, with or without the right mouse button.
-        // Ctrl and Alt combinations are left to shortcuts (Ctrl+S, Ctrl+D...).
-        if ((ImGui.IsWindowFocused() || _mode == NavigationMode.Look) && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt)
+        // WASD / Q / E fly whenever the Scene view has keyboard focus, or only while looking around when
+        // FlyOnlyWithRightMouse is set. Ctrl and Alt combinations are left to shortcuts (Ctrl+S, Ctrl+D...).
+        var canFly = _mode == NavigationMode.Look || (!FlyOnlyWithRightMouse && ImGui.IsWindowFocused());
+        if (canFly && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt)
         {
             camera.Fly(ReadFlyInput(), io.KeyShift ? 15f : 5f, io.DeltaTime);
         }
@@ -481,6 +487,7 @@ internal sealed unsafe class SceneViewPanel(
             NavigationMode.Look => "Look  ·  WASD / Q / E to fly, Shift = faster",
             NavigationMode.Orbit => "Orbit",
             NavigationMode.Pan => "Pan",
+            _ when FlyOnlyWithRightMouse => "Click select  ·  RMB look + WASD / Q / E fly  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
             _ => "Click select  ·  WASD / Q / E fly  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
         };
 
