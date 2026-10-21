@@ -135,19 +135,19 @@ internal sealed unsafe class ImGuiController : IDisposable
 
     private static void OnMouseMove(IMouse mouse, Vector2 position) => ImGui.GetIO().AddMousePosEvent(position.X, position.Y);
 
-    private static void OnMouseDown(IMouse mouse, MouseButton button) => SendMouseButton(button, true);
+    private static void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button) => SendMouseButton(button, true);
 
-    private static void OnMouseUp(IMouse mouse, MouseButton button) => SendMouseButton(button, false);
+    private static void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button) => SendMouseButton(button, false);
 
-    private static void SendMouseButton(MouseButton button, bool down)
+    private static void SendMouseButton(Silk.NET.Input.MouseButton button, bool down)
     {
         var index = button switch
         {
-            MouseButton.Left => 0,
-            MouseButton.Right => 1,
-            MouseButton.Middle => 2,
-            MouseButton.Button4 => 3,
-            MouseButton.Button5 => 4,
+            Silk.NET.Input.MouseButton.Left => 0,
+            Silk.NET.Input.MouseButton.Right => 1,
+            Silk.NET.Input.MouseButton.Middle => 2,
+            Silk.NET.Input.MouseButton.Button4 => 3,
+            Silk.NET.Input.MouseButton.Button5 => 4,
             _ => -1,
         };
 

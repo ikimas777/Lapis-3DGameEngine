@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
 
-> **Status:** early development (milestone M4 — editor tools). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M5 — C# scripting). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ```csharp
 using Lapis;
@@ -56,7 +56,18 @@ Console panel and written to `%LOCALAPPDATA%\Lapis\editor.log`.
 dotnet run --project src/Lapis.Editor
 ```
 
+To open the sample project with its scripts:
+
+```bash
+dotnet run --project src/Lapis.Editor -- --project samples/Sandbox
+```
+
 ![Lapis editor](docs/images/editor.png)
+
+### Scripting
+
+Scripts are C# classes in a project's `Assets` folder. The editor compiles them itself and reloads them
+while it runs whenever a file is saved — see the [scripting guide](docs/scripting.md).
 
 ### Scene view controls
 
@@ -89,7 +100,8 @@ Drag entities in the Hierarchy to re-parent them, or drop an entity onto an enti
 
 `--help` lists them all:
 
-- `--scene samples/Scenes/Demo.lscene` opens a scene file
+- `--project samples/Sandbox` opens a game project (by default the last opened project is reopened)
+- `--scene path/to/file.lscene` opens a scene file
 - `--select Box` selects an entity at startup
 - `--save-scene file.lscene` saves the opened scene
 - `--capture shot.png` renders a few frames with the default layout, saves a screenshot and exits

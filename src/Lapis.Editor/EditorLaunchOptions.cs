@@ -3,12 +3,14 @@ using System.Globalization;
 namespace Lapis.Editor;
 
 /// <summary>Command-line options for the editor.</summary>
+/// <param name="ProjectPath">Project folder or .lapis file to open.</param>
 /// <param name="ScenePath">Scene file to open; the demo scene is used when null.</param>
 /// <param name="SaveScenePath">When set, save the opened scene to this file at startup.</param>
 /// <param name="SelectName">Name of an entity to select at startup.</param>
 /// <param name="CapturePath">When set, save a screenshot to this PNG file and exit.</param>
 /// <param name="CaptureAfterFrames">Number of frames to render before capturing.</param>
 internal sealed record EditorLaunchOptions(
+    string? ProjectPath = null,
     string? ScenePath = null,
     string? SaveScenePath = null,
     string? SelectName = null,
@@ -18,7 +20,8 @@ internal sealed record EditorLaunchOptions(
     public const string Usage = """
         Usage: Lapis.Editor [options]
 
-          --scene <file.lscene>       Open a scene file (default: built-in demo scene)
+          --project <folder>          Open a game project (default: the last opened project)
+          --scene <file.lscene>       Open a scene file
           --save-scene <file.lscene>  Save the opened scene to a file at startup
           --select <name>             Select the first entity with this name
           --capture <file.png>        Render, save a screenshot and exit
@@ -36,6 +39,9 @@ internal sealed record EditorLaunchOptions(
         {
             switch (args[i])
             {
+                case "--project":
+                    options = options with { ProjectPath = ReadValue(args, ref i) };
+                    break;
                 case "--scene":
                     options = options with { ScenePath = ReadValue(args, ref i) };
                     break;

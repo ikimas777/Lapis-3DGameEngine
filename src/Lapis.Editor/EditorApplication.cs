@@ -3,6 +3,7 @@ using Hexa.NET.ImGui;
 using Lapis.Editor.ImGuiIntegration;
 using Lapis.Editor.Panels;
 using Lapis.Editor.SceneView;
+using Lapis.Editor.Scripting;
 using Lapis.Editor.Theme;
 using Lapis.Rendering;
 using Lapis.Serialization;
@@ -14,7 +15,7 @@ namespace Lapis.Editor;
 /// <summary>
 /// The editor: a dockable layout with Hierarchy, Scene, Game, Inspector and Console panels.
 /// </summary>
-internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions)
+internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launchOptions)
     : Application(new ApplicationOptions { Title = $"{EngineInfo.Name} Editor" })
 {
     private const string DockSpaceName = "LapisDockSpace";
@@ -27,6 +28,8 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     private readonly List<EditorPanel> _panels = [];
 
     private EditorContext _context = null!;
+    private ScriptManager _scripts = null!;
+    private EditorSettings _settings = new();
     private ImGuiController? _imgui;
     private SceneRenderer? _renderer;
     private EntityPicker? _picker;
@@ -43,9 +46,20 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     protected override void OnLoad()
     {
         _context = new EditorContext(DemoScene.Create());
-        if (launchOptions.ScenePath is { } scenePath)
+        _scripts = new ScriptManager(_context);
+        _settings = EditorSettings.Load();
+
+        if (launchOptions.ProjectPath is { } projectPath)
+        {
+            OpenProject(projectPath, launchOptions.ScenePath);
+        }
+        else if (launchOptions.ScenePath is { } scenePath)
         {
             _context.OpenScene(scenePath);
+        }
+        else if (launchOptions.CapturePath is null && _settings.LastProject is { } lastProject && File.Exists(lastProject))
+        {
+            OpenProject(lastProject, _settings.LastScene);
         }
 
         if (launchOptions.SaveScenePath is { } savePath)
@@ -76,8 +90,8 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
         _panels.Add(new GameViewPanel(_context, _renderer, _gameFramebuffer));
-        _panels.Add(new InspectorPanel(_context));
-        _panels.Add(new ConsolePanel(_logBuffer));
+        _panels.Add(new InspectorPanel(_context, _scripts));
+        _panels.Add(new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory)));
 
         _context.SceneChanged += _ => _camera.Pivot = new Vector3(0f, 0.5f, 0f);
 
@@ -89,13 +103,16 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
 
     protected override void OnUpdate()
     {
+        _scripts.Update(Time.TimeSinceStart);
+
         _titleTimer += Time.DeltaTime;
         if (_titleTimer >= 0.25)
         {
             _titleTimer = 0;
             var dirty = _context.IsDirty ? "*" : string.Empty;
-            var path = _context.ScenePath is { } scenePath ? $" — {scenePath}" : string.Empty;
-            Window.Title = $"{_context.Scene.Name}{dirty}{path} — {EngineInfo.Name} Editor";
+            var project = _scripts.Project is { } open ? $" — {open.Name}" : string.Empty;
+            var compiling = _scripts.IsCompiling ? " — compiling scripts..." : string.Empty;
+            Window.Title = $"{_context.Scene.Name}{dirty}{project}{compiling} — {EngineInfo.Name} Editor";
         }
     }
 
@@ -152,6 +169,8 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         _picker?.Dispose();
         _renderer?.Dispose();
         _imgui?.Dispose();
+        _scripts.Dispose();
+        SaveSettings();
         _logBuffer.Dispose();
     }
 
@@ -260,6 +279,8 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
 
             ImGui.EndMenu();
         }
+
+        DrawProjectMenu();
 
         if (ImGui.BeginMenu("Edit"))
         {
@@ -378,8 +399,12 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     private void RequestPopup(string name)
     {
         _popupToOpen = name;
-        _pathInput = _context.ScenePath ?? Path.Combine(Environment.CurrentDirectory, "NewScene" + SceneSerializer.FileExtension);
+        var sceneFolder = _scripts.Project is { } project ? Path.Combine(project.AssetsDirectory, "Scenes") : Environment.CurrentDirectory;
+        _pathInput = _context.ScenePath ?? Path.Combine(sceneFolder, "NewScene" + SceneSerializer.FileExtension);
     }
+
+    /// <summary>Folder searched for scene files in the Open / Save popups.</summary>
+    private string SceneSearchRoot => _scripts.Project?.AssetsDirectory ?? Environment.CurrentDirectory;
 
     private void DrawPopups()
     {
@@ -396,13 +421,13 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         ImGui.SetNextWindowSize(new Vector2(640, 0), ImGuiCond.Appearing);
         if (ImGui.BeginPopupModal(OpenScenePopup, ImGuiWindowFlags.NoSavedSettings))
         {
-            DrawPathPopup("Open", path =>
+            DrawPathPopup("Scene file:", "Open", path =>
             {
                 if (_context.OpenScene(path))
                 {
                     _context.Selection = null;
                 }
-            });
+            }, FindSceneFiles());
             ImGui.EndPopup();
         }
 
@@ -410,9 +435,11 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         ImGui.SetNextWindowSize(new Vector2(640, 0), ImGuiCond.Appearing);
         if (ImGui.BeginPopupModal(SaveScenePopup, ImGuiWindowFlags.NoSavedSettings))
         {
-            DrawPathPopup("Save", path => _context.SaveScene(path));
+            DrawPathPopup("Scene file:", "Save", path => _context.SaveScene(path), FindSceneFiles());
             ImGui.EndPopup();
         }
+
+        DrawProjectPopups(center);
 
         if (_showAbout)
         {
@@ -435,9 +462,9 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         }
     }
 
-    private void DrawPathPopup(string action, Action<string> confirm)
+    private void DrawPathPopup(string prompt, string action, Action<string> confirm, List<string>? candidates = null)
     {
-        ImGui.TextUnformatted("Scene file:");
+        ImGui.TextUnformatted(prompt);
         ImGui.SetNextItemWidth(-1);
         if (ImGui.IsWindowAppearing())
         {
@@ -446,17 +473,16 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
 
         var submitted = ImGui.InputText("##path", ref _pathInput, 1024, ImGuiInputTextFlags.EnterReturnsTrue);
 
-        // Offer scene files found under the working directory as shortcuts.
-        var candidates = FindSceneFiles();
-        if (candidates.Count > 0)
+        // Offer files found on disk as shortcuts.
+        if (candidates is { Count: > 0 })
         {
             ImGui.Spacing();
-            ImGui.TextDisabled("Scenes in the working folder:");
+            ImGui.TextDisabled($"Found in {SceneSearchRoot}:");
             if (ImGui.BeginChild("##candidates", new Vector2(0, MathF.Min(candidates.Count, 6) * ImGui.GetFrameHeightWithSpacing() + 8), ImGuiChildFlags.Borders))
             {
                 foreach (var candidate in candidates)
                 {
-                    var relative = Path.GetRelativePath(Environment.CurrentDirectory, candidate);
+                    var relative = Path.GetRelativePath(SceneSearchRoot, candidate);
                     if (ImGui.Selectable(relative, string.Equals(candidate, _pathInput, StringComparison.OrdinalIgnoreCase), ImGuiSelectableFlags.AllowDoubleClick))
                     {
                         _pathInput = candidate;
@@ -501,7 +527,7 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         try
         {
             var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, MaxRecursionDepth = 6 };
-            _sceneFileCache = Directory.EnumerateFiles(Environment.CurrentDirectory, "*" + SceneSerializer.FileExtension, options)
+            _sceneFileCache = Directory.EnumerateFiles(SceneSearchRoot, "*" + SceneSerializer.FileExtension, options)
                 .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 .Take(50)
                 .ToList();

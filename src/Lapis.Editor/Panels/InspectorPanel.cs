@@ -2,6 +2,7 @@ using System.Numerics;
 using Hexa.NET.ImGui;
 using Lapis.Editor.Commands;
 using Lapis.Editor.PropertyDrawers;
+using Lapis.Editor.Scripting;
 using Lapis.Serialization;
 
 namespace Lapis.Editor.Panels;
@@ -10,7 +11,7 @@ namespace Lapis.Editor.Panels;
 /// Shows and edits the selected entity: name, transform and components.
 /// Every edit is recorded in the undo history; a drag or a text edit becomes one step.
 /// </summary>
-internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel("Inspector")
+internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager scripts) : EditorPanel("Inspector")
 {
     private const string AddComponentPopup = "##addComponent";
 
@@ -26,6 +27,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
         if (context.Selection is not { } entity)
         {
             ImGui.TextDisabled("Select an entity to inspect it.");
+            _eulerOwner = null; // do not keep a reloaded scene alive
             return;
         }
 
@@ -158,6 +160,20 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
             ImGui.PopTextWrapPos();
             ImGui.Spacing();
             return keep;
+        }
+
+        if (scripts.FindScript(component.GetType()) is { } script)
+        {
+            PropertyGrid.Label("Script");
+            if (ImGui.Button($"{Path.GetFileName(script.FilePath)}##script", new Vector2(-1, 0)))
+            {
+                CodeEditor.Open(script.FilePath, script.Line, scripts.Project?.Directory);
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Open the script in VS Code");
+            }
         }
 
         foreach (var member in SerializedMember.For(component.GetType()))

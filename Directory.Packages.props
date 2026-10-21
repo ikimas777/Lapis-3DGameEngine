@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Editor">
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <PackageVersion Include="Hexa.NET.ImGui" Version="2.2.9" />
     <PackageVersion Include="Hexa.NET.ImGuizmo" Version="2.2.9" />
   </ItemGroup>
