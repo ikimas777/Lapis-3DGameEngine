@@ -59,6 +59,7 @@ public static partial class SceneSerializer
             ["version"] = FormatVersion,
             ["name"] = scene.Name,
             ["environment"] = WriteMembers(scene.Environment),
+            ["physics"] = WriteMembers(scene.Physics),
             ["entities"] = WriteEntities(scene.RootEntities),
         };
 
@@ -76,6 +77,11 @@ public static partial class SceneSerializer
         if (root["environment"] is JsonObject environment)
         {
             ReadMembers(scene.Environment, environment, context);
+        }
+
+        if (root["physics"] is JsonObject physics)
+        {
+            ReadMembers(scene.Physics, physics, context);
         }
 
         ReadEntities(root["entities"] as JsonArray, context);

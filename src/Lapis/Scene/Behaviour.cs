@@ -45,6 +45,26 @@ public abstract class Behaviour : Component
     {
     }
 
+    /// <summary>Called when this entity's collider starts touching another (non-trigger) collider.</summary>
+    public virtual void OnCollisionBegin(Collision collision)
+    {
+    }
+
+    /// <summary>Called when this entity's collider stops touching another collider.</summary>
+    public virtual void OnCollisionEnd(Collider other)
+    {
+    }
+
+    /// <summary>Called when a collider enters a trigger on this entity, or this entity enters a trigger.</summary>
+    public virtual void OnTriggerBegin(Collider other)
+    {
+    }
+
+    /// <summary>Called when a collider leaves a trigger on this entity, or this entity leaves a trigger.</summary>
+    public virtual void OnTriggerEnd(Collider other)
+    {
+    }
+
     /// <inheritdoc />
     protected internal override void OnRemoved()
     {

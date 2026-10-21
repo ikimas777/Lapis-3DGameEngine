@@ -37,6 +37,21 @@ internal static class CreateMenu
             created = EntityFactory.CreateMesh(scene, BuiltInMeshes.Plane, parent);
         }
 
+        if (ImGui.BeginMenu("Physics"))
+        {
+            if (ImGui.MenuItem("Physics Cube"))
+            {
+                created = EntityFactory.CreatePhysicsMesh(scene, BuiltInMeshes.Cube, parent);
+            }
+
+            if (ImGui.MenuItem("Physics Sphere"))
+            {
+                created = EntityFactory.CreatePhysicsMesh(scene, BuiltInMeshes.Sphere, parent);
+            }
+
+            ImGui.EndMenu();
+        }
+
         ImGui.Separator();
 
         if (ImGui.MenuItem("Camera"))
