@@ -37,6 +37,9 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     private Framebuffer? _sceneFramebuffer;
     private Framebuffer? _gameFramebuffer;
     private SceneViewPanel? _sceneView;
+    private GameViewPanel? _gameView;
+    private PlayMode _play = null!;
+    private GameInput? _gameInput;
     private bool _resetLayout;
     private string? _popupToOpen;
     private string _pathInput = string.Empty;
@@ -47,6 +50,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     {
         _context = new EditorContext(DemoScene.Create());
         _scripts = new ScriptManager(_context);
+        _play = new PlayMode(_context);
         _settings = EditorSettings.Load();
 
         if (launchOptions.ProjectPath is { } projectPath)
@@ -89,7 +93,18 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _sceneView = new SceneViewPanel(_context, _renderer, _picker, _sceneFramebuffer, _camera);
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
-        _panels.Add(new GameViewPanel(_context, _renderer, _gameFramebuffer));
+        _gameInput = new GameInput(InputContext);
+        _gameView = new GameViewPanel(_context, _renderer, _gameFramebuffer, _play, _gameInput);
+        _panels.Add(_gameView);
+        _play.Started += _gameView.RequestFocus;
+        _scripts.Reloading += () =>
+        {
+            if (_play.IsActive)
+            {
+                _play.Stop();
+                Log.Warning("Play mode was stopped because the scripts changed.");
+            }
+        };
         _panels.Add(new InspectorPanel(_context, _scripts));
         _panels.Add(new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory)));
 
@@ -99,11 +114,20 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         {
             _context.Selection = _context.Scene.FindByName(selectName);
         }
+
+        if (launchOptions.Play)
+        {
+            _play.Play();
+        }
     }
 
     protected override void OnUpdate()
     {
         _scripts.Update(Time.TimeSinceStart);
+
+        // Scripts see the input gathered since the previous frame, then the per-frame flags are cleared.
+        _play.Update(Time.DeltaTime);
+        Input.BeginFrame();
 
         _titleTimer += Time.DeltaTime;
         if (_titleTimer >= 0.25)
@@ -145,6 +169,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             panel.Draw();
         }
 
+        if (_gameInput is not null && _gameView is not null)
+        {
+            _gameInput.Enabled = _gameView.IsOpen && _gameView.WantsInput;
+        }
+
         DrawPopups();
 
         var size = FramebufferSize;
@@ -168,6 +197,8 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _sceneFramebuffer?.Dispose();
         _picker?.Dispose();
         _renderer?.Dispose();
+        _play.Stop();
+        _gameInput?.Dispose();
         _imgui?.Dispose();
         _scripts.Dispose();
         SaveSettings();
@@ -184,7 +215,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         if (!io.KeyCtrl)
         {
-            if (ImGui.IsKeyPressed(ImGuiKey.Delete, false) && _context.Selection is { } selected)
+            if (ImGui.IsKeyPressed(ImGuiKey.Delete, false) && _context.Selection is { } selected && _gameInput?.Enabled != true)
             {
                 EditorActions.Delete(_context, selected);
             }
@@ -192,7 +223,22 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             return;
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.Z, false))
+        if (ImGui.IsKeyPressed(ImGuiKey.P, false))
+        {
+            if (io.KeyAlt)
+            {
+                _play.Step();
+            }
+            else if (io.KeyShift)
+            {
+                _play.TogglePause();
+            }
+            else
+            {
+                _play.TogglePlay();
+            }
+        }
+        else if (ImGui.IsKeyPressed(ImGuiKey.Z, false))
         {
             if (io.KeyShift)
             {
@@ -234,7 +280,20 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
     private void DrawMainMenu()
     {
-        if (!ImGui.BeginMainMenuBar())
+        // A tinted menu bar makes it obvious that changes made now are thrown away on Stop.
+        var tinted = _play.IsActive;
+        if (tinted)
+        {
+            ImGui.PushStyleColor(ImGuiCol.MenuBarBg, PlayModeTint);
+        }
+
+        var menuOpen = ImGui.BeginMainMenuBar();
+        if (tinted)
+        {
+            ImGui.PopStyleColor();
+        }
+
+        if (!menuOpen)
         {
             return;
         }
@@ -387,11 +446,13 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             ImGui.EndMenu();
         }
 
+        DrawPlayControls();
         ImGui.EndMainMenuBar();
     }
 
     private void NewScene()
     {
+        _play.Stop();
         _context.NewScene();
         Log.Info("Created a new scene.");
     }
@@ -423,6 +484,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         {
             DrawPathPopup("Scene file:", "Open", path =>
             {
+                _play.Stop();
                 if (_context.OpenScene(path))
                 {
                     _context.Selection = null;

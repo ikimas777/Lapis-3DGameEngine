@@ -84,7 +84,8 @@ Disabled behaviours (`Enabled = false`) and behaviours on inactive entities rece
 If a method throws an exception, the error is logged with its stack trace and that behaviour is disabled,
 so one broken script does not stop the rest of the game.
 
-> Scripts run in **Play mode**, which arrives with milestone M6.
+> Scripts run in **Play mode**: press **Play** (Ctrl+P) in the menu bar. Keyboard and mouse input reach the game
+> while the Game view has focus. Everything changed while playing is discarded on **Stop**.
 
 ## Fields in the Inspector
 

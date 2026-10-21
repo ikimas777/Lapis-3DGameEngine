@@ -126,6 +126,44 @@ public class ScriptRunnerTests
         Assert.DoesNotContain("Update", victimScript.Calls);
     }
 
+    [Fact]
+    public void Time_ReportsGameTimeDuringTick_AndIsRestoredAfterwards()
+    {
+        var scene = new Lapis.Scene();
+        var probe = scene.CreateEntity().AddComponent<TimeProbe>();
+        var runner = new ScriptRunner(scene) { FixedDeltaTime = 0.05f };
+        var before = Time.DeltaTime;
+
+        runner.Tick(0.1f);
+        runner.Tick(0.1f);
+
+        Assert.Equal(0.1f, probe.UpdateDelta, 5);
+        Assert.Equal(0.05f, probe.PhysicsDelta, 5);
+        Assert.Equal(0.2, probe.GameTime, 5);
+        Assert.Equal(2, probe.Frame);
+        Assert.Equal(before, Time.DeltaTime);
+    }
+
+    private sealed class TimeProbe : Behaviour
+    {
+        public float UpdateDelta { get; private set; }
+
+        public float PhysicsDelta { get; private set; }
+
+        public double GameTime { get; private set; }
+
+        public long Frame { get; private set; }
+
+        public override void Update()
+        {
+            UpdateDelta = Time.DeltaTime;
+            GameTime = Time.TimeSinceStart;
+            Frame = Time.FrameCount;
+        }
+
+        public override void PhysicsUpdate() => PhysicsDelta = Time.DeltaTime;
+    }
+
     private sealed class Recorder : Behaviour
     {
         public List<string> Calls { get; } = [];
