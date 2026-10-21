@@ -17,7 +17,7 @@ internal sealed record PlayerOptions(
     int CaptureAfterFrames = 60)
 {
     public const string Usage = """
-        Usage: <game>.exe [options]
+        Usage: <game> [options]
 
           --game <folder>        Folder of an exported game (default: the folder of this program)
           --scene <path>         Start with this scene (relative to Data, e.g. Assets/Scenes/Level2.lscene)

@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Games are assembled as scenes in the editor and programmed with C# scripts (`Behaviour`).
 
-> Status: **M11 — project launcher** (done). **All MVP milestones are complete**; next steps are listed under "After the MVP". This is a living document; it is updated at the end of every milestone.
+> Status: **M12 — Linux support** (in progress). **All MVP milestones are complete**; next steps are listed under "After the MVP". This is a living document; it is updated at the end of every milestone.
 
 ---
 
@@ -263,7 +263,13 @@ Estimates are in **work sessions** (one session ≈ one afternoon: Claude writes
 
 **MVP total: about 18–28 sessions.**
 
-After the MVP: prefabs, audio, animation, in-game UI, particles, editor profiler, Linux / macOS.
+Post-MVP milestones:
+
+| # | Milestone | Content | Sessions |
+|---|---|---|---|
+| **M12** | Linux support | one code base for Windows and Linux: Linux folder chooser, file manager, Trash, VS Code and fonts; Linux player for exports; `scripts/publish-editor.sh`; CI on Windows and Ubuntu; GitHub Releases with Windows and Linux packages built from a version tag | 1–2 |
+
+After the MVP: prefabs, audio, animation, in-game UI, particles, editor profiler, macOS.
 
 ---
 
@@ -273,7 +279,7 @@ After the MVP: prefabs, audio, animation, in-game UI, particles, editor profiler
 |---|---|
 | Hot reload leaks (old `Game.dll` cannot unload because something still references it) | the editor never keeps script types outside the scene; unload is verified with a `WeakReference` test; fallback: full reload when entering Play |
 | Garbage collector stutter | no allocations in the loop, object pools, `Span<T>`; `SustainedLowLatency` GC mode during play |
-| Native libraries (Jolt, cimgui) | NuGet packages ship prebuilt binaries; Windows x64 only for now |
+| Native libraries (Jolt, cimgui, GLFW) | NuGet packages ship prebuilt binaries for Windows x64 and Linux x64 |
 | Scope creep | the next milestone starts only when the current one is done; new ideas go to "After the MVP" |
 | OpenGL context or driver errors | `GL_KHR_debug` validation in Debug builds, messages routed to the Console |
 
@@ -288,7 +294,7 @@ Answers given by the project owner on 2026-10-21.
 | 1 | Target .NET version? | **.NET 10 LTS** (installed). |
 | 2 | IDE? | **VS Code** — the editor opens scripts there. |
 | 3 | Does the GPU support OpenGL 4.5? | **Yes.** |
-| 4 | Target platforms? | **Windows only** for now. |
+| 4 | Target platforms? | **Windows only** at first; **Linux** added in M12 (2026-10-21) from the same code base — no separate branch; per-system downloads on GitHub Releases. |
 | 5 | Engine name? | **Lapis** (namespace `Lapis`). |
 | 6 | API naming style? | Agreed: lowercase `entity` / `transform` shortcuts in scripts, PascalCase for everything else. |
 | 7 | Coordinate system? | **Right-handed**, Y up, −Z forward. |
@@ -321,7 +327,8 @@ Answers given by the project owner on 2026-10-21.
 | M9 | Physically based shading (GGX / Smith / Schlick, metallic + roughness on `MeshRenderer` and materials, hemisphere ambient with reflected sky, ACES tone mapping), directional-light shadow map (2048², fitted to the view up to a configurable shadow distance, texel-snapped, normal-offset bias, 5×5 PCF, edge fade, per-renderer / per-light Cast Shadows), procedural skybox with sun disk (scene settings), 4× MSAA in the Scene and Game views, infinite editor ground grid with X / Z axes (Edit > Show Grid). Scene drops: the whole Scene view accepts assets, models land under the cursor, model files dropped from Explorer over the view go straight into the scene. Cascaded shadows, point-light shadows and image-based lighting are left for later. |
 | M10 | File > Export Game: compiles scripts to `Game.dll`, copies assets (without `.cs`) to `Data/Assets`, writes `Data/game.json` and the player as `<Name>.exe`; background export with progress, Run Game / Open Folder; `--export` for command-line builds. `Lapis.Player`: loads the manifest, assets and scripts, runs `GameSimulation` and renders through the main camera with 4× MSAA, Alt+Enter fullscreen, `--scene` / `--fullscreen`, `log.txt`. The published editor ships the player in `Player/`; from source it is built on first export into `artifacts/player`. `InputBridge` moved into the engine and shared by editor and player. Verified: Sandbox exported from both the source and the published editor and run standalone. Guide: [docs/export.md](docs/export.md). 155 tests. Loading other scenes from scripts is not available yet. |
 | M11 | Project launcher shown when the editor starts without `--project` / `--scene`: recent projects (name, folder, last opened, search, missing ones marked; right-click: open, show in Explorer, remove from list), New Project (name + location with a Windows folder browser, starter scene with camera, sun, ground and cube plus an example script), Open Project (folder browser, typed path, or drop a folder on the window). Project menu: Recent Projects, Close Project (asks to save unsaved changes, returns to the launcher). The last project is no longer reopened automatically. 166 tests. |
+| M12 | (in progress) Linux support from the same code base: `PlatformShell` (file manager via `xdg-open`, freedesktop Trash for deleted assets), folder chooser via zenity / kdialog, VS Code found on the Linux `PATH`, Noto / Ubuntu / DejaVu fonts, the player is built and copied without `.exe` and marked executable, `scripts/publish-editor.sh`, CI matrix (Windows + Ubuntu), `release.yml` publishing `Lapis-Windows-x64.zip` and `Lapis-Linux-x64.tar.gz` for `v*` tags. Options > Keybindings (fly mode toggle) added on main before M12. The Linux build is cross-compiled and its native libraries checked, but not yet run on a Linux machine. 168 tests. |
 
 ### Open items
-- No `origin` remote is configured yet; CI starts running once the repository is pushed to GitHub.
+- The Linux build needs a first run on a real Linux machine (or the Ubuntu CI job) to confirm the editor and exported games start.
 - Copyright holder name in `LICENSE` is currently "Lapis contributors" — change it if you want your name there.

@@ -8,7 +8,7 @@ namespace Lapis.Editor.Export;
 /// <param name="Project">The project to export.</param>
 /// <param name="OutputFolder">Folder that receives the game; created when missing.</param>
 /// <param name="StartScene">Project-relative path of the first scene, e.g. <c>Assets/Scenes/Main.lscene</c>.</param>
-/// <param name="ExecutableName">File name of the game's executable, without <c>.exe</c>.</param>
+/// <param name="ExecutableName">File name of the game's executable, without an extension such as <c>.exe</c>.</param>
 internal sealed record ExportSettings(LapisProject Project, string OutputFolder, string StartScene, string ExecutableName);
 
 /// <summary>Result of a successful export.</summary>
@@ -72,8 +72,14 @@ internal static class GameExporter
             }
 
             progress?.Report("Copying the player...");
-            var executable = Path.Combine(output, settings.ExecutableName + ".exe");
+            // Same extension as the player: ".exe" on Windows, none on Linux.
+            var executable = Path.Combine(output, settings.ExecutableName + Path.GetExtension(playerExecutable));
             File.Copy(playerExecutable, executable, overwrite: true);
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(executable, File.GetUnixFileMode(executable)
+                    | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
+            }
 
             File.WriteAllBytes(Path.Combine(output, GameManifest.ScriptsFileName), compilation.AssemblyBytes!);
             File.WriteAllBytes(Path.Combine(output, Path.ChangeExtension(GameManifest.ScriptsFileName, ".pdb")), compilation.SymbolBytes!);

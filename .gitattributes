@@ -3,3 +3,6 @@
 
 # Prebuilt executables in the repository root
 *.exe binary
+
+# Shell scripts must keep LF line endings to run on Linux
+*.sh text eol=lf

@@ -83,7 +83,7 @@ internal sealed unsafe class ProjectLauncher(EditorSettings settings, ILauncherH
         ImGui.Dummy(new Vector2(0, 12));
         ImGui.TextDisabled("Or type a path:");
         ImGui.SetNextItemWidth(width);
-        if (ImGui.InputTextWithHint("##openPath", @"C:\...\MyGame", ref _openPath, 1024, ImGuiInputTextFlags.EnterReturnsTrue) && _openPath.Trim().Length > 0)
+        if (ImGui.InputTextWithHint("##openPath", OperatingSystem.IsWindows() ? @"C:\...\MyGame" : "~/.../MyGame", ref _openPath, 1024, ImGuiInputTextFlags.EnterReturnsTrue) && _openPath.Trim().Length > 0)
         {
             Open(_openPath.Trim().Trim('"'));
         }
@@ -195,9 +195,9 @@ internal sealed unsafe class ProjectLauncher(EditorSettings settings, ILauncherH
                 Open(project.Path);
             }
 
-            if (ImGui.MenuItem("Show in Explorer", string.Empty, false, exists))
+            if (ImGui.MenuItem($"Show in {PlatformShell.FileManagerName}", string.Empty, false, exists))
             {
-                ShowInExplorer(project.Path);
+                PlatformShell.ShowInFileManager(project.Path, select: true);
             }
 
             ImGui.Separator();
@@ -349,20 +349,6 @@ internal sealed unsafe class ProjectLauncher(EditorSettings settings, ILauncherH
         fixed (byte* pointer = bytes)
         {
             ImGui.GetWindowDrawList().AddText(ImGui.GetFont(), size, ImGui.GetCursorScreenPos(), ImGui.GetColorU32(color), pointer);
-        }
-    }
-
-    private static void ShowInExplorer(string path)
-    {
-        try
-        {
-            var start = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
-            start.ArgumentList.Add($"/select,{path}");
-            Process.Start(start)?.Dispose();
-        }
-        catch (System.ComponentModel.Win32Exception exception)
-        {
-            Log.Error($"Could not open Explorer: {exception.Message}");
         }
     }
 }

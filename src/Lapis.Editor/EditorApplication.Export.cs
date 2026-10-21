@@ -55,7 +55,7 @@ internal sealed unsafe partial class EditorApplication
         ImGui.SetNextItemWidth(-1);
         ImGui.InputText("##folder", ref _exportFolder, 1024);
 
-        ImGui.TextUnformatted("Game name (the .exe file):");
+        ImGui.TextUnformatted(OperatingSystem.IsWindows() ? "Game name (the .exe file):" : "Game name (the executable file):");
         ImGui.SetNextItemWidth(-1);
         ImGui.InputText("##name", ref _exportName, 128);
 
@@ -112,13 +112,13 @@ internal sealed unsafe partial class EditorApplication
             ImGui.SameLine();
             if (ImGui.Button("Run Game", new Vector2(120, 0)))
             {
-                StartProcess(done.ExecutablePath, Path.GetDirectoryName(done.ExecutablePath));
+                RunGame(done.ExecutablePath);
             }
 
             ImGui.SameLine();
             if (ImGui.Button("Open Folder", new Vector2(120, 0)))
             {
-                StartProcess("explorer.exe", Path.GetDirectoryName(done.ExecutablePath));
+                PlatformShell.ShowInFileManager(Path.GetDirectoryName(done.ExecutablePath)!);
             }
         }
 
@@ -176,7 +176,7 @@ internal sealed unsafe partial class EditorApplication
         Log.Info($"Exported the game to {_exportResult.ExecutablePath} ({_exportResult.AssetCount} assets).");
         if (_exportOpenFolder)
         {
-            StartProcess("explorer.exe", Path.GetDirectoryName(_exportResult.ExecutablePath));
+            PlatformShell.ShowInFileManager(Path.GetDirectoryName(_exportResult.ExecutablePath)!);
         }
     }
 
@@ -209,21 +209,16 @@ internal sealed unsafe partial class EditorApplication
         Close();
     }
 
-    private static void StartProcess(string file, string? argumentOrFolder)
+    private static void RunGame(string executable)
     {
         try
         {
-            var start = new ProcessStartInfo(file) { UseShellExecute = false, WorkingDirectory = argumentOrFolder ?? string.Empty };
-            if (file == "explorer.exe" && argumentOrFolder is not null)
-            {
-                start.ArgumentList.Add(argumentOrFolder);
-            }
-
+            var start = new ProcessStartInfo(executable) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(executable) ?? string.Empty };
             Process.Start(start)?.Dispose();
         }
         catch (System.ComponentModel.Win32Exception exception)
         {
-            Log.Error($"Could not start '{file}': {exception.Message}");
+            Log.Error($"Could not start '{executable}': {exception.Message}");
         }
     }
 }
