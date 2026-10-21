@@ -16,6 +16,12 @@ internal sealed class EditorSettings
     /// <summary>Scene opened last in <see cref="LastProject"/>.</summary>
     public string? LastScene { get; set; }
 
+    /// <summary>
+    /// When true, WASD / Q E move the Scene view camera only while the right mouse button is held
+    /// (and W / E / R also pick the gizmo tools); otherwise they move it whenever the Scene view has focus.
+    /// </summary>
+    public bool FlyOnlyWithRightMouse { get; set; }
+
     /// <summary>Projects shown in the launcher, most recently opened first.</summary>
     public List<RecentProject> RecentProjects { get; set; } = [];
 

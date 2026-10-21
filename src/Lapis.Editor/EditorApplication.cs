@@ -97,7 +97,10 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _sceneFramebuffer = new Framebuffer(GL, samples: 4);
         _gameFramebuffer = new Framebuffer(GL, samples: 4);
 
-        _sceneView = new SceneViewPanel(_context, _renderer, _picker, _lines, _grid, _sceneFramebuffer, _camera);
+        _sceneView = new SceneViewPanel(_context, _renderer, _picker, _lines, _grid, _sceneFramebuffer, _camera)
+        {
+            FlyOnlyWithRightMouse = _settings.FlyOnlyWithRightMouse,
+        };
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
         _gameInput = new Lapis.Platform.InputBridge(InputContext);
@@ -485,6 +488,16 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             ImGui.EndMenu();
         }
 
+        if (ImGui.BeginMenu("Options"))
+        {
+            if (ImGui.MenuItem("Keybindings..."))
+            {
+                ShowOptions(OptionsTab.Keybindings);
+            }
+
+            ImGui.EndMenu();
+        }
+
         if (ImGui.BeginMenu("Help"))
         {
             if (ImGui.MenuItem("About Lapis"))
@@ -573,6 +586,8 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
             ImGui.EndPopup();
         }
+
+        DrawOptionsWindow(center);
     }
 
     private void DrawPathPopup(string prompt, string action, Action<string> confirm, List<string>? candidates = null)
