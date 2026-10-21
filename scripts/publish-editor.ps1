@@ -14,12 +14,20 @@
 .PARAMETER Shortcut
     Also create a "Lapis Editor" shortcut on the desktop.
 
+.PARAMETER RepoRoot
+    Also copy Lapis.Editor.exe and Player\Lapis.Player.exe into the repository root, where they are committed
+    so the editor can be started right after cloning.
+
 .EXAMPLE
     .\scripts\publish-editor.ps1 -Shortcut
+
+.EXAMPLE
+    .\scripts\publish-editor.ps1 -RepoRoot
 #>
 param(
     [string]$Output = (Join-Path $PSScriptRoot "..\publish\Lapis.Editor"),
-    [switch]$Shortcut
+    [switch]$Shortcut,
+    [switch]$RepoRoot
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,6 +69,14 @@ if ($LASTEXITCODE -ne 0) {
 
 $exe = Resolve-Path (Join-Path $Output "Lapis.Editor.exe")
 Write-Host "Editor published to $exe"
+
+if ($RepoRoot) {
+    $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+    New-Item -ItemType Directory -Force (Join-Path $root "Player") | Out-Null
+    Copy-Item $exe (Join-Path $root "Lapis.Editor.exe") -Force
+    Copy-Item (Join-Path $Output "Player\Lapis.Player.exe") (Join-Path $root "Player\Lapis.Player.exe") -Force
+    Write-Host "Copied Lapis.Editor.exe and Player\Lapis.Player.exe to $root"
+}
 
 if ($Shortcut) {
     $desktop = [Environment]::GetFolderPath("Desktop")

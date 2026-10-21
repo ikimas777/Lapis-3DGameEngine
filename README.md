@@ -40,7 +40,17 @@ dotnet test --solution Lapis.slnx
 
 ## Editor executable
 
-Build a standalone `Lapis.Editor.exe` (includes .NET, runs on any 64-bit Windows 10/11 PC):
+A ready-to-run editor is committed in the repository root: double-click **`Lapis.Editor.exe`**
+(it includes .NET and runs on any 64-bit Windows 10/11 PC). Keep the `Player` folder next to it: exported games
+are built from `Player\Lapis.Player.exe`.
+
+To rebuild it after changing the code:
+
+```powershell
+.\scripts\publish-editor.ps1 -RepoRoot
+```
+
+Without `-RepoRoot` the build only goes to `publish\Lapis.Editor`.
 
 ```powershell
 .\scripts\publish-editor.ps1
