@@ -20,6 +20,9 @@ internal sealed class ScriptManager(EditorContext context) : IDisposable
     private volatile bool _changesPending;
     private double _changeTime;
 
+    /// <summary>Raised on the main thread right before new scripts replace the loaded ones.</summary>
+    public event Action? Reloading;
+
     /// <summary>The open project, or null.</summary>
     public LapisProject? Project { get; private set; }
 
@@ -172,6 +175,11 @@ internal sealed class ScriptManager(EditorContext context) : IDisposable
         {
             Log.Error($"Scripts have {compilation.ErrorCount} error(s); the previous version stays loaded until they are fixed.");
             return;
+        }
+
+        if (reloadScene)
+        {
+            Reloading?.Invoke();
         }
 
         // Keep the scene as JSON while the old scripts are swapped for the new ones.

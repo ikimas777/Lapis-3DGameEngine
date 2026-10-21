@@ -26,10 +26,13 @@ internal sealed class EditorContext
     public string? ScenePath { get; private set; }
 
     /// <summary>Undo / redo history of the open scene.</summary>
-    public UndoStack History { get; } = new();
+    public UndoStack History { get; private set; } = new();
 
     /// <summary>True when the scene has changes that are not saved.</summary>
-    public bool IsDirty => _unrecordedChanges || History.StateId != _savedStateId;
+    public bool IsDirty => _editState is { } edit ? edit.WasDirty : _unrecordedChanges || History.StateId != _savedStateId;
+
+    /// <summary>True while the game is running on a copy of the scene (see <see cref="EnterPlay"/>).</summary>
+    public bool IsPlaying => _editState is not null;
 
     /// <summary>
     /// The selected entity, or null. When the selected entity is deleted and later restored by undo,
@@ -111,6 +114,12 @@ internal sealed class EditorContext
     /// <summary>Saves the scene to <paramref name="path"/>, or to <see cref="ScenePath"/> when null.</summary>
     public bool SaveScene(string? path = null)
     {
+        if (IsPlaying)
+        {
+            Log.Warning("Stop Play mode before saving; changes made while playing are discarded when it stops.");
+            return false;
+        }
+
         path ??= ScenePath;
         if (path is null)
         {
@@ -166,6 +175,41 @@ internal sealed class EditorContext
         _unrecordedChanges = wasDirty;
         _selection = selectedId is { } id ? scene.FindById(id) : null;
     }
+
+    /// <summary>
+    /// Switches to <paramref name="playScene"/> (a copy of the edited scene) with its own undo history.
+    /// The edited scene, its history and its unsaved-changes state are kept for <see cref="ExitPlay"/>.
+    /// </summary>
+    public void EnterPlay(Scene playScene)
+    {
+        if (IsPlaying)
+        {
+            throw new InvalidOperationException("Play mode is already active.");
+        }
+
+        _editState = new EditState(Scene, History, IsDirty);
+        Scene = playScene;
+        History = new UndoStack();
+        _selection = _selectionId is { } id ? playScene.FindById(id) : null;
+    }
+
+    /// <summary>Returns to the edited scene, discarding the play copy and everything done to it.</summary>
+    public void ExitPlay()
+    {
+        if (_editState is not { } edit)
+        {
+            return;
+        }
+
+        _editState = null;
+        Scene = edit.Scene;
+        History = edit.History;
+        _selection = _selectionId is { } id ? edit.Scene.FindById(id) : null;
+    }
+
+    private EditState? _editState;
+
+    private sealed record EditState(Scene Scene, UndoStack History, bool WasDirty);
 
     private void SetScene(Scene scene, string? path)
     {

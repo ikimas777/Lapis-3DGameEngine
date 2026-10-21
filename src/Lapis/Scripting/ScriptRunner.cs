@@ -25,8 +25,29 @@ public sealed class ScriptRunner(Scene scene)
     /// <summary>Called once per physics step, after <c>PhysicsUpdate</c> (the physics engine hooks in here).</summary>
     public event Action<float>? PhysicsStep;
 
-    /// <summary>Advances the game by <paramref name="deltaTime"/> seconds.</summary>
+    /// <summary>Seconds of game time run so far.</summary>
+    public double GameTime { get; private set; }
+
+    /// <summary>Number of frames run so far.</summary>
+    public long FrameCount { get; private set; }
+
+    /// <summary>
+    /// Advances the game by <paramref name="deltaTime"/> seconds. While the scripts run, <see cref="Time"/>
+    /// reports this game's time rather than the host application's.
+    /// </summary>
     public void Tick(float deltaTime)
+    {
+        deltaTime = Math.Clamp(deltaTime, 0f, Time.MaxDeltaTime);
+        GameTime += deltaTime;
+        FrameCount++;
+
+        using (Time.Use(deltaTime, GameTime, FrameCount, FixedDeltaTime))
+        {
+            RunFrame(deltaTime);
+        }
+    }
+
+    private void RunFrame(float deltaTime)
     {
         Collect();
         foreach (var behaviour in _behaviours)
@@ -49,6 +70,7 @@ public sealed class ScriptRunner(Scene scene)
         _accumulator += deltaTime;
         var steps = 0;
         // The small tolerance keeps float rounding (0.25 - 0.1 - 0.1 + 0.05 = 0.0999...) from skipping a step.
+        var frameDelta = Time.SetDeltaTime(FixedDeltaTime); // PhysicsUpdate sees the fixed step
         while (_accumulator + 1e-6 >= FixedDeltaTime && steps < MaxPhysicsStepsPerFrame)
         {
             foreach (var behaviour in _behaviours)
@@ -64,6 +86,7 @@ public sealed class ScriptRunner(Scene scene)
             steps++;
         }
 
+        Time.SetDeltaTime(frameDelta);
         if (steps == MaxPhysicsStepsPerFrame)
         {
             _accumulator = 0; // drop the backlog instead of trying to catch up forever

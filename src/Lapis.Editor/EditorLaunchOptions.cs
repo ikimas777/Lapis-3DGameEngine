@@ -7,6 +7,7 @@ namespace Lapis.Editor;
 /// <param name="ScenePath">Scene file to open; the demo scene is used when null.</param>
 /// <param name="SaveScenePath">When set, save the opened scene to this file at startup.</param>
 /// <param name="SelectName">Name of an entity to select at startup.</param>
+/// <param name="Play">Enter Play mode right after startup.</param>
 /// <param name="CapturePath">When set, save a screenshot to this PNG file and exit.</param>
 /// <param name="CaptureAfterFrames">Number of frames to render before capturing.</param>
 internal sealed record EditorLaunchOptions(
@@ -14,6 +15,7 @@ internal sealed record EditorLaunchOptions(
     string? ScenePath = null,
     string? SaveScenePath = null,
     string? SelectName = null,
+    bool Play = false,
     string? CapturePath = null,
     int CaptureAfterFrames = 30)
 {
@@ -24,6 +26,7 @@ internal sealed record EditorLaunchOptions(
           --scene <file.lscene>       Open a scene file
           --save-scene <file.lscene>  Save the opened scene to a file at startup
           --select <name>             Select the first entity with this name
+          --play                      Start in Play mode
           --capture <file.png>        Render, save a screenshot and exit
           --frames <count>            Frames to render before capturing (default 30)
           --help                      Show this help
@@ -47,6 +50,9 @@ internal sealed record EditorLaunchOptions(
                     break;
                 case "--save-scene":
                     options = options with { SaveScenePath = ReadValue(args, ref i) };
+                    break;
+                case "--play":
+                    options = options with { Play = true };
                     break;
                 case "--select":
                     options = options with { SelectName = ReadValue(args, ref i) };

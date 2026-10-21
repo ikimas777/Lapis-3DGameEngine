@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
 
-> **Status:** early development (milestone M5 — C# scripting). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M6 — Play mode). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ```csharp
 using Lapis;
@@ -69,6 +69,15 @@ dotnet run --project src/Lapis.Editor -- --project samples/Sandbox
 Scripts are C# classes in a project's `Assets` folder. The editor compiles them itself and reloads them
 while it runs whenever a file is saved — see the [scripting guide](docs/scripting.md).
 
+### Play mode
+
+Press **Play** (Ctrl+P) in the middle of the menu bar to run the game in the Game view. In the sample
+project, W A S D / arrow keys move the blue ball and the box spins. **Pause** (Ctrl+Shift+P) freezes the
+game and **Step** (Ctrl+Alt+P) advances it by one frame. The menu bar turns blue while playing: changes
+made during play are thrown away on **Stop**, and the scene returns to exactly how it was.
+
+![Play mode](docs/images/play-mode.png)
+
 ### Scene view controls
 
 | Input | Action |
@@ -90,6 +99,7 @@ while it runs whenever a file is saved — see the [scripting guide](docs/script
 | Ctrl+S / Ctrl+Shift+S | Save / Save As |
 | Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) | Undo / Redo |
 | Ctrl+D | Duplicate the selected entity |
+| Ctrl+P / Ctrl+Shift+P / Ctrl+Alt+P | Play or stop / Pause / Step |
 | Delete | Delete the selected entity |
 | W / E / R (Scene view) | Move / Rotate / Scale tool |
 | Ctrl while dragging the gizmo | Toggle snapping |
@@ -103,6 +113,7 @@ Drag entities in the Hierarchy to re-parent them, or drop an entity onto an enti
 - `--project samples/Sandbox` opens a game project (by default the last opened project is reopened)
 - `--scene path/to/file.lscene` opens a scene file
 - `--select Box` selects an entity at startup
+- `--play` starts in Play mode
 - `--save-scene file.lscene` saves the opened scene
 - `--capture shot.png` renders a few frames with the default layout, saves a screenshot and exits
 

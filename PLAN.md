@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Games are assembled as scenes in the editor and programmed with C# scripts (`Behaviour`).
 
-> Status: **M5 — C# scripting** (done). Next: **M6 — Play mode**. This is a living document; it is updated at the end of every milestone.
+> Status: **M6 — Play mode** (done). Next: **M7 — physics**. This is a living document; it is updated at the end of every milestone.
 
 ---
 
@@ -314,6 +314,7 @@ Answers given by the project owner on 2026-10-21.
 | M3 | Dear ImGui (Hexa.NET.ImGui 1.92) with an own Silk.NET input layer and OpenGL renderer (dynamic font atlas), dark theme with Segoe UI, docking layout (Hierarchy / Scene + Game / Inspector / Console) saved per user, `Framebuffer` render targets, editor camera (look + fly, orbit, pan, zoom, focus), Hierarchy with search, create / delete / re-parent by drag and drop, Inspector with name / active / transform and reflection-based component editing (numbers, vectors, colours, enums, strings, entity and component references), Add / remove component, Console with level filters and search, File menu with New / Open / Save / Save As. Known gaps: no undo yet (M4), no clipboard in text fields, no prompt for unsaved changes. |
 | M4 | Undo / redo for every editor change (`UndoStack` with gesture merging, commands refer to entities by id so they survive delete + undo), transform gizmos (ImGuizmo: move / rotate / scale, local / world, snapping), Scene view toolbar and W / E / R shortcuts, mouse picking with an entity-id render pass (`EntityPicker`), duplicate (Ctrl+D), Edit menu, unsaved-changes tracking based on the history, scene fragments in `SceneSerializer` (`EntitiesToJson` / `EntitiesFromJson` with new ids). Standalone `Lapis.Editor.exe` via `scripts/publish-editor.ps1`. 88 tests (new `Lapis.Editor.Tests`). |
 | M5 | Game projects (`.lapis` file, `Assets/`, generated `.csproj` + engine copy for VS Code), `samples/Sandbox` with `PlayerController` and `Rotator`, in-process Roslyn compilation (no SDK needed, ~50–150 ms per change after the first), collectible `AssemblyLoadContext` hot reload that keeps scene values, compile errors with file / line in the Console (double-click opens VS Code), "Edit Script" link in the Inspector, Project menu (new / open project, create script, recompile, open in VS Code), last project reopened on start, `Input` (keys, mouse, axes) and `ScriptRunner` (Start / Update / PhysicsUpdate / PostUpdate / OnDestroy, exceptions disable the script). Scripts start running in Play mode (M6). Guide: [docs/scripting.md](docs/scripting.md). 116 tests. |
+| M6 | Play / Pause / Step (menu bar buttons, Ctrl+P / Ctrl+Shift+P / Ctrl+Alt+P, `--play`), the game runs on a JSON copy of the scene with its own undo history and is discarded on Stop (edited scene, history, selection and unsaved state restored), tinted menu bar while playing, Game view gets focus on Play and is the only panel that feeds keyboard / mouse to `Input`, game time in `Time` (stops when paused, one frame per Step, fixed step inside `PhysicsUpdate`), Play stops automatically when scripts are recompiled, saving is blocked while playing. 124 tests. |
 
 ### Open items
 - No `origin` remote is configured yet; CI starts running once the repository is pushed to GitHub.

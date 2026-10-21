@@ -18,6 +18,7 @@ internal sealed unsafe partial class EditorApplication
     /// <summary>Opens a project and one of its scenes (by default the start scene).</summary>
     private bool OpenProject(string path, string? scenePath = null)
     {
+        _play.Stop();
         LapisProject project;
         try
         {
