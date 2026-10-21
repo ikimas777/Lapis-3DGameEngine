@@ -23,9 +23,13 @@ public sealed class Material
     [Assets.AssetReference(Assets.AssetType.Texture)]
     public string TextureId { get; set; } = string.Empty;
 
-    /// <summary>Size of specular highlights; higher is smaller and sharper.</summary>
-    [Range(1, 256)]
-    public float Shininess { get; set; } = 32f;
+    /// <summary>0 = non-metal (plastic, wood, stone), 1 = metal.</summary>
+    [Range(0, 1)]
+    public float Metallic { get; set; }
+
+    /// <summary>0 = mirror-smooth with sharp highlights, 1 = completely matte.</summary>
+    [Range(0, 1)]
+    public float Roughness { get; set; } = 0.5f;
 
     /// <summary>Reads a material file.</summary>
     /// <exception cref="InvalidDataException">The file is not a material.</exception>
@@ -44,7 +48,8 @@ public sealed class Material
         }
 
         material.TextureId = (string?)root["texture"] ?? string.Empty;
-        material.Shininess = (float?)root["shininess"] ?? 32f;
+        material.Metallic = (float?)root["metallic"] ?? 0f;
+        material.Roughness = (float?)root["roughness"] ?? 0.5f;
         return material;
     }
 
@@ -57,7 +62,8 @@ public sealed class Material
             ["version"] = 1,
             ["color"] = JsonSerializer.SerializeToNode(Color, SceneSerializer.JsonOptions),
             ["texture"] = TextureId,
-            ["shininess"] = Shininess,
+            ["metallic"] = Metallic,
+            ["roughness"] = Roughness,
         };
 
         File.WriteAllText(path, root.ToJsonString(SceneSerializer.JsonOptions) + Environment.NewLine);

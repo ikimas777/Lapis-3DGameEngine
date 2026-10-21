@@ -193,13 +193,14 @@ public sealed class AssetTests : IDisposable
     public void Material_RoundTrips()
     {
         var path = Path.Combine(_root, "m.lmat");
-        new Material { Color = Color.Red, TextureId = "asset:0f8fad5bd9cb469fa16570867728950e", Shininess = 64 }.Save(path);
+        new Material { Color = Color.Red, TextureId = "asset:0f8fad5bd9cb469fa16570867728950e", Metallic = 1, Roughness = 0.2f }.Save(path);
 
         var loaded = Material.Load(path);
 
         Assert.Equal(Color.Red, loaded.Color);
         Assert.Equal("asset:0f8fad5bd9cb469fa16570867728950e", loaded.TextureId);
-        Assert.Equal(64f, loaded.Shininess);
+        Assert.Equal(1f, loaded.Metallic);
+        Assert.Equal(0.2f, loaded.Roughness);
     }
 
     [Fact]

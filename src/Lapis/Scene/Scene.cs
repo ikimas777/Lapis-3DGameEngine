@@ -178,4 +178,20 @@ public sealed class SceneEnvironment
 
     /// <summary>Multiplier for both ambient colours.</summary>
     public float AmbientIntensity { get; set; } = 1f;
+
+    /// <summary>Draw a sky behind everything instead of the camera's flat background colour.</summary>
+    public bool Skybox { get; set; } = true;
+
+    /// <summary>Sky colour straight up (sRGB).</summary>
+    public Color SkyZenithColor { get; set; } = new(0.30f, 0.52f, 0.85f);
+
+    /// <summary>Sky colour at the horizon (sRGB).</summary>
+    public Color SkyHorizonColor { get; set; } = new(0.75f, 0.84f, 0.93f);
+
+    /// <summary>Colour below the horizon (sRGB).</summary>
+    public Color SkyGroundColor { get; set; } = new(0.36f, 0.34f, 0.32f);
+
+    /// <summary>How far from the camera shadows are drawn; smaller values give sharper shadows.</summary>
+    [Range(5, 200)]
+    public float ShadowDistance { get; set; } = 40f;
 }

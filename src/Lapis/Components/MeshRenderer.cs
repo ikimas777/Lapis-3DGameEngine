@@ -63,7 +63,7 @@ public sealed class MeshRenderer : Component
     public string MeshId { get; set; } = BuiltInMeshes.Cube;
 
     /// <summary>
-    /// A material asset to use instead of <see cref="Color"/>, <see cref="TextureId"/> and <see cref="Shininess"/>.
+    /// A material asset to use instead of <see cref="Color"/>, <see cref="TextureId"/>, <see cref="Metallic"/> and <see cref="Roughness"/>.
     /// Empty to use those settings.
     /// </summary>
     [Assets.AssetReference(Assets.AssetType.Material)]
@@ -76,19 +76,26 @@ public sealed class MeshRenderer : Component
     [Assets.AssetReference(Assets.AssetType.Texture)]
     public string TextureId { get; set; } = string.Empty;
 
-    /// <summary>Size of specular highlights; higher is smaller and sharper.</summary>
-    [Range(1, 256)]
-    public float Shininess { get; set; } = 32f;
+    /// <summary>0 = non-metal (plastic, wood, stone), 1 = metal.</summary>
+    [Range(0, 1)]
+    public float Metallic { get; set; }
+
+    /// <summary>0 = mirror-smooth with sharp highlights, 1 = completely matte.</summary>
+    [Range(0, 1)]
+    public float Roughness { get; set; } = 0.5f;
+
+    /// <summary>Whether this object casts shadows from the sun.</summary>
+    public bool CastShadows { get; set; } = true;
 
     /// <summary>The surface to draw with: the material when set and found, otherwise this renderer's own settings.</summary>
-    internal (Color Color, string TextureId, float Shininess) ResolveSurface()
+    internal (Color Color, string TextureId, float Metallic, float Roughness) ResolveSurface()
     {
         if (MaterialId.Length > 0 && Assets.AssetDatabase.TryParseReference(MaterialId, out var id, out _) &&
             Assets.AssetDatabase.Active?.LoadMaterial(id) is { } material)
         {
-            return (material.Color, material.TextureId, material.Shininess);
+            return (material.Color, material.TextureId, material.Metallic, material.Roughness);
         }
 
-        return (Color, TextureId, Shininess);
+        return (Color, TextureId, Metallic, Roughness);
     }
 }

@@ -22,7 +22,7 @@ internal enum GizmoTool
 /// W / E / R: move / rotate / scale tool; hold Ctrl to snap.
 /// </summary>
 internal sealed unsafe class SceneViewPanel(
-    EditorContext context, SceneRenderer renderer, EntityPicker picker, LineRenderer lines, Framebuffer framebuffer, EditorCamera camera)
+    EditorContext context, SceneRenderer renderer, EntityPicker picker, LineRenderer lines, GridRenderer grid, Framebuffer framebuffer, EditorCamera camera)
     : EditorPanel("Scene")
 {
     private static readonly Color Background = new(0.20f, 0.22f, 0.25f);
@@ -46,6 +46,9 @@ internal sealed unsafe class SceneViewPanel(
 
     /// <summary>Draw collider outlines.</summary>
     public bool ShowColliders { get; set; } = true;
+
+    /// <summary>Draw the ground grid.</summary>
+    public bool ShowGrid { get; set; } = true;
 
     /// <summary>True to move and rotate along the entity's own axes instead of the world axes.</summary>
     public bool LocalSpace { get; set; }
@@ -81,6 +84,11 @@ internal sealed unsafe class SceneViewPanel(
 
         framebuffer.Bind();
         renderer.Render(context.Scene, view);
+        if (ShowGrid)
+        {
+            grid.Render(view);
+        }
+
         if (ShowColliders)
         {
             ColliderGizmos.Add(lines, context.Scene, context.Selection);
