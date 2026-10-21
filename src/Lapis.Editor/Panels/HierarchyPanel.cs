@@ -420,7 +420,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             _pendingChanges.Add(() => Reparent(dropped, entity));
         }
 
-        // Assets dropped on an entity: a model becomes a child, a material or texture is applied to it.
+        // Assets dropped on an entity: a model becomes a child, a script is added to it, a material or texture is applied to it.
         if (DragDrop.AcceptAsset(context.Assets) is { } asset)
         {
             _pendingChanges.Add(() =>
@@ -428,6 +428,10 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
                 if (asset.Type == Lapis.Assets.AssetType.Model)
                 {
                     EditorActions.InstantiateModel(context, asset, entity, Vector3.Zero);
+                }
+                else if (asset.Type == Lapis.Assets.AssetType.Script)
+                {
+                    EditorActions.AddScript(context, entity, asset);
                 }
                 else if (!EditorActions.AssignToRenderer(context, entity, asset))
                 {

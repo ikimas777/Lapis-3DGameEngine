@@ -84,6 +84,7 @@ internal static class ScriptCompiler
         var diagnostics = result.Diagnostics
             .Where(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning)
             .Select(ToScriptDiagnostic)
+            .Concat(FindMisnamedEventMethods(compilation))
             .OrderByDescending(d => d.IsError)
             .ToList();
 
@@ -95,6 +96,62 @@ internal static class ScriptCompiler
             SymbolBytes = result.Success ? symbolStream.ToArray() : null,
             TypeLocations = result.Success ? FindTypeLocations(compilation) : ImmutableDictionary<string, ScriptLocation>.Empty,
         };
+    }
+
+    /// <summary>Id of the warning for methods that look like engine events but are never called.</summary>
+    public const string MisnamedEventId = "LAPIS001";
+
+    /// <summary>
+    /// Warns about methods in behaviours that look like engine events (<c>Start</c>, <c>Update</c>...) but will never
+    /// be called: wrong letter case (<c>start</c>) or a missing <c>override</c>.
+    /// </summary>
+    private static IEnumerable<ScriptDiagnostic> FindMisnamedEventMethods(CSharpCompilation compilation)
+    {
+        if (compilation.GetTypeByMetadataName(typeof(Behaviour).FullName!) is not { } behaviour)
+        {
+            yield break;
+        }
+
+        var events = behaviour.GetMembers().OfType<IMethodSymbol>()
+            .Where(method => method.IsVirtual && method.MethodKind == MethodKind.Ordinary)
+            .ToDictionary(method => method.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            var model = compilation.GetSemanticModel(tree);
+            foreach (var declaration in tree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>())
+            {
+                if (model.GetDeclaredSymbol(declaration) is not { IsOverride: false, IsStatic: false } method ||
+                    !events.TryGetValue(method.Name, out var engineEvent) || !InheritsFrom(method.ContainingType, behaviour))
+                {
+                    continue;
+                }
+
+                var parameters = string.Join(", ", engineEvent.Parameters.Select(p => $"{p.Type.Name} {p.Name}"));
+                var signature = $"public override void {engineEvent.Name}({parameters})";
+                var span = declaration.Identifier.GetLocation().GetLineSpan();
+                yield return new ScriptDiagnostic(
+                    false,
+                    MisnamedEventId,
+                    $"'{method.ContainingType.Name}.{method.Name}' is never called by the engine. Declare it as '{signature}'.",
+                    span.Path,
+                    span.StartLinePosition.Line + 1,
+                    span.StartLinePosition.Character + 1);
+            }
+        }
+    }
+
+    private static bool InheritsFrom(INamedTypeSymbol? type, INamedTypeSymbol baseType)
+    {
+        for (var current = type?.BaseType; current is not null; current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current, baseType))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Paths of the assemblies scripts are compiled against (for diagnostics and the generated .csproj).</summary>

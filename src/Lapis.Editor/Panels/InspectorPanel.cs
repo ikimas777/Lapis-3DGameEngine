@@ -243,6 +243,16 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             ImGui.OpenPopup(AddComponentPopup);
         }
 
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Or drop a script from the Assets panel here.");
+        }
+
+        if (DragDrop.AcceptAsset(context.Assets) is { Type: Lapis.Assets.AssetType.Script } script)
+        {
+            EditorActions.AddScript(context, entity, script);
+        }
+
         if (!ImGui.BeginPopup(AddComponentPopup))
         {
             return;

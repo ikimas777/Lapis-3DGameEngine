@@ -160,9 +160,11 @@ made during play are thrown away on **Stop**, and the scene returns to exactly h
 
 The **Console** panel shows messages from the editor and from `Log.Info` / `Log.Warning` / `Log.Error` in scripts.
 
-- Click a message to select it (Ctrl+click adds one, Shift+click selects a range, Ctrl+A selects all) and press
-  **Ctrl+C** to copy, or right-click for **Copy**, **Copy Message Text Only** and **Copy All**. The box under the
-  list shows the whole selected message; any part of it can be selected with the mouse and copied.
+- Drag over a message's text to select words or letters (double-click selects a word) and press **Ctrl+C** to
+  copy them.
+- Click a message's time or the empty space after it to select the whole message (Ctrl+click adds one,
+  Shift+click selects a range, Ctrl+A selects all) and press **Ctrl+C**, or right-click for **Copy**,
+  **Copy Message Text Only** and **Copy All**.
 - **Clear on Play** (next to **Clear**) empties the Console every time Play starts; the choice is remembered.
 - Double-click a script error to open the file at that line.
 

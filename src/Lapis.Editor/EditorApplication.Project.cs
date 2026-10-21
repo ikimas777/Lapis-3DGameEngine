@@ -122,6 +122,12 @@ internal sealed unsafe partial class EditorApplication
 
     private void SaveSettings()
     {
+        // Screenshot runs (--capture) must not change the user's recent projects or last scene.
+        if (launchOptions.CapturePath is not null)
+        {
+            return;
+        }
+
         if (_scripts.Project is not null)
         {
             _settings.LastScene = _context.ScenePath;

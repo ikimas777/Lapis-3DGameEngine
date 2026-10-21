@@ -56,6 +56,10 @@ public class PlayerController : Behaviour
 
 Inside a behaviour, `entity` is the entity it is attached to and `transform` is that entity's transform.
 
+To attach a script to an entity, drag the `.cs` file from the Assets panel onto the entity in the Hierarchy, onto
+the object in the Scene view, or onto **Add Component** in the Inspector — or pick it in **Add Component**. The class
+must have the same name as the file (scripts created by the editor do).
+
 ## Libraries and `using` lines
 
 Scripts are built against two things:
@@ -109,6 +113,10 @@ For code completion in VS Code, install the C# extension; it uses the generated 
 | `PhysicsUpdate()` | At a fixed rate (50 times per second by default), before each physics step. |
 | `PostUpdate()` | Every frame, after all `Update` calls and physics — e.g. for cameras following a target. |
 | `OnDestroy()` | When a started behaviour is removed, its entity is destroyed, or the game stops. |
+
+The methods must be written exactly like this — `public override void Start()`. C# is case-sensitive, so
+`start()` is a different method that the engine never calls; the Console shows a **LAPIS001** warning for such
+methods (wrong letter case or a missing `override`) with the line to fix.
 
 Disabled behaviours (`Enabled = false`) and behaviours on inactive entities receive no calls.
 If a method throws an exception, the error is logged with its stack trace and that behaviour is disabled,
