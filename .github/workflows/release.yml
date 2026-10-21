@@ -1,0 +1,70 @@
+name: Release
+
+# Pushing a version tag (for example v0.2.0) builds the editor for Windows and Linux
+# and publishes both on the repository's Releases page.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish
+        shell: pwsh
+        run: ./scripts/publish-editor.ps1 -Output publish/Lapis
+
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path publish/Lapis -DestinationPath Lapis-Windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: Lapis-Windows-x64.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish
+        run: ./scripts/publish-editor.sh publish/Lapis
+
+      - name: Package
+        # tar keeps the executable permissions.
+        run: tar -czf Lapis-Linux-x64.tar.gz -C publish Lapis
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: Lapis-Linux-x64.tar.gz
+
+  release:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          Lapis-Windows-x64.zip Lapis-Linux-x64.tar.gz
+          --repo "${{ github.repository }}"
+          --title "Lapis ${{ github.ref_name }}"
+          --generate-notes

@@ -18,6 +18,8 @@
     Also copy Lapis.Editor.exe and Player\Lapis.Player.exe into the repository root, where they are committed
     so the editor can be started right after cloning.
 
+    On Linux use scripts/publish-editor.sh instead.
+
 .EXAMPLE
     .\scripts\publish-editor.ps1 -Shortcut
 
