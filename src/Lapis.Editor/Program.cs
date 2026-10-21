@@ -2,6 +2,8 @@ namespace Lapis.Editor;
 
 internal static class Program
 {
+    // Single-threaded apartment: required by Windows shell dialogs (Browse for folder).
+    [STAThread]
     private static int Main(string[] args)
     {
         EditorLaunchOptions? options;

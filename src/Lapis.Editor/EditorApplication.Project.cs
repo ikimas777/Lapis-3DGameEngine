@@ -56,6 +56,8 @@ internal sealed unsafe partial class EditorApplication
         }
 
         _settings.LastProject = project.FilePath;
+        _settings.AddRecentProject(project.FilePath, project.Name, DateTime.Now);
+        _inLauncher = false;
         SaveSettings();
         return true;
     }
@@ -66,6 +68,17 @@ internal sealed unsafe partial class EditorApplication
     /// </summary>
     private void OnFilesDropped(string[] paths)
     {
+        if (_inLauncher)
+        {
+            // A project folder dropped on the launcher opens it.
+            if (paths.Length > 0 && !OpenProject(paths[0]) && _launcher is not null)
+            {
+                _launcher.Error = $"'{paths[0]}' is not a Lapis project (no .lapis file found).";
+            }
+
+            return;
+        }
+
         if (_assetsPanel is null)
         {
             return;
@@ -132,6 +145,34 @@ internal sealed unsafe partial class EditorApplication
             _pathInput = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Lapis Projects", "MyGame");
         }
 
+        if (ImGui.BeginMenu("Recent Projects", _settings.RecentProjects.Count > 0))
+        {
+            foreach (var recent in _settings.RecentProjects.ToList())
+            {
+                if (ImGui.MenuItem($"{recent.Name}##{recent.Path}", string.Empty, false, File.Exists(recent.Path)))
+                {
+                    if (!_context.IsDirty || _context.SaveScene())
+                    {
+                        OpenProject(recent.Path);
+                    }
+                }
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.SetTooltip(recent.Path);
+                }
+            }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.MenuItem("Close Project", string.Empty, false, project is not null))
+        {
+            RequestCloseProject();
+        }
+
+        ImGui.Separator();
+
         if (ImGui.MenuItem("Open Project..."))
         {
             _popupToOpen = OpenProjectPopup;
@@ -176,7 +217,7 @@ internal sealed unsafe partial class EditorApplication
         if (ImGui.BeginPopupModal(NewProjectPopup, ImGuiWindowFlags.NoSavedSettings))
         {
             ImGui.TextDisabled("A new folder is created with Assets, Scenes and Scripts folders and an empty scene.");
-            DrawPathPopup("Project folder:", "Create", CreateProject);
+            DrawPathPopup("Project folder:", "Create", folder => CreateProject(folder));
             ImGui.EndPopup();
         }
 
@@ -196,11 +237,11 @@ internal sealed unsafe partial class EditorApplication
         }
     }
 
-    private void CreateProject(string folder)
+    private bool CreateProject(string folder, string? name = null)
     {
         try
         {
-            var project = LapisProject.Create(folder);
+            var project = LapisProject.Create(folder, name);
             File.WriteAllText(
                 Path.Combine(project.AssetsDirectory, "Scripts", "Rotator.cs"),
                 """
@@ -217,13 +258,23 @@ internal sealed unsafe partial class EditorApplication
 
                 """);
 
+            // Starter scene: camera and sun (from NewScene), plus a ground to stand on and a cube to look at.
             _context.NewScene();
+            EntityFactory.CreateMesh(_context.Scene, BuiltInMeshes.Plane).Name = "Ground";
+            EntityFactory.CreateMesh(_context.Scene, BuiltInMeshes.Cube).Transform.Position = new Vector3(0f, 0.5f, 0f);
+            _context.Scene.Name = "Main";
             _context.SaveScene(project.StartScenePath);
-            OpenProject(project.FilePath);
+            return OpenProject(project.FilePath);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
             Log.Error($"Could not create the project: {exception.Message}");
+            if (_launcher is not null)
+            {
+                _launcher.Error = $"Could not create the project: {exception.Message}";
+            }
+
+            return false;
         }
     }
 
