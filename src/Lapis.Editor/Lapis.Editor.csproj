@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Lapis\Lapis.csproj" />
+    <InternalsVisibleTo Include="Lapis.Editor.Tests" />
   </ItemGroup>
 
   <ItemGroup>

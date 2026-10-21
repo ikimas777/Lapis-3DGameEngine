@@ -29,6 +29,8 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     private EditorContext _context = null!;
     private ImGuiController? _imgui;
     private SceneRenderer? _renderer;
+    private EntityPicker? _picker;
+    private uint _lastActiveWidget;
     private Framebuffer? _sceneFramebuffer;
     private Framebuffer? _gameFramebuffer;
     private SceneViewPanel? _sceneView;
@@ -66,10 +68,11 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
         EditorTheme.Apply();
 
         _renderer = new SceneRenderer(GL);
+        _picker = new EntityPicker(GL, _renderer.Meshes);
         _sceneFramebuffer = new Framebuffer(GL);
         _gameFramebuffer = new Framebuffer(GL);
 
-        _sceneView = new SceneViewPanel(_context, _renderer, _sceneFramebuffer, _camera);
+        _sceneView = new SceneViewPanel(_context, _renderer, _picker, _sceneFramebuffer, _camera);
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
         _panels.Add(new GameViewPanel(_context, _renderer, _gameFramebuffer));
@@ -99,6 +102,14 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     protected override void OnRender()
     {
         _imgui!.NewFrame(Time.DeltaTime);
+
+        // A new active widget starts a new gesture, so edits made with different widgets never merge.
+        var activeId = ImGuiP.GetActiveID();
+        if (activeId != _lastActiveWidget)
+        {
+            _lastActiveWidget = activeId;
+            _context.History.BeginGesture();
+        }
 
         HandleShortcuts();
         DrawMainMenu();
@@ -138,6 +149,7 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     {
         _gameFramebuffer?.Dispose();
         _sceneFramebuffer?.Dispose();
+        _picker?.Dispose();
         _renderer?.Dispose();
         _imgui?.Dispose();
         _logBuffer.Dispose();
@@ -146,12 +158,41 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
     private void HandleShortcuts()
     {
         var io = ImGui.GetIO();
-        if (io.WantTextInput || !io.KeyCtrl)
+        if (io.WantTextInput)
         {
+            return; // text fields have their own undo and editing keys
+        }
+
+        if (!io.KeyCtrl)
+        {
+            if (ImGui.IsKeyPressed(ImGuiKey.Delete, false) && _context.Selection is { } selected)
+            {
+                EditorActions.Delete(_context, selected);
+            }
+
             return;
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.N, false))
+        if (ImGui.IsKeyPressed(ImGuiKey.Z, false))
+        {
+            if (io.KeyShift)
+            {
+                _context.Redo();
+            }
+            else
+            {
+                _context.Undo();
+            }
+        }
+        else if (ImGui.IsKeyPressed(ImGuiKey.Y, false))
+        {
+            _context.Redo();
+        }
+        else if (ImGui.IsKeyPressed(ImGuiKey.D, false) && _context.Selection is { } toDuplicate)
+        {
+            EditorActions.Duplicate(_context, toDuplicate);
+        }
+        else if (ImGui.IsKeyPressed(ImGuiKey.N, false))
         {
             NewScene();
         }
@@ -215,6 +256,64 @@ internal sealed unsafe class EditorApplication(EditorLaunchOptions launchOptions
             if (ImGui.MenuItem("Exit"))
             {
                 Close();
+            }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.BeginMenu("Edit"))
+        {
+            var history = _context.History;
+            if (ImGui.MenuItem(history.UndoName is { } undo ? $"Undo {undo}" : "Undo", "Ctrl+Z", false, history.CanUndo))
+            {
+                _context.Undo();
+            }
+
+            if (ImGui.MenuItem(history.RedoName is { } redo ? $"Redo {redo}" : "Redo", "Ctrl+Y", false, history.CanRedo))
+            {
+                _context.Redo();
+            }
+
+            ImGui.Separator();
+            var selection = _context.Selection;
+
+            if (ImGui.MenuItem("Duplicate", "Ctrl+D", false, selection is not null))
+            {
+                EditorActions.Duplicate(_context, selection!);
+            }
+
+            if (ImGui.MenuItem("Delete", "Del", false, selection is not null))
+            {
+                EditorActions.Delete(_context, selection!);
+            }
+
+            ImGui.Separator();
+            if (_sceneView is { } sceneView)
+            {
+                if (ImGui.MenuItem("Move Tool", "W", sceneView.Tool == GizmoTool.Move))
+                {
+                    sceneView.Tool = GizmoTool.Move;
+                }
+
+                if (ImGui.MenuItem("Rotate Tool", "E", sceneView.Tool == GizmoTool.Rotate))
+                {
+                    sceneView.Tool = GizmoTool.Rotate;
+                }
+
+                if (ImGui.MenuItem("Scale Tool", "R", sceneView.Tool == GizmoTool.Scale))
+                {
+                    sceneView.Tool = GizmoTool.Scale;
+                }
+
+                if (ImGui.MenuItem("Local Space", string.Empty, sceneView.LocalSpace))
+                {
+                    sceneView.LocalSpace = !sceneView.LocalSpace;
+                }
+
+                if (ImGui.MenuItem("Snap", string.Empty, sceneView.Snap))
+                {
+                    sceneView.Snap = !sceneView.Snap;
+                }
             }
 
             ImGui.EndMenu();

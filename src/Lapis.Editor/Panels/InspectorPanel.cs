@@ -1,11 +1,15 @@
 using System.Numerics;
 using Hexa.NET.ImGui;
+using Lapis.Editor.Commands;
 using Lapis.Editor.PropertyDrawers;
 using Lapis.Serialization;
 
 namespace Lapis.Editor.Panels;
 
-/// <summary>Shows and edits the selected entity: name, transform and components.</summary>
+/// <summary>
+/// Shows and edits the selected entity: name, transform and components.
+/// Every edit is recorded in the undo history; a drag or a text edit becomes one step.
+/// </summary>
 internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel("Inspector")
 {
     private const string AddComponentPopup = "##addComponent";
@@ -29,7 +33,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
 
         DrawHeader(entity);
         ImGui.Spacing();
-        DrawTransform(entity.Transform);
+        DrawTransform(entity);
 
         Component? toRemove = null;
         var index = 0;
@@ -51,8 +55,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
 
         if (toRemove is not null)
         {
-            entity.RemoveComponent(toRemove);
-            context.MarkDirty();
+            context.Execute(ComponentLifetimeCommand.Removing(toRemove));
         }
 
         ImGui.Spacing();
@@ -69,7 +72,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
         if (ImGui.Checkbox("##active", ref active))
         {
             entity.IsActive = active;
-            context.MarkDirty();
+            context.Record(new SetActiveCommand(entity, active));
         }
 
         if (ImGui.IsItemHovered())
@@ -79,26 +82,31 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
 
         ImGui.SameLine();
         ImGui.SetNextItemWidth(-1);
-        var name = entity.Name;
+        var before = entity.Name;
+        var name = before;
         if (ImGui.InputText("##name", ref name, 128))
         {
             entity.Name = name;
-            context.MarkDirty();
+            context.Record(new RenameEntityCommand(entity, before, name));
         }
     }
 
-    private void DrawTransform(Transform transform)
+    private void DrawTransform(Entity entity)
     {
         if (!ImGui.CollapsingHeader("Transform", ImGuiTreeNodeFlags.DefaultOpen))
         {
             return;
         }
 
+        var transform = entity.Transform;
+        var before = TransformState.Of(transform);
+        var changed = false;
+
         var position = transform.LocalPosition;
         if (PropertyGrid.Vector3("Position", ref position))
         {
             transform.LocalPosition = position;
-            context.MarkDirty();
+            changed = true;
         }
 
         if (_eulerOwner != transform || _eulerSource != transform.LocalRotation)
@@ -112,14 +120,19 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
         {
             transform.LocalEulerAngles = _euler;
             _eulerSource = transform.LocalRotation;
-            context.MarkDirty();
+            changed = true;
         }
 
         var scale = transform.LocalScale;
         if (PropertyGrid.Vector3("Scale", ref scale, 0.02f))
         {
             transform.LocalScale = scale;
-            context.MarkDirty();
+            changed = true;
+        }
+
+        if (changed)
+        {
+            context.Record(new SetTransformCommand(entity, before, TransformState.Of(transform)));
         }
 
         ImGui.Spacing();
@@ -154,9 +167,10 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
                 continue;
             }
 
+            var before = member.GetValue(component);
             if (PropertyGrid.Member(component, member, scene))
             {
-                context.MarkDirty();
+                context.Record(new SetMemberCommand(component, member, before, member.GetValue(component)));
             }
         }
 
@@ -196,8 +210,9 @@ internal sealed unsafe class InspectorPanel(EditorContext context) : EditorPanel
 
             if (ImGui.Selectable(PropertyGrid.Nicify(type.Name)))
             {
-                entity.AddComponent(type);
-                context.MarkDirty();
+                var component = entity.AddComponent(type);
+                context.History.BeginGesture();
+                context.Record(ComponentLifetimeCommand.Added(component));
                 ImGui.CloseCurrentPopup();
             }
 

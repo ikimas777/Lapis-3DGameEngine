@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
 
-> **Status:** early development (milestone M3 — editor shell). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M4 — editor tools). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ```csharp
 using Lapis;
@@ -62,6 +62,7 @@ dotnet run --project src/Lapis.Editor
 
 | Input | Action |
 |---|---|
+| Left click | Select the object under the cursor |
 | Right mouse + drag | Look around |
 | Right mouse + W A S D / Q E | Fly (hold Shift to go faster) |
 | Alt + left mouse + drag | Orbit around the focus point |
@@ -76,7 +77,11 @@ dotnet run --project src/Lapis.Editor
 | Ctrl+N | New scene |
 | Ctrl+O | Open scene |
 | Ctrl+S / Ctrl+Shift+S | Save / Save As |
-| Delete (in Hierarchy) | Delete the selected entity |
+| Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) | Undo / Redo |
+| Ctrl+D | Duplicate the selected entity |
+| Delete | Delete the selected entity |
+| W / E / R (Scene view) | Move / Rotate / Scale tool |
+| Ctrl while dragging the gizmo | Toggle snapping |
 
 Drag entities in the Hierarchy to re-parent them, or drop an entity onto an entity / component field in the Inspector to assign it.
 

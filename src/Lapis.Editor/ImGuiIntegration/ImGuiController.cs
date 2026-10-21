@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Hexa.NET.ImGui;
+using Hexa.NET.ImGuizmo;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -29,6 +30,7 @@ internal sealed unsafe class ImGuiController : IDisposable
         _input = input;
         _context = ImGui.CreateContext();
         ImGui.SetCurrentContext(_context);
+        ImGuizmo.SetImGuiContext(_context);
 
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard | ImGuiConfigFlags.DockingEnable;
@@ -72,6 +74,7 @@ internal sealed unsafe class ImGuiController : IDisposable
         io.DeltaTime = deltaTime > 0f ? deltaTime : 1f / 60f;
 
         ImGui.NewFrame();
+        ImGuizmo.BeginFrame();
     }
 
     /// <summary>Finishes the frame and draws it into the default framebuffer.</summary>

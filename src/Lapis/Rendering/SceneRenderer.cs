@@ -44,6 +44,9 @@ public sealed class SceneRenderer : IDisposable
     /// <summary>Number of meshes drawn by the last <see cref="Render"/> call.</summary>
     public int DrawCount { get; private set; }
 
+    /// <summary>GPU meshes used by this renderer; share it with other passes such as <see cref="EntityPicker"/>.</summary>
+    public MeshLibrary Meshes => _meshes;
+
     /// <summary>Clears the current framebuffer and draws the scene from <paramref name="view"/>.</summary>
     public void Render(Scene scene, in RenderView view)
     {

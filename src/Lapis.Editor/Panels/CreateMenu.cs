@@ -65,6 +65,6 @@ internal static class CreateMenu
         }
 
         context.Selection = created;
-        context.MarkDirty();
+        EditorActions.RecordCreated(context, created);
     }
 }

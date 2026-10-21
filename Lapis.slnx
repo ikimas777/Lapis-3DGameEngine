@@ -15,5 +15,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Lapis.Tests/Lapis.Tests.csproj" />
+    <Project Path="tests/Lapis.Editor.Tests/Lapis.Editor.Tests.csproj" />
   </Folder>
 </Solution>
