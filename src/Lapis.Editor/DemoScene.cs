@@ -21,7 +21,7 @@ internal static class DemoScene
 
         var ground = scene.CreateEntity("Ground");
         ground.Transform.LocalScale = new Vector3(20f, 1f, 20f);
-        ground.AddComponent<MeshRenderer>().Configure(BuiltInMeshes.Plane, Color.FromBytes(166, 112, 82), shininess: 8f);
+        ground.AddComponent<MeshRenderer>().Configure(BuiltInMeshes.Plane, Color.FromBytes(166, 112, 82), roughness: 0.9f);
 
         var box = scene.CreateEntity("Box");
         box.Transform.Position = new Vector3(0f, 0.5f, 0f);
@@ -36,7 +36,7 @@ internal static class DemoScene
 
         var ball = scene.CreateEntity("Ball");
         ball.Transform.Position = new Vector3(1.6f, 0.5f, -0.8f);
-        ball.AddComponent<MeshRenderer>().Configure(BuiltInMeshes.Sphere, Color.FromBytes(60, 110, 220), shininess: 64f);
+        ball.AddComponent<MeshRenderer>().Configure(BuiltInMeshes.Sphere, Color.FromBytes(60, 110, 220), roughness: 0.25f);
 
         var lamp = scene.CreateEntity("Lamp");
         lamp.Transform.Position = new Vector3(-1.5f, 1f, 1.2f);
@@ -49,10 +49,10 @@ internal static class DemoScene
         return scene;
     }
 
-    private static void Configure(this MeshRenderer renderer, string meshId, Color color, float shininess = 32f)
+    private static void Configure(this MeshRenderer renderer, string meshId, Color color, float roughness = 0.5f)
     {
         renderer.MeshId = meshId;
         renderer.Color = color;
-        renderer.Shininess = shininess;
+        renderer.Roughness = roughness;
     }
 }

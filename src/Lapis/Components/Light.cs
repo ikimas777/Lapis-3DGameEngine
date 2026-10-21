@@ -24,4 +24,7 @@ public sealed class Light : Component
 
     /// <summary>Distance at which a point light fades to zero.</summary>
     public float Range { get; set; } = 10f;
+
+    /// <summary>Whether a directional light casts shadows (point lights do not cast shadows yet).</summary>
+    public bool CastShadows { get; set; } = true;
 }

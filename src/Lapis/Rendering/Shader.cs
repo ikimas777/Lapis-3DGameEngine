@@ -66,6 +66,15 @@ public sealed unsafe class Shader : IDisposable
         return FromSource(gl, name, vertexSource, fragmentSource);
     }
 
+    /// <summary>Loads a built-in program whose vertex and fragment stages have different file names.</summary>
+    public static Shader LoadBuiltIn(GL gl, string vertexName, string fragmentName)
+    {
+        var directory = Path.Combine(AppContext.BaseDirectory, "Shaders");
+        var vertexSource = File.ReadAllText(Path.Combine(directory, vertexName + ".vert"));
+        var fragmentSource = File.ReadAllText(Path.Combine(directory, fragmentName + ".frag"));
+        return FromSource(gl, $"{vertexName}+{fragmentName}", vertexSource, fragmentSource);
+    }
+
     /// <summary>Loads one of the engine's built-in shaders shipped in the <c>Shaders</c> folder.</summary>
     public static Shader LoadBuiltIn(GL gl, string name) =>
         FromFiles(gl, Path.Combine(AppContext.BaseDirectory, "Shaders"), name);

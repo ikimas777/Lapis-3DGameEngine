@@ -3,5 +3,6 @@
   "version": 1,
   "color": [1, 1, 1, 1],
   "texture": "asset:b172068fa1584cd0b2b7ac6c726bfe61",
-  "shininess": 8
+  "metallic": 0,
+  "roughness": 0.9
 }

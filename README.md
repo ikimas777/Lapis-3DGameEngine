@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
 
-> **Status:** early development (milestone M8 — assets). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M9 — visual quality). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ```csharp
 using Lapis;

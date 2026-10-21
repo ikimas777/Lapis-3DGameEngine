@@ -33,7 +33,7 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
   "active": false,
   "transform": { "position": [0, 0.75, 0], "rotation": [0, 0, 0, 1], "scale": [0.3, 0.3, 0.3] },
   "components": [
-    { "type": "Lapis.MeshRenderer", "data": { "meshId": "builtin:sphere", "color": [0.94, 0.78, 0.24, 1], "shininess": 32 } }
+    { "type": "Lapis.MeshRenderer", "data": { "meshId": "builtin:sphere", "color": [0.94, 0.78, 0.24, 1], "metallic": 0, "roughness": 0.5 } }
   ]
 }
 ```
