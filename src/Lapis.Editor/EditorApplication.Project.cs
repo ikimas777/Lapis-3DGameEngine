@@ -60,6 +60,35 @@ internal sealed unsafe partial class EditorApplication
         return true;
     }
 
+    /// <summary>
+    /// Files dropped from Explorer are copied into the Assets panel's folder. Models dropped over the Scene
+    /// view are also placed in the scene where the cursor points at the ground.
+    /// </summary>
+    private void OnFilesDropped(string[] paths)
+    {
+        if (_assetsPanel is null)
+        {
+            return;
+        }
+
+        var imported = _assetsPanel.Import(paths);
+        var mouse = InputContext.Mice.Count > 0 ? InputContext.Mice[0].Position : new Vector2(-1);
+        if (_sceneView is null || !_sceneView.Contains(mouse) || _context.Assets is not { } assets)
+        {
+            return;
+        }
+
+        var position = _sceneView.GroundPointAt(mouse);
+        foreach (var path in imported)
+        {
+            if (assets.FindByPath(path) is { Type: Lapis.Assets.AssetType.Model } model)
+            {
+                EditorActions.InstantiateModel(_context, model, null, position);
+                position += new Vector3(1.5f, 0f, 0f); // several models side by side
+            }
+        }
+    }
+
     void IAssetsPanelHost.OpenScene(string path)
     {
         _play.Stop();

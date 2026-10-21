@@ -113,7 +113,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _panels.Add(new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory)));
         _assetsPanel = new AssetsPanel(_context, _renderer.Textures, this);
         _panels.Add(_assetsPanel);
-        Window.FileDrop += paths => _assetsPanel.Import(paths);
+        Window.FileDrop += OnFilesDropped;
 
         _context.SceneChanged += _ => _camera.Pivot = new Vector3(0f, 0.5f, 0f);
 

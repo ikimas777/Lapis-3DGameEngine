@@ -28,6 +28,9 @@ internal sealed unsafe class SceneViewPanel(
     private static readonly Color Background = new(0.20f, 0.22f, 0.25f);
 
     private NavigationMode _mode;
+    private Vector2 _viewMin;
+    private Vector2 _viewMax;
+    private RenderView _lastView;
     private TransformState? _gizmoStart;
     private Entity? _gizmoEntity;
 
@@ -88,10 +91,6 @@ internal sealed unsafe class SceneViewPanel(
         var origin = ImGui.GetCursorScreenPos();
         ImGui.Image(new ImTextureRef(null, new ImTextureID((ulong)framebuffer.ColorTexture)), size, new Vector2(0, 1), new Vector2(1, 0));
         var imageHovered = ImGui.IsItemHovered();
-        if (DragDrop.AcceptAsset(context.Assets) is { } droppedAsset)
-        {
-            DropAsset(droppedAsset, view, origin, size);
-        }
 
         DrawGizmo(view, origin, size);
 
@@ -108,6 +107,15 @@ internal sealed unsafe class SceneViewPanel(
         }
 
         DrawHint(origin, size);
+
+        // The whole view is a drop target, so the toolbar and gizmo drawn on top never block a drop.
+        _viewMin = origin;
+        _viewMax = origin + size;
+        _lastView = view;
+        if (DragDrop.AcceptAssetInRect(context.Assets, _viewMin, _viewMax, "##sceneDrop") is { } droppedAsset)
+        {
+            DropAsset(droppedAsset, view, origin, size);
+        }
     }
 
     /// <summary>
@@ -119,7 +127,7 @@ internal sealed unsafe class SceneViewPanel(
         switch (asset.Type)
         {
             case Lapis.Assets.AssetType.Model:
-                EditorActions.InstantiateModel(context, asset, null, camera.Pivot);
+                EditorActions.InstantiateModel(context, asset, null, GroundPointAt(ImGui.GetMousePos()));
                 break;
             case Lapis.Assets.AssetType.Material or Lapis.Assets.AssetType.Texture:
                 var mouse = ImGui.GetMousePos() - origin;
@@ -139,6 +147,40 @@ internal sealed unsafe class SceneViewPanel(
                 Log.Info("Double-click a scene in the Assets panel to open it.");
                 break;
         }
+    }
+
+    /// <summary>True when a point in window coordinates lies over the rendered scene.</summary>
+    public bool Contains(Vector2 screenPoint) =>
+        IsOpen && screenPoint.X >= _viewMin.X && screenPoint.Y >= _viewMin.Y && screenPoint.X < _viewMax.X && screenPoint.Y < _viewMax.Y;
+
+    /// <summary>
+    /// Where the ray under a screen point meets the ground plane (Y = 0); the camera's focus point when the
+    /// ray points away from the ground or hits it very far away.
+    /// </summary>
+    public Vector3 GroundPointAt(Vector2 screenPoint)
+    {
+        var size = _viewMax - _viewMin;
+        if (size.X <= 0 || size.Y <= 0 || !Matrix4x4.Invert(_lastView.View * _lastView.Projection, out var inverse))
+        {
+            return camera.Pivot;
+        }
+
+        var x = (screenPoint.X - _viewMin.X) / size.X * 2f - 1f;
+        var y = 1f - (screenPoint.Y - _viewMin.Y) / size.Y * 2f;
+        var near = Vector4.Transform(new Vector4(x, y, 0f, 1f), inverse);
+        var far = Vector4.Transform(new Vector4(x, y, 1f, 1f), inverse);
+        var start = new Vector3(near.X, near.Y, near.Z) / near.W;
+        var end = new Vector3(far.X, far.Y, far.Z) / far.W;
+        var direction = end - start;
+
+        if (MathF.Abs(direction.Y) < 1e-6f)
+        {
+            return camera.Pivot;
+        }
+
+        var t = -start.Y / direction.Y;
+        var point = start + direction * t;
+        return t > 0f && Vector3.Distance(point, camera.Position) < 500f ? point : camera.Pivot;
     }
 
     /// <summary>Centres the camera on the selected entity.</summary>
