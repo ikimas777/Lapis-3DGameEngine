@@ -22,6 +22,9 @@ internal static class Program
             return 0;
         }
 
+        // The published editor has no console window, so messages are also written to a file.
+        using var logFile = EditorLogFile.Open();
+
         try
         {
             using var app = new EditorApplication(options);

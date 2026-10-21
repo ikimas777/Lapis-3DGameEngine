@@ -38,6 +38,18 @@ dotnet build Lapis.slnx
 dotnet test --solution Lapis.slnx
 ```
 
+## Editor executable
+
+Build a standalone `Lapis.Editor.exe` (includes .NET, runs on any 64-bit Windows 10/11 PC):
+
+```powershell
+.\scripts\publish-editor.ps1
+```
+
+The file is written to `publish\Lapis.Editor\Lapis.Editor.exe`. Add `-Shortcut` to also put a
+"Lapis Editor" shortcut on the desktop. The executable has no console window; its messages are shown in the
+Console panel and written to `%LOCALAPPDATA%\Lapis\editor.log`.
+
 ## Running
 
 ```bash

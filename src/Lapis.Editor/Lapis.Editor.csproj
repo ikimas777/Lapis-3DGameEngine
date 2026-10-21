@@ -2,7 +2,10 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <!-- scripts/publish-editor.ps1 builds a windowed app without a console window. -->
+    <OutputType Condition="'$(LapisWindowedApp)' == 'true'">WinExe</OutputType>
     <RootNamespace>Lapis.Editor</RootNamespace>
+    <AssemblyTitle>Lapis Editor</AssemblyTitle>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
