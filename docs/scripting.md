@@ -87,6 +87,70 @@ so one broken script does not stop the rest of the game.
 > Scripts run in **Play mode**: press **Play** (Ctrl+P) in the menu bar. Keyboard and mouse input reach the game
 > while the Game view has focus. Everything changed while playing is discarded on **Stop**.
 
+## Physics
+
+Add a **collider** to give an entity a shape: `BoxCollider`, `SphereCollider`, `CapsuleCollider` or
+`MeshCollider` (static objects only). Cubes, spheres and planes from the Create menu already have one.
+
+| Setup | Behaves like |
+|---|---|
+| Collider only | A static obstacle: floors, walls. |
+| Collider + `RigidBody` (Dynamic) | Falls, bounces and is pushed: crates, balls. |
+| Collider + `RigidBody` (Kinematic) | Moved by your script through `transform`; pushes dynamic bodies but is never pushed back: moving platforms, a player you move directly. |
+| Collider with **Is Trigger** | Detects other colliders passing through it without blocking them: pickups, checkpoints. |
+
+Gravity and the physics rate are scene settings: click empty space in the Hierarchy to see them in the Inspector.
+The Scene view draws collider outlines in green (blue for triggers); Edit > Show Colliders toggles them.
+
+Moving a dynamic body:
+
+```csharp
+public class Jumper : Behaviour
+{
+    public float jumpSpeed = 6f;
+    private RigidBody? _body;
+
+    public override void Start() => _body = entity.GetComponent<RigidBody>();
+
+    public override void Update()
+    {
+        // Only jump when standing on something: cast a short ray down from the centre.
+        bool grounded = Physics.Raycast(transform.Position, -Vector3.UnitY, 0.6f);
+        if (grounded && Input.GetKeyDown(KeyCode.Space))
+        {
+            _body!.Velocity = new Vector3(_body.Velocity.X, jumpSpeed, _body.Velocity.Z);
+        }
+    }
+
+    public override void PhysicsUpdate()
+    {
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+        _body!.AddForce(new Vector3(x, 0, -z) * 20f);
+    }
+}
+```
+
+Collision events (on any behaviour of either entity):
+
+| Method | When |
+|---|---|
+| `OnCollisionBegin(Collision collision)` | Two solid colliders start touching. `collision.Other`, `.OtherEntity`, `.Point`, `.Normal`. |
+| `OnCollisionEnd(Collider other)` | They stop touching. |
+| `OnTriggerBegin(Collider other)` | A collider enters a trigger (called on both entities). |
+| `OnTriggerEnd(Collider other)` | It leaves the trigger. |
+
+`RigidBody` API: `Velocity`, `AngularVelocity`, `AddForce`, `AddImpulse`, `AddTorque`, plus Inspector settings
+for mass, damping, gravity, continuous collision and per-axis freezing.
+`Physics.Raycast(origin, direction, out RaycastHit hit, maxDistance)` returns the closest hit
+(`hit.Entity`, `hit.Point`, `hit.Normal`, `hit.Distance`); triggers are included.
+
+Notes and current limits:
+
+- Each entity uses one collider (extra ones are ignored with a warning). Build compound objects from child entities.
+- Physics runs at a fixed rate (50 steps per second by default); transforms of dynamic bodies are updated each step.
+- Changing a collider or rigid body in the Inspector while playing rebuilds that body.
+
 ## Fields in the Inspector
 
 | Field | Shown in the Inspector and saved? |

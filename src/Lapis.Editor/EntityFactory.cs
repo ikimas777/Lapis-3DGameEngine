@@ -19,11 +19,33 @@ internal static class EntityFactory
 
         var entity = scene.CreateEntity(name, parent);
         entity.AddComponent<MeshRenderer>().MeshId = meshId;
-        if (meshId == BuiltInMeshes.Plane)
+
+        // Shapes come with a matching collider, so they are solid as soon as physics runs.
+        switch (meshId)
         {
-            entity.Transform.LocalScale = new Vector3(10f, 1f, 10f);
+            case BuiltInMeshes.Cube:
+                entity.AddComponent<BoxCollider>();
+                break;
+            case BuiltInMeshes.Sphere:
+                entity.AddComponent<SphereCollider>();
+                break;
+            case BuiltInMeshes.Plane:
+                entity.Transform.LocalScale = new Vector3(10f, 1f, 10f);
+                var floor = entity.AddComponent<BoxCollider>();
+                floor.Size = new Vector3(1f, 0.1f, 1f);
+                floor.Center = new Vector3(0f, -0.05f, 0f);
+                break;
         }
 
+        return entity;
+    }
+
+    /// <summary>A shape with a dynamic rigid body: it falls and collides when the game runs.</summary>
+    public static Entity CreatePhysicsMesh(Scene scene, string meshId, Entity? parent = null)
+    {
+        var entity = CreateMesh(scene, meshId, parent);
+        entity.Name = $"Physics {entity.Name}";
+        entity.AddComponent<RigidBody>();
         return entity;
     }
 

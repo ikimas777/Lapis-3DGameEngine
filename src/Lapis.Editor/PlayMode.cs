@@ -1,4 +1,4 @@
-using Lapis.Scripting;
+using Lapis.Simulation;
 using Lapis.Serialization;
 
 namespace Lapis.Editor;
@@ -15,12 +15,12 @@ internal enum PlayState
 /// Runs the game inside the editor. Play starts the scripts on a copy of the scene; Stop throws the
 /// copy away, so the edited scene is exactly as it was before.
 /// </summary>
-internal sealed class PlayMode(EditorContext context)
+internal sealed class PlayMode(EditorContext context) : IDisposable
 {
     /// <summary>Time advanced by one <see cref="Step"/>.</summary>
     public const float StepDeltaTime = 1f / 60f;
 
-    private ScriptRunner? _runner;
+    private GameSimulation? _game;
 
     public PlayState State { get; private set; } = PlayState.Stopped;
 
@@ -49,7 +49,7 @@ internal sealed class PlayMode(EditorContext context)
         // A deep copy through the scene format, so the game cannot change the edited scene.
         var playScene = SceneSerializer.FromJson(SceneSerializer.ToJson(context.Scene));
         context.EnterPlay(playScene);
-        _runner = new ScriptRunner(playScene);
+        _game = new GameSimulation(playScene);
         Input.Reset();
         State = PlayState.Playing;
         Log.Info("Play mode started.");
@@ -64,8 +64,8 @@ internal sealed class PlayMode(EditorContext context)
             return;
         }
 
-        _runner?.Shutdown();
-        _runner = null;
+        _game?.Dispose();
+        _game = null;
         context.ExitPlay();
         Input.Reset();
         State = PlayState.Stopped;
@@ -106,15 +106,18 @@ internal sealed class PlayMode(EditorContext context)
         }
 
         State = PlayState.Paused;
-        _runner?.Tick(StepDeltaTime);
+        _game?.Tick(StepDeltaTime);
     }
+
+    /// <summary>Stops the game if it is running.</summary>
+    public void Dispose() => Stop();
 
     /// <summary>Advances the game by one frame when it is playing. Call once per editor frame.</summary>
     public void Update(float deltaTime)
     {
         if (State == PlayState.Playing)
         {
-            _runner?.Tick(deltaTime);
+            _game?.Tick(deltaTime);
         }
     }
 }

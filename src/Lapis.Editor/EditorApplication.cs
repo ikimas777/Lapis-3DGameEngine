@@ -33,6 +33,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     private ImGuiController? _imgui;
     private SceneRenderer? _renderer;
     private EntityPicker? _picker;
+    private LineRenderer? _lines;
     private uint _lastActiveWidget;
     private Framebuffer? _sceneFramebuffer;
     private Framebuffer? _gameFramebuffer;
@@ -87,10 +88,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         _renderer = new SceneRenderer(GL);
         _picker = new EntityPicker(GL, _renderer.Meshes);
+        _lines = new LineRenderer(GL);
         _sceneFramebuffer = new Framebuffer(GL);
         _gameFramebuffer = new Framebuffer(GL);
 
-        _sceneView = new SceneViewPanel(_context, _renderer, _picker, _sceneFramebuffer, _camera);
+        _sceneView = new SceneViewPanel(_context, _renderer, _picker, _lines, _sceneFramebuffer, _camera);
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
         _gameInput = new GameInput(InputContext);
@@ -196,6 +198,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _gameFramebuffer?.Dispose();
         _sceneFramebuffer?.Dispose();
         _picker?.Dispose();
+        _lines?.Dispose();
         _renderer?.Dispose();
         _play.Stop();
         _gameInput?.Dispose();
@@ -393,6 +396,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
                 if (ImGui.MenuItem("Snap", string.Empty, sceneView.Snap))
                 {
                     sceneView.Snap = !sceneView.Snap;
+                }
+
+                if (ImGui.MenuItem("Show Colliders", string.Empty, sceneView.ShowColliders))
+                {
+                    sceneView.ShowColliders = !sceneView.ShowColliders;
                 }
             }
 

@@ -3,7 +3,7 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone Windows app.
 
-> **Status:** early development (milestone M6 — Play mode). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M7 — physics). See [PLAN.md](PLAN.md) for the roadmap and architecture.
 
 ```csharp
 using Lapis;
@@ -77,6 +77,14 @@ game and **Step** (Ctrl+Alt+P) advances it by one frame. The menu bar turns blue
 made during play are thrown away on **Stop**, and the scene returns to exactly how it was.
 
 ![Play mode](docs/images/play-mode.png)
+
+### Physics
+
+Colliders and rigid bodies are simulated with [Jolt](https://github.com/jrouwe/JoltPhysics) while the game
+runs. In the sample, the blue ball (a kinematic body you steer) pushes the crates, and the red ball bounces.
+See the [physics section of the scripting guide](docs/scripting.md#physics).
+
+![Physics](docs/images/physics.png)
 
 ### Scene view controls
 

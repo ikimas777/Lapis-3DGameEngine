@@ -19,7 +19,8 @@ internal static class GLDebug
 
     private static void OnDebugMessage(GLEnum source, GLEnum type, int id, GLEnum severity, int length, nint message, nint userParam)
     {
-        if (severity == GLEnum.DebugSeverityNotification)
+        // Notifications and driver performance hints (e.g. "shader recompiled due to state change") are not actionable.
+        if (severity == GLEnum.DebugSeverityNotification || type == GLEnum.DebugTypePerformance)
         {
             return;
         }

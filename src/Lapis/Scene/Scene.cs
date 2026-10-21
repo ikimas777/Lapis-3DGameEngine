@@ -13,6 +13,9 @@ public sealed class Scene
     /// <summary>Ambient lighting and other scene-wide settings.</summary>
     public SceneEnvironment Environment { get; } = new();
 
+    /// <summary>Physics settings for this scene.</summary>
+    public ScenePhysics Physics { get; } = new();
+
     /// <summary>Number of entities in the scene, including children.</summary>
     public int EntityCount => _entitiesById.Count;
 
@@ -151,6 +154,17 @@ public sealed class Scene
 
         return entity;
     }
+}
+
+/// <summary>Scene-wide physics settings.</summary>
+public sealed class ScenePhysics
+{
+    /// <summary>Acceleration applied to dynamic bodies, in units per second squared.</summary>
+    public System.Numerics.Vector3 Gravity { get; set; } = new(0f, -9.81f, 0f);
+
+    /// <summary>Physics steps per second while the game runs.</summary>
+    [Range(10, 240)]
+    public int StepsPerSecond { get; set; } = 50;
 }
 
 /// <summary>Scene-wide lighting settings.</summary>
