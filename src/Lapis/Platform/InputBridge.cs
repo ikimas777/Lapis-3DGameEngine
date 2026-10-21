@@ -4,18 +4,19 @@ using LapisKey = Lapis.KeyCode;
 using LapisMouseButton = Lapis.MouseButton;
 using SilkMouseButton = Silk.NET.Input.MouseButton;
 
-namespace Lapis.Editor;
+namespace Lapis.Platform;
 
 /// <summary>
-/// Forwards keyboard and mouse events to the game's <see cref="Input"/> while the Game view has focus,
-/// so typing in other panels never moves the player.
+/// Forwards window keyboard and mouse events to the game's <see cref="Input"/> while <see cref="Enabled"/> is true.
+/// The editor enables it only while the Game view has focus; the player keeps it enabled.
 /// </summary>
-internal sealed class GameInput : IDisposable
+public sealed class InputBridge : IDisposable
 {
     private readonly IInputContext _input;
     private bool _enabled;
 
-    public GameInput(IInputContext input)
+    /// <summary>Starts listening to the window's keyboards and mice.</summary>
+    public InputBridge(IInputContext input)
     {
         _input = input;
         foreach (var keyboard in input.Keyboards)
@@ -53,6 +54,7 @@ internal sealed class GameInput : IDisposable
     /// <summary>Top-left corner of the Game view in window coordinates; mouse positions are relative to it.</summary>
     public Vector2 ViewOrigin { get; set; }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         foreach (var keyboard in _input.Keyboards)

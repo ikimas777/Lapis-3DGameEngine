@@ -21,6 +21,12 @@ public sealed record ApplicationOptions
     /// <summary>Synchronise presentation with the monitor refresh rate.</summary>
     public bool VSync { get; init; } = true;
 
+    /// <summary>Samples per pixel for anti-aliasing of the window itself (0 = off).</summary>
+    public int Samples { get; init; }
+
+    /// <summary>Start in fullscreen mode.</summary>
+    public bool Fullscreen { get; init; }
+
     /// <summary>Create an OpenGL debug context and route driver messages to the <see cref="Log"/>.</summary>
     public bool DebugContext { get; init; }
 #if DEBUG
@@ -61,6 +67,8 @@ public abstract class Application : IDisposable
             API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, flags, new APIVersion(4, 5)),
             PreferredDepthBufferBits = 24,
             PreferredStencilBufferBits = 8,
+            Samples = options.Samples,
+            WindowState = options.Fullscreen ? WindowState.Fullscreen : WindowState.Normal,
         };
 
         _window = Silk.NET.Windowing.Window.Create(windowOptions);

@@ -41,7 +41,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     private SceneViewPanel? _sceneView;
     private GameViewPanel? _gameView;
     private PlayMode _play = null!;
-    private GameInput? _gameInput;
+    private Lapis.Platform.InputBridge? _gameInput;
     private AssetsPanel? _assetsPanel;
     private AssetWatcher? _assetWatcher;
     private bool _resetLayout;
@@ -99,7 +99,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _sceneView = new SceneViewPanel(_context, _renderer, _picker, _lines, _grid, _sceneFramebuffer, _camera);
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
-        _gameInput = new GameInput(InputContext);
+        _gameInput = new Lapis.Platform.InputBridge(InputContext);
         _gameView = new GameViewPanel(_context, _renderer, _gameFramebuffer, _play, _gameInput);
         _panels.Add(_gameView);
         _play.Started += _gameView.RequestFocus;
@@ -124,6 +124,12 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             _context.Selection = _context.Scene.FindByName(selectName);
         }
 
+        if (launchOptions.ExportPath is { } exportPath)
+        {
+            ExportFromCommandLine(exportPath);
+            return;
+        }
+
         if (launchOptions.Play)
         {
             _play.Play();
@@ -134,6 +140,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     {
         _scripts.Update(Time.TimeSinceStart);
         _assetWatcher?.Update(Time.TimeSinceStart);
+        UpdateExport();
 
         // Scripts see the input gathered since the previous frame, then the per-frame flags are cleared.
         _play.Update(Time.DeltaTime);
@@ -344,6 +351,17 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             }
 
             ImGui.Separator();
+            if (ImGui.MenuItem("Export Game...", string.Empty, false, _scripts.Project is not null))
+            {
+                ShowExport();
+            }
+
+            if (_scripts.Project is null && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip("Exporting needs an open project.");
+            }
+
+            ImGui.Separator();
 
             if (ImGui.MenuItem("Exit"))
             {
@@ -526,6 +544,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         }
 
         DrawProjectPopups(center);
+        DrawExportPopup(center);
 
         if (_showAbout)
         {
