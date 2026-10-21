@@ -101,6 +101,21 @@ public sealed class ScriptCompilerTests : IDisposable
         Assert.True(ScriptCompiler.Compile([file]).Success);
     }
 
+    [Fact]
+    public void NewScript_ListsTheEngineAndDotNetNamespaces_AndCompilesWithoutWarnings()
+    {
+        var source = ScriptProjectFiles.NewScript("Enemy");
+
+        Assert.StartsWith(
+            "using System;\nusing System.Collections.Generic;\nusing System.Linq;\nusing System.Numerics;\nusing Lapis;\n\n",
+            source,
+            StringComparison.Ordinal);
+
+        var result = ScriptCompiler.Compile([Write("Enemy.cs", source)]);
+        Assert.True(result.Success);
+        Assert.DoesNotContain(result.Diagnostics, d => !d.IsError);
+    }
+
     [Theory]
     [InlineData("Player", true)]
     [InlineData("_hidden", true)]

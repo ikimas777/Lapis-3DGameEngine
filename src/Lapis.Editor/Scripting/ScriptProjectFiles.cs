@@ -37,8 +37,19 @@ internal static class ScriptProjectFiles
         WriteIfChanged(Path.Combine(project.Directory, project.Name + ".csproj"), CreateProjectFile());
     }
 
+    /// <summary>
+    /// The <c>using</c> lines written at the top of every script the editor creates: the engine (<c>Lapis</c>)
+    /// and the parts of .NET scripts use most. The compiler also adds them to every script
+    /// (<see cref="ScriptCompiler.GlobalUsings"/>), so scripts without them still compile.
+    /// </summary>
+    public static string UsingDirectives { get; } =
+        string.Concat(ScriptCompiler.GlobalUsings
+            .OrderBy(ns => ns.StartsWith("System", StringComparison.Ordinal) ? 0 : 1)
+            .ThenBy(ns => ns, StringComparer.Ordinal)
+            .Select(ns => $"using {ns};\n"));
+
     /// <summary>Source code of a new, empty script.</summary>
-    public static string NewScript(string className) => $$"""
+    public static string NewScript(string className) => UsingDirectives + "\n" + $$"""
         /// <summary>Describe what this script does.</summary>
         public class {{className}} : Behaviour
         {

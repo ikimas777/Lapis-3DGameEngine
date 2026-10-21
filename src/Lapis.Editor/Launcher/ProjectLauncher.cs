@@ -25,7 +25,7 @@ internal interface ILauncherHost
 /// The start screen: recent projects, opening an existing project and creating a new one. The editor
 /// shows it before a project is open.
 /// </summary>
-internal sealed unsafe class ProjectLauncher(EditorSettings settings, ILauncherHost host)
+internal sealed unsafe partial class ProjectLauncher(EditorSettings settings, ILauncherHost host)
 {
     private const float SidebarWidth = 260f;
 
@@ -47,9 +47,11 @@ internal sealed unsafe class ProjectLauncher(EditorSettings settings, ILauncherH
         ImGui.Begin("##launcher", ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus);
         ImGui.PopStyleVar();
 
+        UpdateBackgroundWork();
         DrawSidebar();
         ImGui.SameLine(0, 0);
         DrawMain();
+        DrawUpdatePopup();
 
         ImGui.End();
     }
@@ -63,7 +65,8 @@ internal sealed unsafe class ProjectLauncher(EditorSettings settings, ILauncherH
         BigText("Lapis", 40f, EditorTheme.Accent);
         ImGui.Dummy(new Vector2(0, 44));
         ImGui.TextDisabled($"Version {EngineInfo.Version.ToString(3)}");
-        ImGui.Dummy(new Vector2(0, 24));
+        DrawUpdateStatus();
+        ImGui.Dummy(new Vector2(0, 16));
 
         var width = SidebarWidth - 40;
         if (SidebarButton("New Project", width, _creating))

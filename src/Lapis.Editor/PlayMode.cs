@@ -26,6 +26,9 @@ internal sealed class PlayMode(EditorContext context) : IDisposable
 
     public bool IsActive => State != PlayState.Stopped;
 
+    /// <summary>Raised when Play is pressed, before the game is set up (not when resuming from pause).</summary>
+    public event Action? Starting;
+
     /// <summary>Raised after play mode starts.</summary>
     public event Action? Started;
 
@@ -45,6 +48,8 @@ internal sealed class PlayMode(EditorContext context) : IDisposable
         {
             return;
         }
+
+        Starting?.Invoke();
 
         // A deep copy through the scene format, so the game cannot change the edited scene.
         var playScene = SceneSerializer.FromJson(SceneSerializer.ToJson(context.Scene));

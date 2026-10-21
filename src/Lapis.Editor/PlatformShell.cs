@@ -8,6 +8,19 @@ internal static class PlatformShell
     /// <summary>Name of the file manager, for menu items such as "Show in Explorer".</summary>
     public static string FileManagerName => OperatingSystem.IsWindows() ? "Explorer" : "File Manager";
 
+    /// <summary>Opens a web page in the default browser.</summary>
+    public static void OpenUrl(string url)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Error($"Could not open {url}: {exception.Message}");
+        }
+    }
+
     /// <summary>Name of the place deleted files go to.</summary>
     public static string TrashName => OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash";
 

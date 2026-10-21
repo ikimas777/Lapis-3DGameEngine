@@ -116,7 +116,23 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             }
         };
         _panels.Add(new InspectorPanel(_context, _scripts, new AssetInspector(_context, _renderer.Textures, this, () => _camera.Pivot)));
-        _panels.Add(new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory)));
+        var console = new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory))
+        {
+            ClearOnPlay = _settings.ClearConsoleOnPlay,
+        };
+        console.ClearOnPlayChanged += value =>
+        {
+            _settings.ClearConsoleOnPlay = value;
+            _settings.Save();
+        };
+        _play.Starting += () =>
+        {
+            if (console.ClearOnPlay)
+            {
+                _logBuffer.Clear();
+            }
+        };
+        _panels.Add(console);
         _assetsPanel = new AssetsPanel(_context, _renderer.Textures, this);
         _panels.Add(_assetsPanel);
         Window.FileDrop += OnFilesDropped;

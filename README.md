@@ -31,6 +31,10 @@ gh release download --repo ikimas777/Lapis-3DGameEngine --pattern Lapis-Linux-x6
 More options are under [Download](#download).
 
 ```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using Lapis;
 
 public class PlayerController : Behaviour
@@ -73,6 +77,15 @@ nothing else needs to be installed:
   Optional: install `zenity` (or `kdialog`) for the folder chooser and `code` (VS Code) for editing scripts.
 
 Keep the `Player` folder next to the editor: exported games are built from it.
+
+### Updates
+
+The project launcher checks GitHub for a newer release when it opens (this can be turned off in the update
+window). When one is found, the **Lapis Update** window shows what is new and downloads the package for your
+system — `Lapis-Windows-x64.zip` on Windows, `Lapis-Linux-x64.tar.gz` on Linux — into your Downloads folder.
+Close Lapis and unpack it to update; projects are not affected. The **Check for updates** link under the version
+number opens the window at any time. While the repository is private, the check reports that no release can be
+found.
 
 ## Editor executable (Windows)
 
@@ -142,6 +155,16 @@ game and **Step** (Ctrl+Alt+P) advances it by one frame. The menu bar turns blue
 made during play are thrown away on **Stop**, and the scene returns to exactly how it was.
 
 ![Play mode](docs/images/play-mode.png)
+
+### Console
+
+The **Console** panel shows messages from the editor and from `Log.Info` / `Log.Warning` / `Log.Error` in scripts.
+
+- Click a message to select it (Ctrl+click adds one, Shift+click selects a range, Ctrl+A selects all) and press
+  **Ctrl+C** to copy, or right-click for **Copy**, **Copy Message Text Only** and **Copy All**. The box under the
+  list shows the whole selected message; any part of it can be selected with the mouse and copied.
+- **Clear on Play** (next to **Clear**) empties the Console every time Play starts; the choice is remembered.
+- Double-click a script error to open the file at that line.
 
 ### Assets
 
