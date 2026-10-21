@@ -1,24 +1,23 @@
 using System.Numerics;
 using Lapis.Editor.SceneView;
 using Lapis.Rendering;
+using Lapis.Serialization;
 using Silk.NET.Input;
-using Silk.NET.OpenGL;
-using Shader = Lapis.Rendering.Shader;
 
 namespace Lapis.Editor;
 
 /// <summary>
-/// The editor application. Until the editor shell exists (milestone M3) it renders a fixed
-/// preview scene that can be orbited with the mouse.
+/// The editor application. Until the editor panels exist (milestone M3) it shows the open scene
+/// in the whole window, seen through an orbit camera or the scene's main camera.
 /// </summary>
 internal sealed class EditorApplication(EditorLaunchOptions launchOptions)
     : Application(new ApplicationOptions { Title = $"{EngineInfo.Name} Editor" })
 {
-    private static readonly Vector3 SkyColor = new(0.53f, 0.70f, 0.88f);
+    private static readonly Color EditorBackground = new(0.53f, 0.70f, 0.88f);
 
     private readonly OrbitCamera _camera = new() { Target = new Vector3(0, 0.5f, 0) };
-    private readonly List<PreviewObject> _objects = [];
-    private Shader? _litShader;
+    private Scene _scene = new();
+    private SceneRenderer? _renderer;
     private Vector2 _lastMousePosition;
     private float _aspectRatio = 16f / 9f;
     private double _titleTimer;
@@ -26,20 +25,14 @@ internal sealed class EditorApplication(EditorLaunchOptions launchOptions)
 
     protected override void OnLoad()
     {
-        _litShader = Shader.LoadBuiltIn(GL, "lit");
+        _scene = OpenScene();
+        if (launchOptions.SaveScenePath is { } savePath)
+        {
+            SceneSerializer.Save(_scene, savePath);
+            Log.Info($"Saved scene '{_scene.Name}' to {Path.GetFullPath(savePath)}");
+        }
 
-        var cube = new Mesh(GL, Primitives.CreateCube());
-        var sphere = new Mesh(GL, Primitives.CreateSphere());
-        var plane = new Mesh(GL, Primitives.CreatePlane(20f));
-
-        _objects.Add(new PreviewObject(plane, Vector3.Zero, new Vector3(0.36f, 0.20f, 0.12f)));
-        _objects.Add(new PreviewObject(cube, new Vector3(0, 0.5f, 0), new Vector3(0.9f, 0.9f, 0.9f), RotationSpeed: 0.5f));
-        _objects.Add(new PreviewObject(sphere, new Vector3(1.6f, 0.5f, -0.8f), new Vector3(0.15f, 0.35f, 0.8f)));
-
-        GL.Enable(EnableCap.DepthTest);
-        GL.Enable(EnableCap.CullFace);
-        GL.CullFace(TriangleFace.Back);
-        GL.FrontFace(FrontFaceDirection.Ccw);
+        _renderer = new SceneRenderer(GL);
 
         foreach (var mouse in InputContext.Mice)
         {
@@ -66,7 +59,8 @@ internal sealed class EditorApplication(EditorLaunchOptions launchOptions)
         _framesSinceTitleUpdate++;
         if (_titleTimer >= 0.5)
         {
-            Window.Title = $"{EngineInfo.Name} Editor — {_framesSinceTitleUpdate / _titleTimer:0} FPS";
+            var fps = _framesSinceTitleUpdate / _titleTimer;
+            Window.Title = $"{EngineInfo.Name} Editor — {_scene.Name} — {fps:0} FPS, {_renderer?.DrawCount} draws";
             _titleTimer = 0;
             _framesSinceTitleUpdate = 0;
         }
@@ -74,29 +68,7 @@ internal sealed class EditorApplication(EditorLaunchOptions launchOptions)
 
     protected override void OnRender()
     {
-        var shader = _litShader!;
-
-        GL.ClearColor(SkyColor.X, SkyColor.Y, SkyColor.Z, 1f);
-        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-        shader.Use();
-        shader.Set("u_View", _camera.ViewMatrix);
-        shader.Set("u_Projection", _camera.GetProjectionMatrix(_aspectRatio));
-        shader.Set("u_CameraPosition", _camera.Position);
-        shader.Set("u_LightDirection", Vector3.Normalize(new Vector3(-0.4f, -1f, -0.3f)));
-        shader.Set("u_LightColor", new Vector3(1f, 0.96f, 0.9f));
-        shader.Set("u_SkyColor", new Vector3(0.25f, 0.32f, 0.42f));
-        shader.Set("u_GroundColor", new Vector3(0.12f, 0.09f, 0.07f));
-        shader.Set("u_Shininess", 32f);
-
-        var angle = (float)Time.TimeSinceStart;
-        foreach (var item in _objects)
-        {
-            var model = Matrix4x4.CreateRotationY(angle * item.RotationSpeed) * Matrix4x4.CreateTranslation(item.Position);
-            shader.Set("u_Model", model);
-            shader.Set("u_Albedo", item.Albedo);
-            item.Mesh.Draw();
-        }
+        _renderer!.Render(_scene, GetView());
 
         if (launchOptions.CapturePath is { } capturePath && Time.FrameCount >= launchOptions.CaptureAfterFrames)
         {
@@ -109,14 +81,31 @@ internal sealed class EditorApplication(EditorLaunchOptions launchOptions)
 
     protected override void OnFramebufferResize(int width, int height) => _aspectRatio = (float)width / height;
 
-    protected override void OnUnload()
+    protected override void OnUnload() => _renderer?.Dispose();
+
+    private Scene OpenScene()
     {
-        foreach (var mesh in _objects.Select(item => item.Mesh).Distinct())
+        if (launchOptions.ScenePath is not { } path)
         {
-            mesh.Dispose();
+            return DemoScene.Create();
         }
 
-        _litShader?.Dispose();
+        var scene = SceneSerializer.Load(path);
+        Log.Info($"Opened scene '{scene.Name}' ({scene.EntityCount} entities) from {Path.GetFullPath(path)}");
+        return scene;
+    }
+
+    private RenderView GetView()
+    {
+        if (launchOptions.GameView)
+        {
+            if (_scene.FindMainCamera() is { } camera)
+            {
+                return RenderView.FromCamera(camera, _aspectRatio);
+            }
+        }
+
+        return new RenderView(_camera.ViewMatrix, _camera.GetProjectionMatrix(_aspectRatio), _camera.Position, EditorBackground);
     }
 
     private void OnMouseMove(IMouse mouse, Vector2 position)
@@ -129,6 +118,4 @@ internal sealed class EditorApplication(EditorLaunchOptions launchOptions)
             _camera.Orbit(delta);
         }
     }
-
-    private sealed record PreviewObject(Mesh Mesh, Vector3 Position, Vector3 Albedo, float RotationSpeed = 0f);
 }

@@ -73,6 +73,15 @@ public sealed unsafe class Shader : IDisposable
     /// <summary>Makes this program current for subsequent draw calls.</summary>
     public void Use() => _gl.UseProgram(_program);
 
+    /// <summary>Sets an <c>int</c> uniform.</summary>
+    public void Set(string name, int value)
+    {
+        if (TryGetLocation(name, out var location))
+        {
+            _gl.ProgramUniform1(_program, location, value);
+        }
+    }
+
     /// <summary>Sets a <c>float</c> uniform.</summary>
     public void Set(string name, float value)
     {
