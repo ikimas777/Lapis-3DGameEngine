@@ -51,6 +51,28 @@ internal static unsafe class DragDrop
         return dropped;
     }
 
+    /// <summary>
+    /// Returns the asset dropped anywhere inside a screen rectangle this frame, or null. Unlike
+    /// <see cref="AcceptAsset"/> this does not depend on the last item, so overlays drawn on top
+    /// (toolbars, gizmos) do not block the drop.
+    /// </summary>
+    public static Lapis.Assets.AssetInfo? AcceptAssetInRect(Lapis.Assets.AssetDatabase? assets, System.Numerics.Vector2 min, System.Numerics.Vector2 max, string id)
+    {
+        Lapis.Assets.AssetInfo? dropped = null;
+        if (assets is not null && ImGuiP.BeginDragDropTargetCustom(new ImRect(min, max), ImGui.GetID(id)))
+        {
+            var payload = ImGui.AcceptDragDropPayload(AssetPayload);
+            if (!payload.IsNull && payload.Data != null)
+            {
+                dropped = assets.Find(*(Guid*)payload.Data);
+            }
+
+            ImGui.EndDragDropTarget();
+        }
+
+        return dropped;
+    }
+
     /// <summary>Returns the entity dropped on the last item this frame, or null.</summary>
     public static Entity? AcceptEntity(Scene scene)
     {

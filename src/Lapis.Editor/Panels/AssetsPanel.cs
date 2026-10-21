@@ -58,17 +58,18 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         }
     }
 
-    /// <summary>Copies files or folders from elsewhere on disk into the current folder.</summary>
-    public void Import(IEnumerable<string> paths)
+    /// <summary>Copies files or folders from elsewhere on disk into the current folder; returns the copied files.</summary>
+    public List<string> Import(IEnumerable<string> paths)
     {
         if (context.Assets is not { } assets)
         {
             Log.Warning("Open a project before importing files.");
-            return;
+            return [];
         }
 
         var target = CurrentFolder;
         var count = 0;
+        var imported = new List<string>();
         foreach (var source in paths)
         {
             try
@@ -77,10 +78,12 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
                 if (Directory.Exists(source))
                 {
                     CopyDirectory(source, destination);
+                    imported.AddRange(Directory.GetFiles(destination, "*", SearchOption.AllDirectories));
                 }
                 else if (File.Exists(source))
                 {
                     File.Copy(source, destination);
+                    imported.Add(destination);
                 }
                 else
                 {
@@ -101,6 +104,8 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         {
             Log.Info($"Imported {count} item(s) into {Path.GetRelativePath(assets.RootDirectory, target)}.");
         }
+
+        return imported;
     }
 
     protected override void DrawContent()
