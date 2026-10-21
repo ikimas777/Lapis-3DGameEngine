@@ -50,13 +50,7 @@ To rebuild it after changing the code:
 .\scripts\publish-editor.ps1 -RepoRoot
 ```
 
-Without `-RepoRoot` the build only goes to `publish\Lapis.Editor`.
-
-```powershell
-.\scripts\publish-editor.ps1
-```
-
-The file is written to `publish\Lapis.Editor\Lapis.Editor.exe`. Add `-Shortcut` to also put a
+Without `-RepoRoot` the build only goes to `publish\Lapis.Editor`. Add `-Shortcut` to also put a
 "Lapis Editor" shortcut on the desktop. The executable has no console window; its messages are shown in the
 Console panel and written to `%LOCALAPPDATA%\Lapis\editor.log`.
 
