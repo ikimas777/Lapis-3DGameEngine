@@ -28,6 +28,21 @@ public class SceneFolderSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_KeepsFolderColors()
+    {
+        var scene = new Lapis.Scene();
+        scene.Folders.Add(new SceneFolder(Guid.NewGuid(), "Red") { Color = new Color(0.9f, 0.3f, 0.3f) });
+        scene.Folders.Add(new SceneFolder(Guid.NewGuid(), "Plain"));
+
+        var json = SceneSerializer.ToJson(scene);
+        var loaded = SceneSerializer.FromJson(json);
+
+        Assert.Equal(new Color(0.9f, 0.3f, 0.3f), loaded.Folders[0].Color);
+        Assert.Null(loaded.Folders[1].Color);
+        Assert.Equal(1, json.Split("\"color\"").Length - 1); // only the coloured folder writes one
+    }
+
+    [Fact]
     public void ScenesWithoutFolders_HaveNoFoldersField()
     {
         var scene = new Lapis.Scene();

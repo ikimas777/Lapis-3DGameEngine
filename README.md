@@ -81,11 +81,15 @@ Keep the `Player` folder next to the editor: exported games are built from it.
 ### Updates
 
 The project launcher checks GitHub for a newer release when it opens (this can be turned off in the update
-window). When one is found, the **Lapis Update** window shows what is new and downloads the package for your
-system — `Lapis-Windows-x64.zip` on Windows, `Lapis-Linux-x64.tar.gz` on Linux — into your Downloads folder.
-Close Lapis and unpack it to update; projects are not affected. The **Check for updates** link under the version
-number opens the window at any time. While the repository is private, the check reports that no release can be
-found.
+window). When one is found, the **Lapis Update** window shows what is new, and **Update to x.y.z** downloads the
+package for your system (`Lapis-Windows-x64.zip` on Windows, `Lapis-Linux-x64.tar.gz` on Linux) and replaces the
+editor's files in the folder it runs from — `Lapis.Editor` and `Player/Lapis.Player`, like pulling a new
+version. Other files there, settings and projects are not touched. **Restart Now** starts the new version; the
+replaced files are kept as `.old` until the next start and then deleted. The **Check for updates** link under the
+version number opens the window at any time.
+
+An editor started from source code (`dotnet run`) is updated with `git pull` instead; its update window only
+offers to download the package.
 
 ## Editor executable (Windows)
 
@@ -229,6 +233,8 @@ for organising the scene. Folders only exist in the editor: they have no positio
   take them out. An entity with a parent moves to the top level (keeping its place in the world) when it is
   put in a folder. Right-click an entity > **Move to Folder** does the same from a menu.
 - Double-click a folder (or select it and press F2) to rename it.
+- Click a folder's icon (or right-click > **Colour**) to give it a colour: pick one of the swatches or a custom
+  colour. The icon, the folder's row and a line along its contents take that colour.
 - **Delete** (or Del) removes only the folder: what was inside moves up one level. **Delete Folder and
   Contents** also deletes everything inside. Both can be undone.
 

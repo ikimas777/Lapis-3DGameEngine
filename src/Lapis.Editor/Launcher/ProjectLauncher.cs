@@ -19,6 +19,9 @@ internal interface ILauncherHost
 
     /// <summary>Creates a project in <paramref name="folder"/> and opens it.</summary>
     bool CreateProject(string folder, string name);
+
+    /// <summary>Starts <paramref name="executable"/> (a freshly installed editor) and closes this one.</summary>
+    void Restart(string executable);
 }
 
 /// <summary>

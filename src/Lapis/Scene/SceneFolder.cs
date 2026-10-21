@@ -14,4 +14,10 @@ public sealed class SceneFolder(Guid id, string name, Guid? parentId = null)
 
     /// <summary>The folder this one is inside, or null for the top level.</summary>
     public Guid? ParentId { get; set; } = parentId;
+
+    /// <summary>Colour of the folder in the Hierarchy (sRGB), or null for the default colour.</summary>
+    public Color? Color { get; set; }
+
+    /// <summary>A separate copy with the same id, name, parent and colour.</summary>
+    public SceneFolder Clone() => new(Id, Name, ParentId) { Color = Color };
 }

@@ -27,6 +27,9 @@ internal static class Program
         // The published editor has no console window, so messages are also written to a file.
         using var logFile = EditorLogFile.Open();
 
+        // Files replaced by an update (renamed to .old while they were running) can be removed now.
+        Launcher.UpdateInstaller.DeleteLeftovers();
+
         try
         {
             using var app = new EditorApplication(options);

@@ -134,7 +134,7 @@ internal sealed class DeleteFolderTreeCommand : IEditorCommand
 
     public DeleteFolderTreeCommand(Scene scene, SceneFolder folder)
     {
-        _foldersBefore = scene.Folders.Select(f => new SceneFolder(f.Id, f.Name, f.ParentId)).ToList();
+        _foldersBefore = scene.Folders.Select(f => f.Clone()).ToList();
         _removedIds = scene.Folders.Where(f => scene.IsFolderInside(f.Id, folder.Id)).Select(f => f.Id).ToHashSet();
         var entities = scene.RootEntities.Where(entity => entity.FolderId is { } id && _removedIds.Contains(id)).ToList();
         _deleteEntities = entities.Count > 0 ? EntityLifetimeCommand.Deleting(entities) : null;
@@ -153,7 +153,7 @@ internal sealed class DeleteFolderTreeCommand : IEditorCommand
     {
         // Only this command changed the folders since it was recorded, so the old list can be put back as it was.
         scene.Folders.Clear();
-        scene.Folders.AddRange(_foldersBefore.Select(f => new SceneFolder(f.Id, f.Name, f.ParentId)));
+        scene.Folders.AddRange(_foldersBefore.Select(f => f.Clone()));
         _deleteEntities?.Undo(scene);
     }
 }
@@ -170,7 +170,7 @@ internal sealed class DeleteFolderCommand : IEditorCommand
 
     public DeleteFolderCommand(Scene scene, SceneFolder folder)
     {
-        _folder = new SceneFolder(folder.Id, folder.Name, folder.ParentId);
+        _folder = folder.Clone();
         _index = scene.Folders.IndexOf(folder);
         _entityIds = scene.RootEntities.Where(entity => entity.FolderId == folder.Id).Select(entity => entity.Id).ToList();
         _subfolderIds = scene.Folders.Where(child => child.ParentId == folder.Id).Select(child => child.Id).ToList();
@@ -196,7 +196,7 @@ internal sealed class DeleteFolderCommand : IEditorCommand
 
     public void Undo(Scene scene)
     {
-        FolderTarget.Place(scene, new SceneFolder(_folder.Id, _folder.Name, _folder.ParentId), _index);
+        FolderTarget.Place(scene, _folder.Clone(), _index);
         foreach (var id in _entityIds)
         {
             CommandTarget.Entity(scene, id).FolderId = _folder.Id;
@@ -206,5 +206,29 @@ internal sealed class DeleteFolderCommand : IEditorCommand
         {
             FolderTarget.Folder(scene, id).ParentId = _folder.Id;
         }
+    }
+}
+
+/// <summary>Changes the colour of a folder (null: the default colour). Changes made while dragging in a colour picker merge.</summary>
+internal sealed class SetFolderColorCommand(SceneFolder folder, Color? before, Color? after) : IEditorCommand
+{
+    private readonly Guid _folderId = folder.Id;
+    private Color? _after = after;
+
+    public string Name { get; } = $"Colour folder {folder.Name}";
+
+    public void Execute(Scene scene) => FolderTarget.Folder(scene, _folderId).Color = _after;
+
+    public void Undo(Scene scene) => FolderTarget.Folder(scene, _folderId).Color = before;
+
+    public bool TryMerge(IEditorCommand next)
+    {
+        if (next is not SetFolderColorCommand other || other._folderId != _folderId)
+        {
+            return false;
+        }
+
+        _after = other._after;
+        return true;
     }
 }

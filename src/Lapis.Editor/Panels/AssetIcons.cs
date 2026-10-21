@@ -46,14 +46,23 @@ internal static class AssetIcons
         drawList.AddText((labelMin + labelMax - textSize) * 0.5f, 0xFFFFFFFFu, label);
     }
 
+    /// <summary>The usual folder colour (the front of the folder icon).</summary>
+    public static Vector4 DefaultFolderColor { get; } = new(0.92f, 0.75f, 0.38f, 1f);
+
     /// <summary>Draws a folder icon filling the square at <paramref name="min"/> with side <paramref name="size"/>.</summary>
-    public static void DrawFolder(ImDrawListPtr drawList, Vector2 min, float size)
+    public static void DrawFolder(ImDrawListPtr drawList, Vector2 min, float size) => DrawFolder(drawList, min, size, FolderBack, FolderFront);
+
+    /// <summary>Draws a folder icon in the given colour (the back is drawn slightly darker).</summary>
+    public static void DrawFolder(ImDrawListPtr drawList, Vector2 min, float size, Vector4 color) =>
+        DrawFolder(drawList, min, size, Pack(color.X * 0.84f, color.Y * 0.84f, color.Z * 0.84f), Pack(color.X, color.Y, color.Z));
+
+    private static void DrawFolder(ImDrawListPtr drawList, Vector2 min, float size, uint back, uint front)
     {
         var body = new Vector2(min.X + size * 0.08f, min.Y + size * 0.22f);
         var bodyMax = new Vector2(min.X + size * 0.92f, min.Y + size * 0.86f);
-        drawList.AddRectFilled(new Vector2(body.X, body.Y - size * 0.08f), new Vector2(body.X + size * 0.36f, body.Y + size * 0.1f), FolderBack, size * 0.04f);
-        drawList.AddRectFilled(body, bodyMax, FolderBack, size * 0.05f);
-        drawList.AddRectFilled(new Vector2(body.X, body.Y + size * 0.12f), bodyMax, FolderFront, size * 0.05f);
+        drawList.AddRectFilled(new Vector2(body.X, body.Y - size * 0.08f), new Vector2(body.X + size * 0.36f, body.Y + size * 0.1f), back, size * 0.04f);
+        drawList.AddRectFilled(body, bodyMax, back, size * 0.05f);
+        drawList.AddRectFilled(new Vector2(body.X, body.Y + size * 0.12f), bodyMax, front, size * 0.05f);
     }
 
     private static uint Pack(float r, float g, float b) =>

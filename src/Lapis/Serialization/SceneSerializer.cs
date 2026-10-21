@@ -73,6 +73,11 @@ public static partial class SceneSerializer
                     data["parent"] = parentId.ToString();
                 }
 
+                if (folder.Color is { } color)
+                {
+                    data["color"] = JsonSerializer.SerializeToNode(color, JsonOptions);
+                }
+
                 folders.Add(data);
             }
 
@@ -108,7 +113,10 @@ public static partial class SceneSerializer
                 if (node is JsonObject data && Guid.TryParse((string?)data["id"], out var id))
                 {
                     Guid? parentId = Guid.TryParse((string?)data["parent"], out var parent) ? parent : null;
-                    scene.Folders.Add(new SceneFolder(id, (string?)data["name"] ?? "Folder", parentId));
+                    scene.Folders.Add(new SceneFolder(id, (string?)data["name"] ?? "Folder", parentId)
+                    {
+                        Color = data["color"] is { } color ? ReadValue(color, Color.White) : null,
+                    });
                 }
             }
 

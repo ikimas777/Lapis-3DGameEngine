@@ -19,6 +19,26 @@ internal sealed unsafe partial class EditorApplication : ILauncherHost
 
     bool ILauncherHost.CreateProject(string folder, string name) => CreateProject(folder, name);
 
+    void ILauncherHost.Restart(string executable)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(executable)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(executable) ?? string.Empty,
+            })?.Dispose();
+        }
+        catch (System.ComponentModel.Win32Exception exception)
+        {
+            Log.Error($"Could not start the new editor: {exception.Message}");
+            return;
+        }
+
+        SaveSettings();
+        Close();
+    }
+
     private void RenderLauncher()
     {
         _launcher ??= new ProjectLauncher(_settings, this);
