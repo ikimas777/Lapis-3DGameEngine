@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  push:
+    branches: [main, "milestone/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Lapis.slnx
+
+      - name: Build
+        run: dotnet build Lapis.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution Lapis.slnx --configuration Release --no-build
