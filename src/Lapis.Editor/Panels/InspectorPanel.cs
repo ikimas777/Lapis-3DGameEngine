@@ -11,7 +11,7 @@ namespace Lapis.Editor.Panels;
 /// Shows and edits the selected entity: name, transform and components.
 /// Every edit is recorded in the undo history; a drag or a text edit becomes one step.
 /// </summary>
-internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager scripts) : EditorPanel("Inspector")
+internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager scripts, AssetInspector assetInspector) : EditorPanel("Inspector")
 {
     private const string AddComponentPopup = "##addComponent";
 
@@ -24,6 +24,13 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
     protected override void DrawContent()
     {
+        if (context.SelectedAsset is { } asset)
+        {
+            _eulerOwner = null;
+            assetInspector.Draw(asset);
+            return;
+        }
+
         if (context.Selection is not { } entity)
         {
             _eulerOwner = null; // do not keep a reloaded scene alive

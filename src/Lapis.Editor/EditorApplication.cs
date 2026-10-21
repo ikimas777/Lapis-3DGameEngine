@@ -16,7 +16,7 @@ namespace Lapis.Editor;
 /// The editor: a dockable layout with Hierarchy, Scene, Game, Inspector and Console panels.
 /// </summary>
 internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launchOptions)
-    : Application(new ApplicationOptions { Title = $"{EngineInfo.Name} Editor" })
+    : Application(new ApplicationOptions { Title = $"{EngineInfo.Name} Editor" }), IAssetsPanelHost
 {
     private const string DockSpaceName = "LapisDockSpace";
     private const string OpenScenePopup = "Open Scene";
@@ -41,6 +41,8 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     private GameViewPanel? _gameView;
     private PlayMode _play = null!;
     private GameInput? _gameInput;
+    private AssetsPanel? _assetsPanel;
+    private AssetWatcher? _assetWatcher;
     private bool _resetLayout;
     private string? _popupToOpen;
     private string _pathInput = string.Empty;
@@ -107,8 +109,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
                 Log.Warning("Play mode was stopped because the scripts changed.");
             }
         };
-        _panels.Add(new InspectorPanel(_context, _scripts));
+        _panels.Add(new InspectorPanel(_context, _scripts, new AssetInspector(_context, _renderer.Textures, this, () => _camera.Pivot)));
         _panels.Add(new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory)));
+        _assetsPanel = new AssetsPanel(_context, _renderer.Textures, this);
+        _panels.Add(_assetsPanel);
+        Window.FileDrop += paths => _assetsPanel.Import(paths);
 
         _context.SceneChanged += _ => _camera.Pivot = new Vector3(0f, 0.5f, 0f);
 
@@ -126,6 +131,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     protected override void OnUpdate()
     {
         _scripts.Update(Time.TimeSinceStart);
+        _assetWatcher?.Update(Time.TimeSinceStart);
 
         // Scripts see the input gathered since the previous frame, then the per-frame flags are cleared.
         _play.Update(Time.DeltaTime);
@@ -204,6 +210,8 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _gameInput?.Dispose();
         _imgui?.Dispose();
         _scripts.Dispose();
+        _assetWatcher?.Dispose();
+        Lapis.Assets.AssetDatabase.Active = null;
         SaveSettings();
         _logBuffer.Dispose();
     }
@@ -626,6 +634,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         ImGuiP.DockBuilderDockWindow("Hierarchy", left);
         ImGuiP.DockBuilderDockWindow("Inspector", right);
+        ImGuiP.DockBuilderDockWindow("Assets", bottom);
         ImGuiP.DockBuilderDockWindow("Console", bottom);
         ImGuiP.DockBuilderDockWindow("Scene", center);
         ImGuiP.DockBuilderDockWindow("Game", center);

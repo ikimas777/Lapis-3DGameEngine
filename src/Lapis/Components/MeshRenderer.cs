@@ -17,9 +17,19 @@ public static class BuiltInMeshes
 
     private static readonly Dictionary<string, Rendering.MeshData> DataCache = new(StringComparer.Ordinal);
 
-    /// <summary>CPU-side geometry of a built-in mesh (shared, do not modify), or null for unknown ids.</summary>
+    /// <summary>
+    /// CPU-side geometry for a mesh id: a built-in shape or a model asset (shared, do not modify).
+    /// Null for unknown ids.
+    /// </summary>
     internal static Rendering.MeshData? GetData(string meshId)
     {
+        if (meshId.StartsWith(Assets.AssetDatabase.ReferencePrefix, StringComparison.Ordinal))
+        {
+            return Assets.AssetDatabase.TryParseReference(meshId, out var id, out _)
+                ? Assets.AssetDatabase.Active?.LoadModel(id)?.Mesh
+                : null;
+        }
+
         lock (DataCache)
         {
             if (DataCache.TryGetValue(meshId, out var cached))
@@ -48,15 +58,37 @@ public static class BuiltInMeshes
 /// <summary>Draws a mesh at the entity's transform.</summary>
 public sealed class MeshRenderer : Component
 {
-    /// <summary>
-    /// Which mesh to draw. One of <see cref="BuiltInMeshes"/> for now; imported assets are referenced
-    /// the same way once the asset pipeline exists.
-    /// </summary>
+    /// <summary>Which mesh to draw: one of <see cref="BuiltInMeshes"/> or a model asset reference.</summary>
+    [Assets.AssetReference(Assets.AssetType.Model)]
     public string MeshId { get; set; } = BuiltInMeshes.Cube;
 
-    /// <summary>Surface colour (sRGB).</summary>
+    /// <summary>
+    /// A material asset to use instead of <see cref="Color"/>, <see cref="TextureId"/> and <see cref="Shininess"/>.
+    /// Empty to use those settings.
+    /// </summary>
+    [Assets.AssetReference(Assets.AssetType.Material)]
+    public string MaterialId { get; set; } = string.Empty;
+
+    /// <summary>Surface colour (sRGB), multiplied with the texture.</summary>
     public Color Color { get; set; } = Color.White;
 
+    /// <summary>Texture asset reference, or empty for none.</summary>
+    [Assets.AssetReference(Assets.AssetType.Texture)]
+    public string TextureId { get; set; } = string.Empty;
+
     /// <summary>Size of specular highlights; higher is smaller and sharper.</summary>
+    [Range(1, 256)]
     public float Shininess { get; set; } = 32f;
+
+    /// <summary>The surface to draw with: the material when set and found, otherwise this renderer's own settings.</summary>
+    internal (Color Color, string TextureId, float Shininess) ResolveSurface()
+    {
+        if (MaterialId.Length > 0 && Assets.AssetDatabase.TryParseReference(MaterialId, out var id, out _) &&
+            Assets.AssetDatabase.Active?.LoadMaterial(id) is { } material)
+        {
+            return (material.Color, material.TextureId, material.Shininess);
+        }
+
+        return (Color, TextureId, Shininess);
+    }
 }

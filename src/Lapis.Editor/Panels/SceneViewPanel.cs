@@ -88,6 +88,10 @@ internal sealed unsafe class SceneViewPanel(
         var origin = ImGui.GetCursorScreenPos();
         ImGui.Image(new ImTextureRef(null, new ImTextureID((ulong)framebuffer.ColorTexture)), size, new Vector2(0, 1), new Vector2(1, 0));
         var imageHovered = ImGui.IsItemHovered();
+        if (DragDrop.AcceptAsset(context.Assets) is { } droppedAsset)
+        {
+            DropAsset(droppedAsset, view, origin, size);
+        }
 
         DrawGizmo(view, origin, size);
 
@@ -104,6 +108,37 @@ internal sealed unsafe class SceneViewPanel(
         }
 
         DrawHint(origin, size);
+    }
+
+    /// <summary>
+    /// A model dropped on the view is placed at the camera's focus point; a material or texture is applied
+    /// to the object under the cursor.
+    /// </summary>
+    private void DropAsset(Lapis.Assets.AssetInfo asset, in RenderView view, Vector2 origin, Vector2 size)
+    {
+        switch (asset.Type)
+        {
+            case Lapis.Assets.AssetType.Model:
+                EditorActions.InstantiateModel(context, asset, null, camera.Pivot);
+                break;
+            case Lapis.Assets.AssetType.Material or Lapis.Assets.AssetType.Texture:
+                var mouse = ImGui.GetMousePos() - origin;
+                var target = picker.Pick(context.Scene, view, framebuffer.Width, framebuffer.Height,
+                    (int)(mouse.X / size.X * framebuffer.Width), (int)(mouse.Y / size.Y * framebuffer.Height));
+                if (target is null || !EditorActions.AssignToRenderer(context, target, asset))
+                {
+                    Log.Warning($"Drop '{asset.Name}' onto an object that has a Mesh Renderer.");
+                }
+                else
+                {
+                    context.Selection = target;
+                }
+
+                break;
+            case Lapis.Assets.AssetType.Scene:
+                Log.Info("Double-click a scene in the Assets panel to open it.");
+                break;
+        }
     }
 
     /// <summary>Centres the camera on the selected entity.</summary>

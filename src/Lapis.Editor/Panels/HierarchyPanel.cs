@@ -47,6 +47,11 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             _pendingChanges.Add(() => Reparent(toRoot, null));
         }
 
+        if (DragDrop.AcceptAsset(context.Assets) is { Type: Lapis.Assets.AssetType.Model } model)
+        {
+            _pendingChanges.Add(() => EditorActions.InstantiateModel(context, model, null, spawnPosition()));
+        }
+
         if (ImGui.BeginPopupContextWindow("##hierarchyContext", ImGuiPopupFlags.MouseButtonRight | ImGuiPopupFlags.NoOpenOverItems))
         {
             CreateMenu.DrawItems(context, null, spawnPosition());
@@ -133,6 +138,22 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         if (DragDrop.AcceptEntity(context.Scene) is { } dropped)
         {
             _pendingChanges.Add(() => Reparent(dropped, entity));
+        }
+
+        // Assets dropped on an entity: a model becomes a child, a material or texture is applied to it.
+        if (DragDrop.AcceptAsset(context.Assets) is { } asset)
+        {
+            _pendingChanges.Add(() =>
+            {
+                if (asset.Type == Lapis.Assets.AssetType.Model)
+                {
+                    EditorActions.InstantiateModel(context, asset, entity, Vector3.Zero);
+                }
+                else if (!EditorActions.AssignToRenderer(context, entity, asset))
+                {
+                    Log.Warning($"'{asset.Name}' cannot be applied to '{entity.Name}' (it needs a Mesh Renderer).");
+                }
+            });
         }
 
         if (open && !flags.HasFlag(ImGuiTreeNodeFlags.NoTreePushOnOpen))
