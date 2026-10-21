@@ -34,7 +34,7 @@ internal static class CodeEditor
         }
     }
 
-    /// <summary>Opens a folder in VS Code (or Explorer when VS Code is not installed).</summary>
+    /// <summary>Opens a folder in VS Code (or the file manager when VS Code is not installed).</summary>
     public static void OpenFolder(string folder)
     {
         try
@@ -50,7 +50,18 @@ internal static class CodeEditor
         }
     }
 
-    private static string? FindVsCode()
+    private static string? FindVsCode() => OperatingSystem.IsWindows() ? FindVsCodeWindows() : FindVsCodeLinux();
+
+    private static string? FindVsCodeLinux()
+    {
+        // The "code" launcher from the .deb/.rpm packages, snap or a tarball added to the PATH.
+        var path = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator)
+            .Where(directory => directory.Length > 0)
+            .Select(directory => Path.Combine(directory.Trim(), "code"));
+        return path.Concat(["/usr/bin/code", "/snap/bin/code", "/usr/share/code/bin/code"]).FirstOrDefault(File.Exists);
+    }
+
+    private static string? FindVsCodeWindows()
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);

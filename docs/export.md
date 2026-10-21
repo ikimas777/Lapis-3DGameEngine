@@ -1,6 +1,7 @@
 # Exporting a game
 
-**File > Export Game...** turns the open project into a standalone Windows game that runs without the
+**File > Export Game...** turns the open project into a standalone game for the system the editor runs on
+(Windows or Linux) that runs without the
 editor and without installing .NET.
 
 1. Choose the output folder (default: `Builds/<project name>` inside the project), the name of the `.exe`
@@ -42,3 +43,12 @@ This exports the project's start scene and returns exit code 1 when the export f
 The published editor (`scripts/publish-editor.ps1`) includes `Player/Lapis.Player.exe` next to
 `Lapis.Editor.exe`. When the editor runs from source with `dotnet run`, the first export builds the player into
 `artifacts/player` (this needs the .NET SDK and takes about a minute; later exports reuse it).
+
+## Linux
+
+The editor exports for the system it runs on. On Linux the game's executable has no extension (`MyGame`
+instead of `MyGame.exe`) and is marked executable; give players the folder as a `.tar.gz` so the permission is
+kept (`tar -czf MyGame.tar.gz MyGame`). To make a Windows build of a game, export it from the Windows editor,
+and the other way round.
+
+The Linux editor ships `Player/Lapis.Player`; build it with `scripts/publish-editor.sh`.

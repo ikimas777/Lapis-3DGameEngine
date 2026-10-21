@@ -15,7 +15,7 @@ Everything a game uses lives in the project's `Assets` folder and appears in the
 
 ## Bringing files in
 
-- Drag files or folders from Windows Explorer onto the editor window: they are copied into the folder shown
+- Drag files or folders from Explorer (or a Linux file manager) onto the editor window: they are copied into the folder shown
   in the Assets panel.
 - Or use **Import...** in the panel's toolbar, or copy files into `Assets` yourself; the editor notices
   changes on disk within a moment.
@@ -49,5 +49,5 @@ Clicking a slot field (Mesh Id, Material Id, Texture Id) opens a list of matchin
 A Mesh Renderer with a material uses the material's colour, texture, metallic and roughness instead of its own.
 
 Right-click in the Assets panel to create folders, scripts, materials and scenes, or to rename, delete
-(to the Recycle Bin) and show items in Explorer. Double-click opens folders and scenes, and opens scripts
+(to the Recycle Bin, or the Trash on Linux) and show items in Explorer / the file manager. Double-click opens folders and scenes, and opens scripts
 in VS Code. Selecting an asset shows a preview and details in the Inspector.

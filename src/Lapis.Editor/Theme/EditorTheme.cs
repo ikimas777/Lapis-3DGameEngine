@@ -104,8 +104,21 @@ internal static unsafe class EditorTheme
     private static void LoadFont()
     {
         var io = ImGui.GetIO();
-        var fontPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "segoeui.ttf");
-        if (File.Exists(fontPath))
+        // Segoe UI on Windows; on Linux the first common sans-serif font that is installed.
+        string[] candidates =
+        [
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "segoeui.ttf"),
+            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/google-noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+        ];
+
+        var fontPath = candidates.FirstOrDefault(File.Exists);
+        if (fontPath is not null)
         {
             io.Fonts.AddFontFromFileTTF(fontPath, FontSize);
         }
