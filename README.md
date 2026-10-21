@@ -195,6 +195,18 @@ Move / Rotate / Scale tools.
 
 Drag entities in the Hierarchy to re-parent them, or drop an entity onto an entity / component field in the Inspector to assign it.
 
+### Hierarchy folders
+
+The folder button next to the Hierarchy's search box (or **New Folder** in its right-click menu) adds a folder
+for organising the scene. Folders only exist in the editor: they have no position and do not change the game.
+
+- Drag entities or other folders onto a folder to move them in; drag them to the empty space below the list to
+  take them out. An entity with a parent moves to the top level (keeping its place in the world) when it is
+  put in a folder. Right-click an entity > **Move to Folder** does the same from a menu.
+- Double-click a folder (or select it and press F2) to rename it.
+- **Delete** (or Del) removes only the folder: what was inside moves up one level. **Delete Folder and
+  Contents** also deletes everything inside. Both can be undone.
+
 ### Command-line options
 
 `--help` lists them all:

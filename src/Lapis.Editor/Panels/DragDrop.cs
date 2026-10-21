@@ -73,6 +73,38 @@ internal static unsafe class DragDrop
         return dropped;
     }
 
+    private const string FolderPayload = "LAPIS_FOLDER";
+
+    /// <summary>Makes the last item a drag source carrying a Hierarchy folder.</summary>
+    public static void FolderSource(SceneFolder folder)
+    {
+        if (ImGui.BeginDragDropSource())
+        {
+            var id = folder.Id;
+            ImGui.SetDragDropPayload(FolderPayload, &id, (nuint)sizeof(Guid));
+            ImGui.TextUnformatted(folder.Name);
+            ImGui.EndDragDropSource();
+        }
+    }
+
+    /// <summary>Returns the Hierarchy folder dropped on the last item this frame, or null.</summary>
+    public static SceneFolder? AcceptFolder(Scene scene)
+    {
+        SceneFolder? dropped = null;
+        if (ImGui.BeginDragDropTarget())
+        {
+            var payload = ImGui.AcceptDragDropPayload(FolderPayload);
+            if (!payload.IsNull && payload.Data != null)
+            {
+                dropped = scene.FindFolder(*(Guid*)payload.Data);
+            }
+
+            ImGui.EndDragDropTarget();
+        }
+
+        return dropped;
+    }
+
     /// <summary>Returns the entity dropped on the last item this frame, or null.</summary>
     public static Entity? AcceptEntity(Scene scene)
     {

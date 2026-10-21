@@ -41,6 +41,28 @@ public sealed class Entity
     /// <summary>True when this entity and all of its parents are active.</summary>
     public bool IsActiveInHierarchy => IsActive && (Transform.Parent?.entity.IsActiveInHierarchy ?? true);
 
+    /// <summary>
+    /// The Hierarchy folder (<see cref="Scene.Folders"/>) this entity is shown in. Only used for entities without
+    /// a parent; null shows the entity at the top level. Folders do not affect the game.
+    /// </summary>
+    public Guid? FolderId { get; set; }
+
+    /// <summary>
+    /// The Hierarchy folder this entity is in, or null when it is at the top level or has a parent
+    /// (folders only hold top-level entities). Unlike <see cref="Parent"/>, a folder never changes the transform.
+    /// </summary>
+    public SceneFolder? Folder => Parent is null ? Scene.FindFolder(FolderId) : null;
+
+    /// <summary>Full path of <see cref="Folder"/>, e.g. <c>"Environment/Lights"</c>, or null when not in a folder.</summary>
+    public string? FolderPath => Folder is { } folder ? Scene.GetFolderPath(folder) : null;
+
+    /// <summary>
+    /// True when the entity is in the folder, directly or in one of its sub-folders.
+    /// </summary>
+    /// <param name="nameOrPath">A folder name (<c>"Enemies"</c>) or a full path (<c>"Level 1/Enemies"</c>).</param>
+    public bool IsInFolder(string nameOrPath) =>
+        Folder is { } folder && Scene.FindFolders(nameOrPath).Any(match => Scene.IsFolderInside(folder.Id, match.Id));
+
     /// <summary>True after the entity has been destroyed; it must not be used any more.</summary>
     public bool IsDestroyed { get; internal set; }
 

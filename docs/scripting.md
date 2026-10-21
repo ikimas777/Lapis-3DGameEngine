@@ -179,9 +179,54 @@ Attributes for the Inspector:
 | `transform.LookAt(target)`, `transform.SetParent(other)` | Orientation and hierarchy |
 | `entity.GetComponent<T>()`, `entity.AddComponent<T>()`, `entity.Destroy()` | Components and lifetime |
 | `entity.Scene.Find<T>()`, `entity.Scene.FindByName("Player")` | Finding other objects |
+| `entity.Parent`, `entity.Children`, `transform.Parent` | Parent and children (never a folder) |
+| `entity.Folder`, `entity.FolderPath`, `entity.IsInFolder("Enemies")`, `entity.Scene.FindEntitiesInFolder("Enemies")` | Hierarchy folders (see below) |
 | `Time.DeltaTime`, `Time.TimeSinceStart`, `Time.FrameCount` | Timing |
 | `Input.GetAxis("Horizontal" / "Vertical" / "Mouse X" / "Mouse Y" / "Mouse ScrollWheel")` | Movement input |
 | `Input.GetKey(KeyCode.Space)`, `GetKeyDown`, `GetKeyUp` | Keys |
 | `Input.GetMouseButton(MouseButton.Left)`, `Input.MousePosition` | Mouse |
 | `Log.Info("...")`, `Log.Warning`, `Log.Error` | Messages in the Console |
 | `MathUtil.FromEulerDegrees`, `Vector3.ClampLength`, `MathUtil.Lerp` | Math helpers |
+
+## Hierarchy folders
+
+Folders in the Hierarchy organise the scene. They are **not** parents: an entity in a folder still has
+`entity.Parent == null`, and a folder has no position, rotation or scale, so it never moves what is inside it.
+Folders only hold top-level entities; the children of those entities come along with them, as usual.
+
+Scripts can still use folders to find groups of objects:
+
+```csharp
+public class WaveStarter : Behaviour
+{
+    public override void Start()
+    {
+        // Every top-level entity in "Enemies" and in the folders inside it.
+        foreach (var enemy in entity.Scene.FindEntitiesInFolder("Enemies"))
+        {
+            enemy.IsActive = true;
+        }
+
+        // A full path picks one folder when several have the same name.
+        var bosses = entity.Scene.FindEntitiesInFolder("Level 1/Bosses", includeSubfolders: false);
+    }
+
+    public override void OnTriggerBegin(Collider other)
+    {
+        if (other.entity.IsInFolder("Pickups"))
+        {
+            Log.Info($"Picked up {other.entity.Name} from {other.entity.FolderPath}");
+        }
+    }
+}
+```
+
+| API | Result |
+|---|---|
+| `entity.Folder` | The folder the entity is in (`SceneFolder`, with `Name`), or `null` at the top level or when the entity has a parent. |
+| `entity.FolderPath` | Full path such as `"Level 1/Enemies"`, or `null`. |
+| `entity.IsInFolder("Enemies")` | `true` when the entity is in that folder or in a folder inside it. Takes a name or a full path. |
+| `scene.FindEntitiesInFolder("Enemies", includeSubfolders: true)` | Top-level entities in the folder(s) with that name, or the folder with that full path, in Hierarchy order. Set `includeSubfolders: false` to skip folders inside it. |
+
+Folder names are case-sensitive. The parent of a child entity is always another entity — use `entity.Parent`
+for that, and folders only for grouping.
