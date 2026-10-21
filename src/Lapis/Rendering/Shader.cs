@@ -82,6 +82,15 @@ public sealed unsafe class Shader : IDisposable
         }
     }
 
+    /// <summary>Sets a <c>uint</c> uniform.</summary>
+    public void Set(string name, uint value)
+    {
+        if (TryGetLocation(name, out var location))
+        {
+            _gl.ProgramUniform1(_program, location, value);
+        }
+    }
+
     /// <summary>Sets a <c>float</c> uniform.</summary>
     public void Set(string name, float value)
     {

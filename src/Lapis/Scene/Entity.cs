@@ -174,6 +174,17 @@ public sealed class Entity
         component.OnAdded();
     }
 
+    /// <summary>Moves a component to <paramref name="index"/>; index 0 is reserved for the transform.</summary>
+    internal void MoveComponent(Component component, int index)
+    {
+        if (component is Transform || !_components.Remove(component))
+        {
+            return;
+        }
+
+        _components.Insert(Math.Clamp(index, 1, _components.Count), component);
+    }
+
     internal void DetachAllComponents()
     {
         for (var i = _components.Count - 1; i >= 0; i--)

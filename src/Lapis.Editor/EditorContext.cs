@@ -1,3 +1,4 @@
+using Lapis.Editor.Commands;
 using Lapis.Serialization;
 
 namespace Lapis.Editor;
@@ -8,6 +9,9 @@ namespace Lapis.Editor;
 internal sealed class EditorContext
 {
     private Entity? _selection;
+    private Guid? _selectionId;
+    private long _savedStateId;
+    private bool _unrecordedChanges;
 
     public EditorContext(Scene scene, string? scenePath = null)
     {
@@ -21,21 +25,61 @@ internal sealed class EditorContext
     /// <summary>File the scene was opened from or last saved to; null for a new scene.</summary>
     public string? ScenePath { get; private set; }
 
-    /// <summary>True when the scene has changes that are not saved.</summary>
-    public bool IsDirty { get; private set; }
+    /// <summary>Undo / redo history of the open scene.</summary>
+    public UndoStack History { get; } = new();
 
-    /// <summary>The selected entity, or null. Destroyed entities are never returned.</summary>
+    /// <summary>True when the scene has changes that are not saved.</summary>
+    public bool IsDirty => _unrecordedChanges || History.StateId != _savedStateId;
+
+    /// <summary>
+    /// The selected entity, or null. When the selected entity is deleted and later restored by undo,
+    /// the restored entity becomes selected again.
+    /// </summary>
     public Entity? Selection
     {
-        get => _selection is { IsDestroyed: false } ? _selection : null;
-        set => _selection = value;
+        get
+        {
+            if (_selection is not { IsDestroyed: false } && _selectionId is { } id && Scene.FindById(id) is { } restored)
+            {
+                _selection = restored;
+            }
+
+            return _selection is { IsDestroyed: false } ? _selection : null;
+        }
+        set
+        {
+            _selection = value;
+            _selectionId = value?.Id;
+        }
     }
 
     /// <summary>Raised when another scene is opened or created.</summary>
     public event Action<Scene>? SceneChanged;
 
-    /// <summary>Records that the scene was modified.</summary>
-    public void MarkDirty() => IsDirty = true;
+    /// <summary>Records a change that is not in the undo history.</summary>
+    public void MarkDirty() => _unrecordedChanges = true;
+
+    /// <summary>Applies a command and adds it to the undo history.</summary>
+    public void Execute(IEditorCommand command) => History.Execute(command, Scene);
+
+    /// <summary>Adds an already-applied change to the undo history.</summary>
+    public void Record(IEditorCommand command) => History.Record(command);
+
+    public void Undo()
+    {
+        if (History.UndoName is { } name && History.Undo(Scene))
+        {
+            Log.Info($"Undo: {name}");
+        }
+    }
+
+    public void Redo()
+    {
+        if (History.RedoName is { } name && History.Redo(Scene))
+        {
+            Log.Info($"Redo: {name}");
+        }
+    }
 
     public void NewScene()
     {
@@ -94,7 +138,8 @@ internal sealed class EditorContext
 
             SceneSerializer.Save(Scene, path);
             ScenePath = Path.GetFullPath(path);
-            IsDirty = false;
+            _savedStateId = History.StateId;
+            _unrecordedChanges = false;
             Log.Info($"Saved scene '{Scene.Name}' to {ScenePath}");
             return true;
         }
@@ -109,8 +154,10 @@ internal sealed class EditorContext
     {
         Scene = scene;
         ScenePath = path;
-        IsDirty = false;
-        _selection = null;
+        History.Clear();
+        _savedStateId = History.StateId;
+        _unrecordedChanges = false;
+        Selection = null;
         SceneChanged?.Invoke(scene);
     }
 }

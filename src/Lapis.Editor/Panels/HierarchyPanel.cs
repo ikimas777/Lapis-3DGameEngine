@@ -1,5 +1,6 @@
 using System.Numerics;
 using Hexa.NET.ImGui;
+using Lapis.Editor.Commands;
 using Lapis.Editor.Theme;
 
 namespace Lapis.Editor.Panels;
@@ -50,12 +51,6 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         {
             CreateMenu.DrawItems(context, null, spawnPosition());
             ImGui.EndPopup();
-        }
-
-        if (ImGui.IsWindowFocused() && !ImGui.GetIO().WantTextInput && ImGui.IsKeyPressed(ImGuiKey.Delete, false) &&
-            context.Selection is { } selected)
-        {
-            _pendingChanges.Add(() => Delete(selected));
         }
 
         foreach (var change in _pendingChanges)
@@ -117,14 +112,18 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
             if (ImGui.MenuItem(entity.IsActive ? "Deactivate" : "Activate"))
             {
-                entity.IsActive = !entity.IsActive;
-                context.MarkDirty();
+                context.Execute(new SetActiveCommand(entity, !entity.IsActive));
             }
 
             ImGui.Separator();
+            if (ImGui.MenuItem("Duplicate", "Ctrl+D"))
+            {
+                _pendingChanges.Add(() => EditorActions.Duplicate(context, entity));
+            }
+
             if (ImGui.MenuItem("Delete", "Del"))
             {
-                _pendingChanges.Add(() => Delete(entity));
+                _pendingChanges.Add(() => EditorActions.Delete(context, entity));
             }
 
             ImGui.EndPopup();
@@ -160,18 +159,6 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             return;
         }
 
-        entity.Transform.SetParent(newParent?.Transform);
-        context.MarkDirty();
-    }
-
-    private void Delete(Entity entity)
-    {
-        if (entity.IsDestroyed)
-        {
-            return;
-        }
-
-        entity.Destroy();
-        context.MarkDirty();
+        context.Execute(new ReparentCommand(entity, newParent));
     }
 }

@@ -10,6 +10,7 @@
     <InternalsVisibleTo Include="Lapis.Editor" />
     <InternalsVisibleTo Include="Lapis.Player" />
     <InternalsVisibleTo Include="Lapis.Tests" />
+    <InternalsVisibleTo Include="Lapis.Editor.Tests" />
   </ItemGroup>
 
   <ItemGroup>
