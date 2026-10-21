@@ -3,7 +3,32 @@
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone app for Windows or Linux.
 
-> **Status:** early development (milestone M11 — project launcher; MVP complete). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+> **Status:** early development (milestone M12 — Linux support; MVP complete). See [PLAN.md](PLAN.md) for the roadmap and architecture.
+
+## Quick start
+
+Download the latest editor, unpack it and run it. Nothing else needs to be installed.
+
+**Linux** (terminal):
+
+```bash
+curl -L https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download/Lapis-Linux-x64.tar.gz | tar -xz && ./Lapis/Lapis.Editor
+```
+
+**Windows** (PowerShell):
+
+```powershell
+irm https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download/Lapis-Windows-x64.zip -OutFile Lapis.zip; Expand-Archive Lapis.zip .; .\Lapis\Lapis.Editor.exe
+```
+
+While the repository is private, these links need a signed-in account: use the [GitHub CLI](https://cli.github.com)
+instead (`gh auth login` once), for example on Linux:
+
+```bash
+gh release download --repo ikimas777/Lapis-3DGameEngine --pattern Lapis-Linux-x64.tar.gz && tar -xzf Lapis-Linux-x64.tar.gz && ./Lapis/Lapis.Editor
+```
+
+More options are under [Download](#download).
 
 ```csharp
 using Lapis;
