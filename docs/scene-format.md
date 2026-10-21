@@ -21,6 +21,7 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 | `version` | Format version. Files with a newer version than the engine supports are rejected. |
 | `name` | Scene name. |
 | `environment` | Scene-wide lighting (`SceneEnvironment`). |
+| `folders` | Hierarchy folders, in display order: `{ "id", "name", "parent" }` (`parent` is the id of the folder it is inside, omitted at the top level). Omitted when the scene has no folders. Folders only organise the editor's Hierarchy and do not affect the game. |
 | `entities` | Every entity, depth-first: a parent always comes before its children, and siblings keep their order. |
 
 ## Entity
@@ -42,6 +43,7 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 |---|---|
 | `id` | GUID that stays the same across saves. References between objects use it. |
 | `parent` | Id of the parent entity. Omitted for root entities. |
+| `folder` | Root entities only: id of the Hierarchy folder the entity is shown in. Omitted at the top level. |
 | `active` | Omitted when `true`. |
 | `transform` | Local position, rotation (quaternion `x, y, z, w`) and scale. |
 | `components` | Every component except the transform: the full C# type name and its saved members. |

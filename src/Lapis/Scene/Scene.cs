@@ -16,6 +16,70 @@ public sealed class Scene
     /// <summary>Physics settings for this scene.</summary>
     public ScenePhysics Physics { get; } = new();
 
+    /// <summary>
+    /// Folders that organise root entities in the editor's Hierarchy, in display order. They do not affect the game.
+    /// </summary>
+    public List<SceneFolder> Folders { get; } = [];
+
+    /// <summary>Returns the folder with the given id, or null.</summary>
+    public SceneFolder? FindFolder(Guid? id) => id is { } value ? Folders.Find(folder => folder.Id == value) : null;
+
+    /// <summary>
+    /// Returns true when <paramref name="folderId"/> is <paramref name="ancestorId"/> or lies inside it (at any depth).
+    /// </summary>
+    public bool IsFolderInside(Guid? folderId, Guid ancestorId)
+    {
+        for (var current = FindFolder(folderId); current is not null; current = FindFolder(current.ParentId))
+        {
+            if (current.Id == ancestorId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Full path of a folder, with its parent folders separated by <c>/</c>, e.g. <c>"Environment/Lights"</c>.</summary>
+    public string GetFolderPath(SceneFolder folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+
+        var path = folder.Name;
+        for (var parent = FindFolder(folder.ParentId); parent is not null; parent = FindFolder(parent.ParentId))
+        {
+            path = $"{parent.Name}/{path}";
+        }
+
+        return path;
+    }
+
+    /// <summary>
+    /// Returns the folders with the given name (<c>"Enemies"</c>), or the folder with the given full path when it
+    /// contains a <c>/</c> (<c>"Level 1/Enemies"</c>). Names are case-sensitive.
+    /// </summary>
+    public IEnumerable<SceneFolder> FindFolders(string nameOrPath)
+    {
+        ArgumentNullException.ThrowIfNull(nameOrPath);
+
+        return nameOrPath.Contains('/', StringComparison.Ordinal)
+            ? Folders.Where(folder => GetFolderPath(folder) == nameOrPath.Trim('/'))
+            : Folders.Where(folder => folder.Name == nameOrPath);
+    }
+
+    /// <summary>
+    /// Returns the top-level entities in a Hierarchy folder, in Hierarchy order. Their children are not listed
+    /// separately; reach them with <see cref="Entity.Children"/>.
+    /// </summary>
+    /// <param name="nameOrPath">A folder name (<c>"Enemies"</c>) or a full path (<c>"Level 1/Enemies"</c>).</param>
+    /// <param name="includeSubfolders">Also return entities from folders inside the folder.</param>
+    public IEnumerable<Entity> FindEntitiesInFolder(string nameOrPath, bool includeSubfolders = true)
+    {
+        var matches = FindFolders(nameOrPath).Select(folder => folder.Id).ToHashSet();
+        return RootEntities.Where(entity => entity.Folder is { } folder &&
+            (matches.Contains(folder.Id) || (includeSubfolders && matches.Any(id => IsFolderInside(folder.Id, id)))));
+    }
+
     /// <summary>Number of entities in the scene, including children.</summary>
     public int EntityCount => _entitiesById.Count;
 

@@ -46,7 +46,8 @@ internal static class AssetIcons
         drawList.AddText((labelMin + labelMax - textSize) * 0.5f, 0xFFFFFFFFu, label);
     }
 
-    private static void DrawFolder(ImDrawListPtr drawList, Vector2 min, float size)
+    /// <summary>Draws a folder icon filling the square at <paramref name="min"/> with side <paramref name="size"/>.</summary>
+    public static void DrawFolder(ImDrawListPtr drawList, Vector2 min, float size)
     {
         var body = new Vector2(min.X + size * 0.08f, min.Y + size * 0.22f);
         var bodyMax = new Vector2(min.X + size * 0.92f, min.Y + size * 0.86f);

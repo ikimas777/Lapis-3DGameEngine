@@ -60,9 +60,26 @@ public static partial class SceneSerializer
             ["name"] = scene.Name,
             ["environment"] = WriteMembers(scene.Environment),
             ["physics"] = WriteMembers(scene.Physics),
-            ["entities"] = WriteEntities(scene.RootEntities),
         };
 
+        if (scene.Folders.Count > 0)
+        {
+            var folders = new JsonArray();
+            foreach (var folder in scene.Folders)
+            {
+                var data = new JsonObject { ["id"] = folder.Id.ToString(), ["name"] = folder.Name };
+                if (folder.ParentId is { } parentId)
+                {
+                    data["parent"] = parentId.ToString();
+                }
+
+                folders.Add(data);
+            }
+
+            root["folders"] = folders;
+        }
+
+        root["entities"] = WriteEntities(scene.RootEntities);
         return Format(root);
     }
 
@@ -82,6 +99,24 @@ public static partial class SceneSerializer
         if (root["physics"] is JsonObject physics)
         {
             ReadMembers(scene.Physics, physics, context);
+        }
+
+        if (root["folders"] is JsonArray folders)
+        {
+            foreach (var node in folders)
+            {
+                if (node is JsonObject data && Guid.TryParse((string?)data["id"], out var id))
+                {
+                    Guid? parentId = Guid.TryParse((string?)data["parent"], out var parent) ? parent : null;
+                    scene.Folders.Add(new SceneFolder(id, (string?)data["name"] ?? "Folder", parentId));
+                }
+            }
+
+            // A folder whose parent is missing (e.g. a hand-edited file) moves to the top level.
+            foreach (var folder in scene.Folders.Where(folder => folder.ParentId is not null && scene.FindFolder(folder.ParentId) is null))
+            {
+                folder.ParentId = null;
+            }
         }
 
         ReadEntities(root["entities"] as JsonArray, context);
@@ -198,6 +233,10 @@ public static partial class SceneSerializer
         {
             data["parent"] = parent.Id.ToString();
         }
+        else if (entity.Parent is null && entity.FolderId is { } folderId)
+        {
+            data["folder"] = folderId.ToString();
+        }
 
         data["transform"] = new JsonObject
         {
@@ -310,6 +349,12 @@ public static partial class SceneSerializer
         }
 
         entity.IsActive = (bool?)data["active"] ?? true;
+
+        // Folders only apply at the top level; entities placed under a parent leave their folder.
+        if (parent is null && Guid.TryParse((string?)data["folder"], out var folderId))
+        {
+            entity.FolderId = folderId;
+        }
 
         if (data["transform"] is JsonObject transform)
         {
