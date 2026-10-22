@@ -20,6 +20,12 @@ internal interface IEditorCommand
     /// becomes a single undo step. Returns false when the commands cannot be merged.
     /// </summary>
     bool TryMerge(IEditorCommand next) => false;
+
+    /// <summary>
+    /// False for changes outside the scene (asset files), which are saved right away and so never make the
+    /// scene unsaved.
+    /// </summary>
+    bool ChangesScene => true;
 }
 
 /// <summary>
@@ -28,8 +34,27 @@ internal interface IEditorCommand
 /// </summary>
 internal sealed class UndoStack
 {
-    /// <summary>Oldest steps are discarded beyond this many.</summary>
-    public const int MaxDepth = 256;
+    /// <summary>Default for <see cref="MaxDepth"/>.</summary>
+    public const int DefaultMaxDepth = 20;
+
+    /// <summary>Smallest and largest allowed <see cref="MaxDepth"/>.</summary>
+    public const int MinMaxDepth = 1, MaxMaxDepth = 1000;
+
+    private int _maxDepth = DefaultMaxDepth;
+
+    /// <summary>Oldest steps are discarded beyond this many. Lowering it discards the oldest steps right away.</summary>
+    public int MaxDepth
+    {
+        get => _maxDepth;
+        set
+        {
+            _maxDepth = Math.Clamp(value, MinMaxDepth, MaxMaxDepth);
+            if (_done.Count > _maxDepth)
+            {
+                _done.RemoveRange(0, _done.Count - _maxDepth);
+            }
+        }
+    }
 
     private readonly List<(IEditorCommand Command, long Serial)> _done = [];
     private readonly Stack<(IEditorCommand Command, long Serial)> _undone = new();
@@ -52,7 +77,21 @@ internal sealed class UndoStack
     /// Identifies the current point in history. Two equal values mean the scene is in the same state,
     /// which lets the editor know whether there are unsaved changes.
     /// </summary>
-    public long StateId => _done.Count > 0 ? _done[^1].Serial : 0;
+    public long StateId
+    {
+        get
+        {
+            for (var i = _done.Count - 1; i >= 0; i--)
+            {
+                if (_done[i].Command.ChangesScene)
+                {
+                    return _done[i].Serial;
+                }
+            }
+
+            return 0;
+        }
+    }
 
     /// <summary>Starts a new gesture: the next recorded command will not merge with earlier ones.</summary>
     public void BeginGesture() => _gesture++;
@@ -76,7 +115,7 @@ internal sealed class UndoStack
         }
 
         _done.Add((command, _nextSerial++));
-        if (_done.Count > MaxDepth)
+        if (_done.Count > _maxDepth)
         {
             _done.RemoveAt(0);
         }

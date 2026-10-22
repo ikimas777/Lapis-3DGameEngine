@@ -110,11 +110,32 @@ public class UndoStackTests
         var entity = scene.CreateEntity("A");
         var history = new UndoStack();
 
-        for (var i = 0; i < UndoStack.MaxDepth + 10; i++)
+        for (var i = 0; i < UndoStack.DefaultMaxDepth + 10; i++)
         {
             history.Execute(new SetActiveCommand(entity, i % 2 == 0), scene);
         }
 
-        Assert.Equal(UndoStack.MaxDepth, history.Count);
+        Assert.Equal(UndoStack.DefaultMaxDepth, history.Count);
+    }
+
+    [Fact]
+    public void LoweringMaxDepth_DropsOldestSteps_AndIsClamped()
+    {
+        var scene = new Scene();
+        var entity = scene.CreateEntity("A");
+        var history = new UndoStack { MaxDepth = 50 };
+        for (var i = 0; i < 30; i++)
+        {
+            history.Execute(new RenameEntityCommand(entity, $"N{i}", $"N{i + 1}"), scene);
+        }
+
+        history.MaxDepth = 5;
+        Assert.Equal(5, history.Count);
+        Assert.Equal("Rename N30", history.UndoName);
+
+        history.MaxDepth = 0;
+        Assert.Equal(UndoStack.MinMaxDepth, history.MaxDepth);
+        history.MaxDepth = 100_000;
+        Assert.Equal(UndoStack.MaxMaxDepth, history.MaxDepth);
     }
 }

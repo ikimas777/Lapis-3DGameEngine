@@ -22,6 +22,9 @@ internal sealed class EditorSettings
     /// </summary>
     public bool FlyOnlyWithRightMouse { get; set; }
 
+    /// <summary>How many steps Undo (Ctrl+Z) can go back.</summary>
+    public int UndoLimit { get; set; } = Commands.UndoStack.DefaultMaxDepth;
+
     /// <summary>Clear the Console every time Play starts.</summary>
     public bool ClearConsoleOnPlay { get; set; }
 

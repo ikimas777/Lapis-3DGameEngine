@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Lapis.Assets;
+using Lapis.Editor.Commands;
 using Lapis.Editor.Scripting;
 using Lapis.Editor.Theme;
 using Lapis.Rendering;
@@ -68,7 +69,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         }
 
         var target = CurrentFolder;
-        var count = 0;
+        var copied = new List<string>();
         var imported = new List<string>();
         foreach (var source in paths)
         {
@@ -91,7 +92,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
                     continue;
                 }
 
-                count++;
+                copied.Add(destination);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
@@ -100,9 +101,17 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         }
 
         assets.Refresh();
-        if (count > 0)
+        if (copied.Count > 0)
         {
-            Log.Info($"Imported {count} item(s) into {Path.GetRelativePath(assets.RootDirectory, target)}.");
+            // Imports are undoable when small enough to keep a copy for redo.
+            if (copied.Sum(AssetFilesCommand.SizeOnDisk) <= AssetFilesCommand.MaxSnapshotBytes)
+            {
+                context.History.BeginGesture();
+                context.Record(AssetFilesCommand.Created(
+                    copied.Count == 1 ? $"Import {Path.GetFileName(copied[0])}" : $"Import {copied.Count} items", copied));
+            }
+
+            Log.Info($"Imported {copied.Count} item(s) into {Path.GetRelativePath(assets.RootDirectory, target)}.");
         }
 
         return imported;
@@ -566,6 +575,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
             }
 
             assets.Refresh();
+            context.Record(AssetFilesCommand.Created($"Create {Path.GetFileName(path)}", [path]));
             if (assets.FindByPath(path) is { } created)
             {
                 context.SelectedAsset = created;
@@ -586,21 +596,20 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
             if (Directory.Exists(path))
             {
                 var target = Path.Combine(Path.GetDirectoryName(path)!, newName);
-                Directory.Move(path, target);
+                context.Execute(new MoveAssetCommand(path, target));
                 if (string.Equals(_folder, path, StringComparison.OrdinalIgnoreCase))
                 {
                     _folder = target;
                 }
-
-                assets.Refresh();
             }
             else if (assets.FindByPath(path) is { } asset)
             {
-                var moved = assets.Move(asset, Path.Combine(Path.GetDirectoryName(path)!, newName + Path.GetExtension(path)));
-                context.SelectedAsset = moved;
+                var target = Path.Combine(Path.GetDirectoryName(path)!, newName + Path.GetExtension(path));
+                context.Execute(new MoveAssetCommand(path, target));
+                context.SelectedAsset = assets.Find(asset.Id);
                 if (asset.Type == AssetType.Script)
                 {
-                    Log.Warning($"Renamed the file only; also rename the class inside {Path.GetFileName(moved.FullPath)} to {newName}.");
+                    Log.Warning($"Renamed the file only; also rename the class inside {Path.GetFileName(target)} to {newName}.");
                 }
             }
         }
@@ -620,7 +629,8 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
         try
         {
-            context.SelectedAsset = assets.Move(asset, Path.Combine(folder, Path.GetFileName(asset.FullPath)));
+            context.Execute(new MoveAssetCommand(asset.FullPath, Path.Combine(folder, Path.GetFileName(asset.FullPath))));
+            context.SelectedAsset = assets.Find(asset.Id);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -630,18 +640,28 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
     private void Delete(string path, bool isFolder)
     {
-        // Deleted assets go to the Recycle Bin / Trash so a mistake can be undone.
+        // Deleted assets go to the Recycle Bin / Trash. Undo restores them from a copy kept in memory, unless they
+        // are too big for that; then only the Recycle Bin / Trash has them.
         try
         {
-            PlatformShell.MoveToTrash(path, isFolder);
-            var meta = path + AssetDatabase.MetaExtension;
-            if (!isFolder && File.Exists(meta))
+            if (AssetFilesCommand.SizeOnDisk(path) <= AssetFilesCommand.MaxSnapshotBytes)
             {
-                PlatformShell.MoveToTrash(meta, isFolder: false);
+                context.Execute(AssetFilesCommand.Deleting(path));
+            }
+            else
+            {
+                PlatformShell.MoveToTrash(path, isFolder);
+                var meta = path + AssetDatabase.MetaExtension;
+                if (!isFolder && File.Exists(meta))
+                {
+                    PlatformShell.MoveToTrash(meta, isFolder: false);
+                }
+
+                context.Assets?.Refresh();
+                Log.Warning($"'{Path.GetFileName(path)}' is too big to undo with Ctrl+Z; restore it from the {PlatformShell.TrashName} if needed.");
             }
 
             context.SelectedAsset = null;
-            context.Assets?.Refresh();
             Log.Info($"Moved '{Path.GetFileName(path)}' to the {PlatformShell.TrashName}.");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or OperationCanceledException)
