@@ -1,4 +1,5 @@
 using Hexa.NET.ImGui;
+using Lapis.Editor.Commands;
 using Lapis.Editor.PropertyDrawers;
 using Lapis.Serialization;
 
@@ -6,7 +7,7 @@ namespace Lapis.Editor.Panels;
 
 /// <summary>
 /// Scene-wide settings: environment lighting, sky and physics. Shown as a tab next to the Inspector.
-/// These edits are not in the undo history.
+/// Every edit is recorded in the undo history.
 /// </summary>
 internal sealed class SceneSettingsPanel(EditorContext context, Func<uint> inspectorDockId) : EditorPanel(PanelTitle)
 {
@@ -62,9 +63,10 @@ internal sealed class SceneSettingsPanel(EditorContext context, Func<uint> inspe
         ImGui.PushID(target.GetType().Name);
         foreach (var member in SerializedMember.For(target.GetType()))
         {
+            var before = member.GetValue(target);
             if (PropertyGrid.Member(target, member, scene))
             {
-                context.MarkDirty();
+                context.Record(new SetSceneSettingCommand(target, member, before, member.GetValue(target)));
             }
         }
 

@@ -11,7 +11,6 @@ internal sealed class EditorContext
     private Entity? _selection;
     private Guid? _selectionId;
     private long _savedStateId;
-    private bool _unrecordedChanges;
 
     public EditorContext(Scene scene, string? scenePath = null)
     {
@@ -28,8 +27,22 @@ internal sealed class EditorContext
     /// <summary>Undo / redo history of the open scene.</summary>
     public UndoStack History { get; private set; } = new();
 
+    /// <summary>How many steps the undo history keeps (also for the history used while playing).</summary>
+    public int UndoLimit
+    {
+        get => History.MaxDepth;
+        set
+        {
+            History.MaxDepth = value;
+            if (_editState is { } edit)
+            {
+                edit.History.MaxDepth = value;
+            }
+        }
+    }
+
     /// <summary>True when the scene has changes that are not saved.</summary>
-    public bool IsDirty => _editState is { } edit ? edit.WasDirty : _unrecordedChanges || History.StateId != _savedStateId;
+    public bool IsDirty => _editState is { } edit ? edit.WasDirty : History.StateId != _savedStateId;
 
     /// <summary>True while the game is running on a copy of the scene (see <see cref="EnterPlay"/>).</summary>
     public bool IsPlaying => _editState is not null;
@@ -88,28 +101,42 @@ internal sealed class EditorContext
     /// <summary>Raised when another scene is opened or created.</summary>
     public event Action<Scene>? SceneChanged;
 
-    /// <summary>Records a change that is not in the undo history.</summary>
-    public void MarkDirty() => _unrecordedChanges = true;
-
     /// <summary>Applies a command and adds it to the undo history.</summary>
     public void Execute(IEditorCommand command) => History.Execute(command, Scene);
 
     /// <summary>Adds an already-applied change to the undo history.</summary>
     public void Record(IEditorCommand command) => History.Record(command);
 
-    public void Undo()
-    {
-        if (History.UndoName is { } name && History.Undo(Scene))
-        {
-            Log.Info($"Undo: {name}");
-        }
-    }
+    public void Undo() => Step("Undo", History.UndoName, () => History.Undo(Scene));
 
-    public void Redo()
+    public void Redo() => Step("Redo", History.RedoName, () => History.Redo(Scene));
+
+    private void Step(string verb, string? name, Func<bool> step)
     {
-        if (History.RedoName is { } name && History.Redo(Scene))
+        if (name is null)
         {
-            Log.Info($"Redo: {name}");
+            return;
+        }
+
+        try
+        {
+            if (step())
+            {
+                Log.Info($"{verb}: {name}");
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or
+            System.Text.Json.JsonException or NotSupportedException or IOException or UnauthorizedAccessException)
+        {
+            // Something the history refers to changed outside it (a script member was removed, a file was moved).
+            History.Clear();
+            Log.Error($"{verb} of '{name}' failed: {exception.Message} The undo history was cleared.");
+        }
+
+        // An undone asset change may have moved or removed the selected asset.
+        if (SelectedAsset is { } asset)
+        {
+            SelectedAsset = Assets?.Find(asset.Id);
         }
     }
 
@@ -177,7 +204,6 @@ internal sealed class EditorContext
             SceneSerializer.Save(Scene, path);
             ScenePath = Path.GetFullPath(path);
             _savedStateId = History.StateId;
-            _unrecordedChanges = false;
             Log.Info($"Saved scene '{Scene.Name}' to {ScenePath}");
             return true;
         }
@@ -190,19 +216,14 @@ internal sealed class EditorContext
 
     /// <summary>
     /// Swaps in a reloaded copy of the current scene (after scripts were recompiled). The file path,
-    /// unsaved-changes state and selection are kept; the undo history is cleared because it may refer
-    /// to the old script types.
+    /// unsaved-changes state, selection and undo history are kept: commands find entities by id and keep
+    /// values as JSON, so they work on the reloaded copy and with the new script types.
     /// </summary>
     public void ReplaceScene(Scene scene)
     {
-        var wasDirty = IsDirty;
-        var selectedId = _selectionId;
-
         Scene = scene;
-        History.Clear();
-        _savedStateId = History.StateId;
-        _unrecordedChanges = wasDirty;
-        _selection = selectedId is { } id ? scene.FindById(id) : null;
+        History.BeginGesture();
+        _selection = _selectionId is { } id ? scene.FindById(id) : null;
     }
 
     /// <summary>
@@ -218,7 +239,7 @@ internal sealed class EditorContext
 
         _editState = new EditState(Scene, History, IsDirty);
         Scene = playScene;
-        History = new UndoStack();
+        History = new UndoStack { MaxDepth = History.MaxDepth };
         _selection = _selectionId is { } id ? playScene.FindById(id) : null;
     }
 
@@ -246,7 +267,6 @@ internal sealed class EditorContext
         ScenePath = path;
         History.Clear();
         _savedStateId = History.StateId;
-        _unrecordedChanges = false;
         Selection = null;
         SceneChanged?.Invoke(scene);
     }

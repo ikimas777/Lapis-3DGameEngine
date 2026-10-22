@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Lapis.Serialization;
 
 namespace Lapis.Editor.Commands;
@@ -8,8 +9,8 @@ internal sealed class SetMemberCommand : IEditorCommand
     private readonly Guid _entityId;
     private readonly int _componentIndex;
     private readonly string _memberKey;
-    private readonly object? _before;
-    private object? _after;
+    private readonly MemberValue _before;
+    private MemberValue _after;
 
     /// <param name="component">The component that was edited.</param>
     /// <param name="member">The edited member.</param>
@@ -20,8 +21,8 @@ internal sealed class SetMemberCommand : IEditorCommand
         _entityId = component.entity.Id;
         _componentIndex = IndexOf(component);
         _memberKey = member.Key;
-        _before = Store(before);
-        _after = Store(after);
+        _before = MemberValue.Capture(before, member.ValueType);
+        _after = MemberValue.Capture(after, member.ValueType);
         Name = $"Change {PropertyDrawers.PropertyGrid.Nicify(member.Name)}";
     }
 
@@ -43,11 +44,11 @@ internal sealed class SetMemberCommand : IEditorCommand
         return true;
     }
 
-    private void Apply(Scene scene, object? stored)
+    private void Apply(Scene scene, MemberValue value)
     {
         var component = CommandTarget.Entity(scene, _entityId).Components[_componentIndex];
         var member = SerializedMember.For(component.GetType()).First(m => m.Key == _memberKey);
-        member.SetValue(component, Load(scene, stored, member.ValueType));
+        member.SetValue(component, value.Restore(scene, member.ValueType));
     }
 
     internal static int IndexOf(Component component)
@@ -63,27 +64,42 @@ internal sealed class SetMemberCommand : IEditorCommand
 
         throw new InvalidOperationException("The component is not attached to its entity.");
     }
+}
 
-    // References are stored as ids so they survive entities being deleted and restored.
-    private static object? Store(object? value) => value switch
+/// <summary>
+/// A member value kept by a command. Entity and component references are stored as ids so they survive entities
+/// being deleted and restored; other values as JSON, so later edits to a list cannot change the stored copy and
+/// values of script types survive the scripts being recompiled.
+/// </summary>
+internal readonly struct MemberValue
+{
+    private readonly Guid? _referenceId;
+    private readonly string? _json;
+
+    private MemberValue(Guid? referenceId, string? json)
     {
-        Entity entity => new EntityReference(entity.Id),
-        Component { IsAttached: true } component => new EntityReference(component.entity.Id),
-        _ => value,
-    };
-
-    private static object? Load(Scene scene, object? stored, Type type)
-    {
-        if (stored is not EntityReference reference)
-        {
-            return stored;
-        }
-
-        var entity = scene.FindById(reference.Id);
-        return type == typeof(Entity) ? entity : entity?.GetComponent(type);
+        _referenceId = referenceId;
+        _json = json;
     }
 
-    private sealed record EntityReference(Guid Id);
+    public static MemberValue Capture(object? value, Type type) => value switch
+    {
+        null => default,
+        Entity entity => new(entity.Id, null),
+        Component component => component.IsAttached ? new(component.entity.Id, null) : default,
+        _ => new(null, JsonSerializer.Serialize(value, type, SceneSerializer.JsonOptions)),
+    };
+
+    public object? Restore(Scene scene, Type type)
+    {
+        if (_referenceId is { } id)
+        {
+            var entity = scene.FindById(id);
+            return type == typeof(Entity) ? entity : entity?.GetComponent(type);
+        }
+
+        return _json is null ? null : JsonSerializer.Deserialize(_json, type, SceneSerializer.JsonOptions);
+    }
 }
 
 /// <summary>Adds or removes a component, keeping its data and position for undo.</summary>

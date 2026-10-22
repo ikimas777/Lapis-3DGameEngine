@@ -1,6 +1,7 @@
 using System.Numerics;
 using Hexa.NET.ImGui;
 using Lapis.Assets;
+using Lapis.Editor.Commands;
 using Lapis.Editor.PropertyDrawers;
 using Lapis.Rendering;
 using Lapis.Serialization;
@@ -10,9 +11,6 @@ namespace Lapis.Editor.Panels;
 /// <summary>Shows the asset selected in the Assets panel: a preview, details and the actions that fit its type.</summary>
 internal sealed unsafe class AssetInspector(EditorContext context, TextureLibrary textures, IAssetsPanelHost host, Func<Vector3> spawnPosition)
 {
-    private Guid _materialId;
-    private Material? _material;
-
     public void Draw(AssetInfo asset)
     {
         var assets = context.Assets;
@@ -114,31 +112,32 @@ internal sealed unsafe class AssetInspector(EditorContext context, TextureLibrar
 
     private void DrawMaterial(AssetInfo asset)
     {
-        if (_materialId != asset.Id || _material is null)
-        {
-            _materialId = asset.Id;
-            _material = context.Assets?.LoadMaterial(asset.Id);
-        }
-
-        if (_material is not { } material)
+        // Loaded every frame (it is cached until the file changes) so an undone edit shows up right away.
+        if (context.Assets?.LoadMaterial(asset.Id) is not { } material)
         {
             ImGui.TextColored(Theme.EditorTheme.Warning, "The material could not be read.");
             return;
         }
 
-        var changed = false;
+        SerializedMember? changed = null;
+        object? before = null;
         foreach (var member in SerializedMember.For(typeof(Material)))
         {
-            changed |= PropertyGrid.Member(material, member, context.Scene);
+            var value = member.GetValue(material);
+            if (PropertyGrid.Member(material, member, context.Scene))
+            {
+                (changed, before) = (member, value);
+            }
         }
 
-        if (changed)
+        if (changed is not null)
         {
             // Materials are files: save right away so every object using it updates.
             try
             {
                 material.Save(asset.FullPath);
                 context.Assets?.NotifyChanged(asset.Id);
+                context.Record(new SetMaterialMemberCommand(asset, changed, before, changed.GetValue(material)));
             }
             catch (IOException exception)
             {

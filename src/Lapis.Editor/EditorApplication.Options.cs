@@ -75,6 +75,22 @@ internal sealed partial class EditorApplication
         ImGui.TextDisabled("Without the right mouse button W / E / R pick the tools (1 / 2 / 3 work too).");
         ImGui.Unindent();
 
+        ImGui.SeparatorText("Undo / Redo");
+
+        var undoLimit = _settings.UndoLimit;
+        ImGui.SetNextItemWidth(120);
+        if (ImGui.InputInt("Steps kept for Undo", ref undoLimit))
+        {
+            _context.UndoLimit = undoLimit; // clamped to the allowed range
+            _settings.UndoLimit = _context.UndoLimit;
+            _settings.Save();
+        }
+
+        ImGui.Indent();
+        ImGui.TextDisabled($"How many actions Ctrl+Z can take back ({Commands.UndoStack.MinMaxDepth}–{Commands.UndoStack.MaxMaxDepth}, default {Commands.UndoStack.DefaultMaxDepth}).");
+        ImGui.TextDisabled("Lowering it forgets the oldest steps right away.");
+        ImGui.Unindent();
+
         ImGui.SeparatorText("All shortcuts");
         var flyKeys = onlyWithMouse ? "Right mouse + W A S D / Q E" : "W A S D / Q E";
         var toolKeys = onlyWithMouse ? "W / E / R  or  1 / 2 / 3" : "1 / 2 / 3";

@@ -56,6 +56,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _scripts = new ScriptManager(_context);
         _play = new PlayMode(_context);
         _settings = EditorSettings.Load();
+        _context.UndoLimit = _settings.UndoLimit;
 
         if (launchOptions.ProjectPath is { } projectPath)
         {
