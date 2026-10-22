@@ -134,20 +134,39 @@ On Linux, build the editor with:
 
 The result is `publish/Lapis.Editor-linux/Lapis.Editor` (messages go to `~/.local/share/Lapis/editor.log`).
 
-### Publishing a release
+## AI assistants (MCP)
 
-Pushing a version tag builds Windows and Linux packages on GitHub Actions and attaches them to a new release.
-The programs get the version from the tag; a tag with `-alpha` or `-beta` becomes a pre-release:
+The **MCP** tab at the right edge of the Scene view starts a local [Model Context Protocol](https://modelcontextprotocol.io/)
+server. AI assistants such as Claude Code, Claude Desktop or Codex can then look at the scene, create and change
+entities, write scripts, take screenshots and run the game, while you watch in the editor; every change can be undone
+with Ctrl+Z.
 
-```bash
-git tag v0.8.0-beta.1
+Click **Start Server** in the MCP tab, then connect the assistant once (the default port is 47800):
+
+**Claude Code** — run in a terminal in your project folder:
+
+```
+claude mcp add --transport http lapis http://127.0.0.1:47800/mcp
 ```
 
-```bash
-git push origin v0.8.0-beta.1
+**Claude Desktop** — in **Settings > Developer > Edit Config**, add this inside `"mcpServers"` in
+`claude_desktop_config.json` and restart Claude Desktop (needs [Node.js](https://nodejs.org/)):
+
+```json
+"lapis": {
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "http://127.0.0.1:47800/mcp"]
+}
 ```
 
-Set the same version in `Directory.Build.props` so builds made from the source show it too.
+**Codex** — run in a terminal:
+
+```
+codex mcp add lapis --url http://127.0.0.1:47800/mcp
+```
+
+The [MCP guide](docs/mcp.md) has more options (project-wide `.mcp.json`, `config.toml` for Codex) and lists every
+tool the assistant can use.
 
 ## Running
 
@@ -205,40 +224,6 @@ See the [assets guide](docs/assets.md).
 **File > Export Game...** builds a standalone executable of the open project for the system the editor runs on
 (a Windows `.exe`, or a Linux executable)
 without the editor or .NET. See the [export guide](docs/export.md).
-
-### AI assistants (MCP)
-
-The **MCP** tab at the right edge of the Scene view starts a local [Model Context Protocol](https://modelcontextprotocol.io/)
-server. AI assistants such as Claude Code, Claude Desktop or Codex can then look at the scene, create and change
-entities, write scripts, take screenshots and run the game, while you watch in the editor; every change can be undone
-with Ctrl+Z.
-
-Click **Start Server** in the MCP tab, then connect the assistant once (the default port is 47800):
-
-**Claude Code** — run in a terminal in your project folder:
-
-```
-claude mcp add --transport http lapis http://127.0.0.1:47800/mcp
-```
-
-**Claude Desktop** — in **Settings > Developer > Edit Config**, add this inside `"mcpServers"` in
-`claude_desktop_config.json` and restart Claude Desktop (needs [Node.js](https://nodejs.org/)):
-
-```json
-"lapis": {
-  "command": "npx",
-  "args": ["-y", "mcp-remote", "http://127.0.0.1:47800/mcp"]
-}
-```
-
-**Codex** — run in a terminal:
-
-```
-codex mcp add lapis --url http://127.0.0.1:47800/mcp
-```
-
-The [MCP guide](docs/mcp.md) has more options (project-wide `.mcp.json`, `config.toml` for Codex) and lists every
-tool the assistant can use.
 
 ### Physics
 
