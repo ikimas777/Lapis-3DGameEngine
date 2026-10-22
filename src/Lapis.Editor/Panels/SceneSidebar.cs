@@ -93,15 +93,34 @@ internal sealed unsafe class SceneSidebar(IReadOnlyList<ISidebarTab> tabs)
     private static void DrawVerticalText(ImDrawListPtr drawList, Vector2 center, string text, uint color)
     {
         var size = ImGui.CalcTextSize(text);
+        center = new Vector2(MathF.Round(center.X), MathF.Round(center.Y));
         var first = drawList.VtxBuffer.Size;
-        drawList.AddText(center - size * 0.5f, color, text);
+        drawList.AddText(new Vector2(MathF.Round(center.X - size.X * 0.5f), MathF.Round(center.Y - size.Y * 0.5f)), color, text);
 
         // Turn the glyphs' vertices a quarter turn anticlockwise around the centre.
         var vertices = drawList.VtxBuffer.Data;
-        for (var i = first; i < drawList.VtxBuffer.Size; i++)
+        var end = drawList.VtxBuffer.Size;
+        for (var i = first; i < end; i++)
         {
             var offset = vertices[i].Pos - center;
             vertices[i].Pos = center + new Vector2(offset.Y, -offset.X);
+        }
+
+        // Glyphs are placed at fractions of a pixel along the line; after turning, that would blur them across pixel
+        // rows. Move each glyph (four vertices) so its corner sits on a whole pixel, which keeps it as sharp as normal text.
+        for (var glyph = first; glyph + 3 < end; glyph += 4)
+        {
+            var corner = vertices[glyph].Pos;
+            for (var i = glyph + 1; i < glyph + 4; i++)
+            {
+                corner = Vector2.Min(corner, vertices[i].Pos);
+            }
+
+            var shift = new Vector2(MathF.Round(corner.X), MathF.Round(corner.Y)) - corner;
+            for (var i = glyph; i < glyph + 4; i++)
+            {
+                vertices[i].Pos += shift;
+            }
         }
     }
 }

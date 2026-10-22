@@ -89,29 +89,16 @@ internal sealed class McpSidebarTab(McpServerHost server, McpSettings settings, 
             ImGui.SetTooltip("Only programs on this computer can connect.");
         }
 
-        if (ImGui.Button("Copy for Claude Code", new Vector2(-1, 0)))
+        ImGui.PushTextWrapPos(0);
+        ImGui.TextDisabled(
+            "The commands and configuration entries for Claude Code, Claude Desktop and Codex are in docs/mcp.md " +
+            "in the Lapis repository (Docs/mcp.md in the download), ready to copy.");
+        if (settings.Port != McpSettings.DefaultPort)
         {
-            ImGui.SetClipboardText($"claude mcp add --transport http lapis {url}");
-            Log.Info("Copied the Claude Code command; run it in a terminal in your project folder.");
+            ImGui.TextColored(EditorTheme.Warning, $"They use port {McpSettings.DefaultPort}; change it to {settings.Port} when you copy them.");
         }
 
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip($"claude mcp add --transport http lapis {url}");
-        }
-
-        if (ImGui.Button("Copy for Claude Desktop", new Vector2(-1, 0)))
-        {
-            ImGui.SetClipboardText(
-                "{\n  \"mcpServers\": {\n    \"lapis\": {\n      \"command\": \"npx\",\n" +
-                $"      \"args\": [\"-y\", \"mcp-remote\", \"{url}\"]\n    }}\n  }}\n}}");
-            Log.Info("Copied the Claude Desktop configuration; add it to claude_desktop_config.json (needs Node.js).");
-        }
-
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip("A server entry for claude_desktop_config.json. It uses mcp-remote, which needs Node.js.");
-        }
+        ImGui.PopTextWrapPos();
     }
 
     private void DrawPermissions()
