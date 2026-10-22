@@ -206,6 +206,13 @@ See the [assets guide](docs/assets.md).
 (a Windows `.exe`, or a Linux executable)
 without the editor or .NET. See the [export guide](docs/export.md).
 
+### AI assistants (MCP)
+
+The **MCP** tab at the right edge of the Scene view starts a local [Model Context Protocol](https://modelcontextprotocol.io/)
+server. AI assistants such as Claude Code or Claude Desktop can then look at the scene, create and change entities,
+write scripts, take screenshots and run the game, while you watch in the editor; every change can be undone with
+Ctrl+Z. See the [MCP guide](docs/mcp.md).
+
 ### Physics
 
 Colliders and rigid bodies are simulated with [Jolt](https://github.com/jrouwe/JoltPhysics) while the game
@@ -244,7 +251,9 @@ Move / Rotate / Scale tools.
 | 1 / 2 / 3 (Scene view) | Move / Rotate / Scale tool |
 | Ctrl while dragging the gizmo | Toggle snapping |
 
-Drag entities in the Hierarchy to re-parent them, or drop an entity onto an entity / component field in the Inspector to assign it.
+Drag entities in the Hierarchy to re-parent them: drop on the middle of a row to make the entity a child, or on
+the top or bottom edge of a row to put it before or after that entity on the same level. Drop an entity onto an
+entity / component field in the Inspector to assign it, or click the field to search the scene.
 
 ### Hierarchy folders
 

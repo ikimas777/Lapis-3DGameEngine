@@ -123,6 +123,15 @@ internal sealed class UndoStack
         _lastRecordedGesture = _gesture;
     }
 
+    /// <summary>Replaces the last recorded step with <paramref name="wrap"/>(step), e.g. to give it another name.</summary>
+    public void RenameLast(Func<IEditorCommand, IEditorCommand> wrap)
+    {
+        if (_done.Count > 0)
+        {
+            _done[^1] = (wrap(_done[^1].Command), _done[^1].Serial);
+        }
+    }
+
     public bool Undo(Scene scene)
     {
         if (!CanUndo)

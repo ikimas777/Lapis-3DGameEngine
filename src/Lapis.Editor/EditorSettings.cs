@@ -25,6 +25,12 @@ internal sealed class EditorSettings
     /// <summary>How many steps Undo (Ctrl+Z) can go back.</summary>
     public int UndoLimit { get; set; } = Commands.UndoStack.DefaultMaxDepth;
 
+    /// <summary>Tab open in the Scene view's sidebar, or null when it is closed.</summary>
+    public string? SceneSidebarTab { get; set; }
+
+    /// <summary>Settings of the MCP server that lets AI assistants work in the editor.</summary>
+    public McpSettings Mcp { get; set; } = new();
+
     /// <summary>Clear the Console every time Play starts.</summary>
     public bool ClearConsoleOnPlay { get; set; }
 
@@ -94,6 +100,28 @@ internal sealed class EditorSettings
             Log.Warning($"Editor settings could not be saved: {exception.Message}");
         }
     }
+}
+
+/// <summary>Settings of the editor's MCP server (see <see cref="Mcp.McpServerHost"/>).</summary>
+internal sealed class McpSettings
+{
+    /// <summary>Default <see cref="Port"/>.</summary>
+    public const int DefaultPort = 47800;
+
+    /// <summary>Local port the server listens on (only 127.0.0.1).</summary>
+    public int Port { get; set; } = DefaultPort;
+
+    /// <summary>Start the server whenever the editor opens a project.</summary>
+    public bool StartWithEditor { get; set; }
+
+    /// <summary>Let assistants create, change and delete entities, components and scene settings.</summary>
+    public bool AllowSceneEdits { get; set; } = true;
+
+    /// <summary>Let assistants create and change files in the Assets folder (scripts, materials) and save the scene.</summary>
+    public bool AllowFileChanges { get; set; } = true;
+
+    /// <summary>Let assistants start and stop Play mode.</summary>
+    public bool AllowPlayMode { get; set; } = true;
 }
 
 /// <summary>An entry in the launcher's list of projects.</summary>

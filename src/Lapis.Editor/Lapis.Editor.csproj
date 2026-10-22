@@ -12,12 +12,15 @@
   <ItemGroup>
     <ProjectReference Include="..\Lapis\Lapis.csproj" />
     <InternalsVisibleTo Include="Lapis.Editor.Tests" />
+    <!-- The MCP server (Mcp/McpServerHost.cs) runs on ASP.NET Core's Kestrel. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Hexa.NET.ImGui" />
     <PackageReference Include="Hexa.NET.ImGuizmo" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
 
 </Project>

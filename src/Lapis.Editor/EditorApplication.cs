@@ -102,6 +102,12 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         {
             FlyOnlyWithRightMouse = _settings.FlyOnlyWithRightMouse,
         };
+        CreateMcp(_sceneView);
+        if (!_inLauncher)
+        {
+            StartMcpIfWanted(); // a project given on the command line opened before the server existed
+        }
+
         _panels.Add(new HierarchyPanel(_context, () => _camera.Pivot));
         _panels.Add(_sceneView);
         _gameInput = new Lapis.Platform.InputBridge(InputContext);
@@ -163,6 +169,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     {
         _scripts.Update(Time.TimeSinceStart);
         _assetWatcher?.Update(Time.TimeSinceStart);
+        _mcpDispatcher.RunPending();
         UpdateExport();
 
         // Scripts see the input gathered since the previous frame, then the per-frame flags are cleared.
@@ -247,6 +254,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
     protected override void OnUnload()
     {
+        StopMcp();
         _gameFramebuffer?.Dispose();
         _sceneFramebuffer?.Dispose();
         _picker?.Dispose();

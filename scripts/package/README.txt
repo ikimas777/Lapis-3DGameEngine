@@ -8,7 +8,8 @@ What is in this folder
                           copies it next to your game as MyGame(.exe) together with your compiled
                           scripts and assets. Keep this folder next to the editor, or exporting
                           games will not work.
-  Docs/                   Guides: scripting.md, assets.md, export.md, scene-format.md.
+  Docs/                   Guides: scripting.md, assets.md, export.md, mcp.md (AI assistants),
+                          scene-format.md.
   README.txt              This file.
   LICENSE.txt             MIT licence.
 
