@@ -38,6 +38,8 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
     private string? _newItemKind;
     private string _importInput = string.Empty;
     private string? _popupToOpen;
+    private string[] _shownFiles = [];
+    private Guid? _assetAnchor;
 
     /// <summary>Folder whose contents are shown; the Assets root when nothing else was chosen.</summary>
     private string CurrentFolder
@@ -245,6 +247,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         var files = searching
             ? assets.Assets.Where(a => a.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)).Select(a => a.FullPath).Order(StringComparer.OrdinalIgnoreCase).ToArray()
             : SafeFiles(folder);
+        _shownFiles = files;
 
         var cell = _iconSize + 24f;
         var columns = Math.Max(1, (int)(ImGui.GetContentRegionAvail().X / cell));
@@ -305,7 +308,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         var asset = isFolder ? null : assets.FindByPath(path);
         var name = isFolder ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
         var cellWidth = _iconSize + 16f;
-        var selected = asset is not null && context.SelectedAsset?.Id == asset.Id;
+        var selected = asset is not null && context.IsAssetSelected(asset);
 
         ImGui.PushID(path);
         ImGui.BeginGroup();
@@ -316,7 +319,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         {
             if (asset is not null)
             {
-                context.SelectedAsset = asset;
+                ClickAsset(assets, asset);
             }
 
             if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
@@ -327,7 +330,8 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
         if (asset is not null)
         {
-            DragDrop.AssetSource(asset);
+            // Dragging a selected asset carries the whole selection.
+            DragDrop.AssetSource(selected ? context.SelectedAssets : [asset]);
         }
         else if (isFolder)
         {
@@ -336,9 +340,10 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
         if (ImGui.BeginPopupContextItem())
         {
-            if (asset is not null)
+            if (asset is not null && !context.IsAssetSelected(asset))
             {
                 context.SelectedAsset = asset;
+                _assetAnchor = asset.Id;
             }
 
             DrawItemMenu(path, asset, isFolder);
@@ -393,10 +398,88 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         }
 
         ImGui.Separator();
-        if (ImGui.MenuItem("Delete"))
+        var count = context.SelectedAssets.Count;
+        if (asset is not null && count > 1 && context.IsAssetSelected(asset))
+        {
+            if (ImGui.MenuItem($"Delete {count} Assets"))
+            {
+                DeleteSelectedAssets();
+            }
+        }
+        else if (ImGui.MenuItem("Delete"))
         {
             Delete(path, isFolder);
         }
+    }
+
+    /// <summary>Selects a clicked asset: alone, or with Ctrl added or removed, or with Shift every file up to the last clicked one.</summary>
+    private void ClickAsset(AssetDatabase assets, AssetInfo asset)
+    {
+        var io = ImGui.GetIO();
+        var to = Array.FindIndex(_shownFiles, path => string.Equals(path, asset.FullPath, StringComparison.OrdinalIgnoreCase));
+        if (io.KeyShift && _assetAnchor is { } anchorId && assets.Find(anchorId) is { } anchor && to >= 0 &&
+            Array.FindIndex(_shownFiles, path => string.Equals(path, anchor.FullPath, StringComparison.OrdinalIgnoreCase)) is var from and >= 0)
+        {
+            var range = new List<AssetInfo>();
+            var step = to >= from ? 1 : -1;
+            for (var i = from; i != to + step; i += step)
+            {
+                if (assets.FindByPath(_shownFiles[i]) is { } inRange)
+                {
+                    range.Add(inRange); // the clicked asset ends up last, so it is shown in the Inspector
+                }
+            }
+
+            context.SetAssetSelection(io.KeyCtrl ? [.. context.SelectedAssets, .. range] : range);
+            return;
+        }
+
+        if (io.KeyCtrl)
+        {
+            context.ToggleAssetSelected(asset);
+        }
+        else
+        {
+            context.SelectedAsset = asset;
+        }
+
+        _assetAnchor = asset.Id;
+    }
+
+    /// <summary>Deletes every selected asset as one undo step (very large files go to the Recycle Bin / Trash only).</summary>
+    private void DeleteSelectedAssets()
+    {
+        var commands = new List<IEditorCommand>();
+        foreach (var asset in context.SelectedAssets.ToList())
+        {
+            try
+            {
+                if (AssetFilesCommand.SizeOnDisk(asset.FullPath) <= AssetFilesCommand.MaxSnapshotBytes)
+                {
+                    var command = AssetFilesCommand.Deleting(asset.FullPath);
+                    command.Execute(context.Scene);
+                    commands.Add(command);
+                }
+                else
+                {
+                    Delete(asset.FullPath, isFolder: false);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or OperationCanceledException)
+            {
+                Log.Error($"Could not delete '{Path.GetFileName(asset.FullPath)}': {exception.Message}");
+            }
+        }
+
+        if (commands.Count > 0)
+        {
+            context.History.BeginGesture();
+            context.Record(new CompositeCommand($"Delete {commands.Count} assets", commands));
+            Log.Info($"Moved {commands.Count} assets to the {PlatformShell.TrashName}.");
+        }
+
+        context.SelectedAsset = null;
+        context.Assets?.Refresh();
     }
 
     private void DrawCreateItems()
@@ -621,21 +704,37 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
 
     private void AcceptMoveInto(AssetDatabase assets, string folder)
     {
-        if (DragDrop.AcceptAsset(assets) is not { } asset ||
-            string.Equals(Path.GetDirectoryName(asset.FullPath), folder, StringComparison.OrdinalIgnoreCase))
+        var dropped = DragDrop.AcceptAssets(assets)
+            .Where(asset => !string.Equals(Path.GetDirectoryName(asset.FullPath), folder, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (dropped.Count == 0)
         {
             return;
         }
 
-        try
+        // Moved one by one, as one undo step; a file that cannot move (name taken) is reported and skipped.
+        var commands = new List<IEditorCommand>();
+        foreach (var asset in dropped)
         {
-            context.Execute(new MoveAssetCommand(asset.FullPath, Path.Combine(folder, Path.GetFileName(asset.FullPath))));
-            context.SelectedAsset = assets.Find(asset.Id);
+            try
+            {
+                var command = new MoveAssetCommand(asset.FullPath, Path.Combine(folder, Path.GetFileName(asset.FullPath)));
+                command.Execute(context.Scene);
+                commands.Add(command);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                Log.Error($"Could not move '{Path.GetFileName(asset.FullPath)}': {exception.Message}");
+            }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+
+        if (commands.Count > 0)
         {
-            Log.Error($"Could not move '{Path.GetFileName(asset.FullPath)}': {exception.Message}");
+            context.History.BeginGesture();
+            context.Record(commands.Count == 1 ? commands[0] : new CompositeCommand($"Move {commands.Count} assets", commands));
         }
+
+        context.SetAssetSelection(dropped.Select(asset => assets.Find(asset.Id)).OfType<AssetInfo>());
     }
 
     private void Delete(string path, bool isFolder)

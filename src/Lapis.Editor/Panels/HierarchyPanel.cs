@@ -20,9 +20,16 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     private Guid? _pressedRow;
     private bool _pressDragged;
 
+    // Entity rows in the order they were drawn (this frame and the last), for Shift+click ranges.
+    private List<Entity> _rows = [];
+    private List<Entity> _previousRows = [];
+    private Guid? _rangeAnchor;
+
     protected override void DrawContent()
     {
         var scene = context.Scene;
+        (_previousRows, _rows) = (_rows, _previousRows);
+        _rows.Clear();
 
         // A folder stays highlighted only while no entity is selected and it still exists (undo can remove it).
         if (context.Selection is not null || scene.FindFolder(_selectedFolder) is null)
@@ -58,7 +65,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             _selectedFolder = null;
         }
 
-        if (DragDrop.AcceptEntity(scene) is { } toRoot)
+        if (DragDrop.AcceptEntities(scene) is { Count: > 0 } toRoot)
         {
             _pendingChanges.Add(() => MoveToFolder(toRoot, null));
         }
@@ -264,9 +271,9 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
 
         DragDrop.FolderSource(folder);
-        if (DragDrop.AcceptEntity(scene) is { } entity)
+        if (DragDrop.AcceptEntities(scene) is { Count: > 0 } entities)
         {
-            _pendingChanges.Add(() => MoveToFolder(entity, folder.Id));
+            _pendingChanges.Add(() => MoveToFolder(entities, folder.Id));
         }
 
         if (DragDrop.AcceptFolder(scene) is { } dropped)
@@ -451,11 +458,11 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             return;
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.F2, false))
+        if (context.Keys.Pressed(EditorAction.RenameFolder))
         {
             StartRename(folder);
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Delete, false))
+        else if (context.Keys.Pressed(EditorAction.Delete))
         {
             _pendingChanges.Add(() => context.Execute(new DeleteFolderCommand(scene, folder)));
         }
@@ -484,14 +491,79 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         _focusRename = true;
     }
 
-    private void MoveToFolder(Entity entity, Guid? folderId)
+    /// <summary>Moves entities into a folder (null: the top level), as one undo step.</summary>
+    private void MoveToFolder(IEnumerable<Entity> entities, Guid? folderId) =>
+        ExecuteEach("Move to folder", entities, entity =>
+            entity.Parent is null && entity.FolderId == folderId ? null : new MoveToFolderCommand(entity, folderId));
+
+    /// <summary>
+    /// Applies a change to several entities as one undo step. Each command is made right before it is applied, so it
+    /// remembers the state left by the ones before it; <paramref name="make"/> returns null to skip an entity.
+    /// </summary>
+    private void ExecuteEach(string name, IEnumerable<Entity> entities, Func<Entity, IEditorCommand?> make)
     {
-        if (entity.Parent is null && entity.FolderId == folderId)
+        var scene = context.Scene;
+        var done = new List<IEditorCommand>();
+        foreach (var entity in entities)
         {
+            if (make(entity) is { } command)
+            {
+                command.Execute(scene);
+                done.Add(command);
+            }
+        }
+
+        if (done.Count > 0)
+        {
+            context.History.BeginGesture();
+            context.Record(done.Count == 1 ? done[0] : new CompositeCommand(name, done));
+        }
+    }
+
+    /// <summary>The entities in the order the Hierarchy shows them (depth first).</summary>
+    private List<Entity> InHierarchyOrder(IEnumerable<Entity> entities)
+    {
+        var order = new Dictionary<Entity, int>();
+        var index = 0;
+        foreach (var entity in context.Scene.AllEntities)
+        {
+            order[entity] = index++;
+        }
+
+        return [.. entities.OrderBy(entity => order.GetValueOrDefault(entity, int.MaxValue))];
+    }
+
+    /// <summary>What dragging a row carries: the whole selection when the row is selected, otherwise just that entity.</summary>
+    private List<Entity> DragItems(Entity entity) =>
+        context.IsSelected(entity) ? InHierarchyOrder(context.SelectedRoots) : [entity];
+
+    /// <summary>Selects a clicked row: alone, or with Ctrl added or removed, or with Shift every row up to the last clicked one.</summary>
+    private void ClickRow(Entity entity)
+    {
+        var io = ImGui.GetIO();
+        if (io.KeyShift && _rangeAnchor is { } anchorId && _previousRows.FindIndex(row => row.Id == anchorId) is var from and >= 0 &&
+            _previousRows.IndexOf(entity) is var to and >= 0)
+        {
+            var range = _previousRows.GetRange(Math.Min(from, to), Math.Abs(to - from) + 1);
+            if (from > to)
+            {
+                range.Reverse(); // the clicked row ends up last, so it is shown in the Inspector
+            }
+
+            context.SetSelection(io.KeyCtrl ? [.. context.SelectedEntities, .. range] : range);
             return;
         }
 
-        context.Execute(new MoveToFolderCommand(entity, folderId));
+        if (io.KeyCtrl)
+        {
+            context.ToggleSelected(entity);
+        }
+        else
+        {
+            context.Selection = entity;
+        }
+
+        _rangeAnchor = entity.Id;
     }
 
     private void MoveFolder(Scene scene, SceneFolder folder, SceneFolder target)
@@ -518,7 +590,8 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
         }
 
-        var selected = entity == context.Selection;
+        _rows.Add(entity);
+        var selected = context.IsSelected(entity);
         if (selected)
         {
             flags |= ImGuiTreeNodeFlags.Selected;
@@ -547,12 +620,19 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
         if (ClickedWithoutDrag(entity.Id))
         {
-            context.Selection = entity;
+            ClickRow(entity);
         }
 
         if (ImGui.BeginPopupContextItem())
         {
-            context.Selection = entity;
+            // Right-clicking a row outside the selection selects just that row; inside it, the menu acts on the selection.
+            if (!context.IsSelected(entity))
+            {
+                context.Selection = entity;
+                _rangeAnchor = entity.Id;
+            }
+
+            var count = context.SelectedEntities.Count;
             if (ImGui.BeginMenu("Create Child"))
             {
                 CreateMenu.DrawItems(context, entity, Vector3.Zero);
@@ -561,31 +641,33 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
             if (ImGui.MenuItem(entity.IsActive ? "Deactivate" : "Activate"))
             {
-                context.Execute(new SetActiveCommand(entity, !entity.IsActive));
+                var active = !entity.IsActive;
+                _pendingChanges.Add(() => ExecuteEach(active ? "Activate" : "Deactivate", context.SelectedEntities,
+                    selectedEntity => selectedEntity.IsActive == active ? null : new SetActiveCommand(selectedEntity, active)));
             }
 
             DrawMoveToFolderMenu(entity);
 
             ImGui.Separator();
-            if (ImGui.MenuItem("Duplicate", "Ctrl+D"))
+            if (ImGui.MenuItem(count > 1 ? $"Duplicate {count} Entities" : "Duplicate", context.Keys.Shortcut(EditorAction.Duplicate)))
             {
-                _pendingChanges.Add(() => EditorActions.Duplicate(context, entity));
+                _pendingChanges.Add(() => EditorActions.DuplicateSelection(context));
             }
 
-            if (ImGui.MenuItem("Delete", "Del"))
+            if (ImGui.MenuItem(count > 1 ? $"Delete {count} Entities" : "Delete", context.Keys.Shortcut(EditorAction.Delete)))
             {
-                _pendingChanges.Add(() => EditorActions.Delete(context, entity));
+                _pendingChanges.Add(() => EditorActions.DeleteSelection(context));
             }
 
             ImGui.EndPopup();
         }
 
-        DragDrop.EntitySource(entity);
-        if (DragDrop.HoverEntity(context.Scene, out var released) is { } dragged)
+        DragDrop.EntitySource(DragItems(entity));
+        if (DragDrop.HoverEntities(context.Scene, out var released) is { Count: > 0 } dragged)
         {
             var childrenShown = open && !flags.HasFlag(ImGuiTreeNodeFlags.NoTreePushOnOpen);
             var placement = DropPlacement(rowMin, rowMax, childrenShown);
-            if (dragged != entity && !entity.Transform.IsChildOf(dragged.Transform))
+            if (dragged.Any(item => CanPlace(item, entity)))
             {
                 DrawDropMarker(rowMin, rowMax, placement);
             }
@@ -639,7 +721,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         var current = entity.Parent is null ? scene.FindFolder(entity.FolderId)?.Id : null;
         if (ImGui.MenuItem("(top level)", string.Empty, entity.Parent is null && current is null))
         {
-            _pendingChanges.Add(() => MoveToFolder(entity, null));
+            _pendingChanges.Add(() => MoveToFolder(InHierarchyOrder(context.SelectedRoots), null));
         }
 
         void Items(Guid? parentId, int depth)
@@ -648,7 +730,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             {
                 if (ImGui.MenuItem($"{new string(' ', depth * 3)}{folder.Name}##move{folder.Id}", string.Empty, current == folder.Id))
                 {
-                    _pendingChanges.Add(() => MoveToFolder(entity, folder.Id));
+                    _pendingChanges.Add(() => MoveToFolder(InHierarchyOrder(context.SelectedRoots), folder.Id));
                 }
 
                 Items(folder.Id, depth + 1);
@@ -703,41 +785,40 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
     }
 
-    private void Place(Entity entity, Entity anchor, Placement? placement)
+    /// <summary>False when <paramref name="anchor"/> is the entity itself or inside it, so it cannot go there.</summary>
+    private static bool CanPlace(Entity entity, Entity anchor) => anchor != entity && !anchor.Transform.IsChildOf(entity.Transform);
+
+    /// <summary>
+    /// Moves the dragged entities (in Hierarchy order) under <paramref name="anchor"/> (placement null) or next to it,
+    /// keeping their order, as one undo step.
+    /// </summary>
+    private void Place(IReadOnlyList<Entity> entities, Entity anchor, Placement? placement)
     {
+        var movable = entities.Where(entity => CanPlace(entity, anchor)).ToList();
+        if (movable.Count < entities.Count && entities.Any(entity => entity != anchor))
+        {
+            Log.Warning("An entity cannot be moved under or next to one of its own children; it was left where it was.");
+        }
+
         if (placement is not { } where)
         {
-            Reparent(entity, anchor);
+            ExecuteEach($"Parent to {anchor.Name}", movable, entity => entity.Parent == anchor ? null : new ReparentCommand(entity, anchor));
             return;
         }
 
-        if (anchor == entity)
+        // Before keeps the order by inserting each one in front of the anchor; After and FirstChild put each one
+        // after the previous.
+        var previous = (Entity?)null;
+        ExecuteEach("Move", movable, entity =>
         {
-            return;
-        }
-
-        if (anchor.Transform.IsChildOf(entity.Transform))
-        {
-            Log.Warning($"Cannot move '{entity.Name}' next to one of its own children.");
-            return;
-        }
-
-        context.Execute(new PlaceEntityCommand(entity, anchor, where));
-    }
-
-    private void Reparent(Entity entity, Entity? newParent)
-    {
-        if (entity == newParent || (newParent is not null && newParent.Transform.IsChildOf(entity.Transform)))
-        {
-            Log.Warning($"Cannot move '{entity.Name}' under one of its own children.");
-            return;
-        }
-
-        if (entity.Parent == newParent)
-        {
-            return;
-        }
-
-        context.Execute(new ReparentCommand(entity, newParent));
+            var command = (where, previous) switch
+            {
+                (Placement.Before, _) => new PlaceEntityCommand(entity, anchor, Placement.Before),
+                (_, { } last) => new PlaceEntityCommand(entity, last, Placement.After),
+                _ => new PlaceEntityCommand(entity, anchor, where),
+            };
+            previous = entity;
+            return command;
+        });
     }
 }

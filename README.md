@@ -209,9 +209,10 @@ without the editor or .NET. See the [export guide](docs/export.md).
 ### AI assistants (MCP)
 
 The **MCP** tab at the right edge of the Scene view starts a local [Model Context Protocol](https://modelcontextprotocol.io/)
-server. AI assistants such as Claude Code or Claude Desktop can then look at the scene, create and change entities,
-write scripts, take screenshots and run the game, while you watch in the editor; every change can be undone with
-Ctrl+Z. See the [MCP guide](docs/mcp.md).
+server. AI assistants such as Claude Code, Claude Desktop or Codex can then look at the scene, create and change
+entities, write scripts, take screenshots and run the game, while you watch in the editor; every change can be undone
+with Ctrl+Z. The [MCP guide](docs/mcp.md) has the setup commands and configuration entries for each of them, ready
+to copy.
 
 ### Physics
 
@@ -226,6 +227,7 @@ See the [physics section of the scripting guide](docs/scripting.md#physics).
 | Input | Action |
 |---|---|
 | Left click | Select the object under the cursor |
+| Ctrl + left click / Shift + left click | Add an object to the selection (Ctrl removes it again) |
 | W A S D / Q E | Fly (hold Shift to go faster) — no mouse button needed |
 | Right mouse + drag | Look around (flying keeps working while you hold it) |
 | Alt + left mouse + drag | Orbit around the focus point |
@@ -233,9 +235,8 @@ See the [physics section of the scripting guide](docs/scripting.md#physics).
 | Mouse wheel | Zoom |
 | F | Focus the selected entity |
 
-**Options > Keybindings** lists every shortcut and lets you choose how flying works: with W A S D / Q E at any
-time (the default), or only while holding the right mouse button — then W / E / R also pick the
-Move / Rotate / Scale tools.
+**Options > Keybindings** lets you choose how flying works: with W A S D / Q E at any time (the default), or only
+while holding the right mouse button — then W / E / R also pick the Move / Rotate / Scale tools.
 
 ### Editor shortcuts
 
@@ -245,11 +246,27 @@ Move / Rotate / Scale tools.
 | Ctrl+O | Open scene |
 | Ctrl+S / Ctrl+Shift+S | Save / Save As |
 | Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) | Undo / Redo |
-| Ctrl+D | Duplicate the selected entity |
+| Ctrl+D | Duplicate the selection |
 | Ctrl+P / Ctrl+Shift+P / Ctrl+Alt+P | Play or stop / Pause / Step |
-| Delete | Delete the selected entity |
+| Delete | Delete the selection |
 | 1 / 2 / 3 (Scene view) | Move / Rotate / Scale tool |
+| F2 (Hierarchy) | Rename the selected folder |
 | Ctrl while dragging the gizmo | Toggle snapping |
+
+These are the defaults. In **Options > Keybindings** every command (including the fly keys) can have two shortcuts:
+click one and press the new keys (Esc cancels, Backspace removes it). Shortcuts used by two commands are shown in
+yellow. **Reset** restores one command, **Restore Defaults** all of them. The menus show the current shortcuts.
+
+### Selecting several objects
+
+- **Hierarchy:** Ctrl+click adds or removes an entity; Shift+click selects every row from the last clicked one.
+- **Scene view:** Ctrl+click adds or removes an object, Shift+click adds it.
+- **Assets panel:** Ctrl+click and Shift+click work as in the Hierarchy.
+
+With several entities selected, the gizmo moves, rotates and scales them all around the last one, which the
+Inspector shows; Delete, Ctrl+D, Activate / Deactivate and Move to Folder act on all of them, and dragging one of
+them in the Hierarchy drags them all. Several selected assets can be dragged into a folder or deleted together.
+Each of these is one Ctrl+Z step.
 
 Drag entities in the Hierarchy to re-parent them: drop on the middle of a row to make the entity a child, or on
 the top or bottom edge of a row to put it before or after that entity on the same level. Drop an entity onto an

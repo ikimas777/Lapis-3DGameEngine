@@ -19,21 +19,21 @@ internal sealed unsafe partial class EditorApplication
         var state = _play.State;
 
         if (PlayButton(state == PlayState.Stopped ? "Play" : "Stop", state != PlayState.Stopped, buttonWidth,
-            state == PlayState.Stopped ? "Run the game (Ctrl+P)" : "Stop and restore the scene (Ctrl+P)"))
+            state == PlayState.Stopped ? $"Run the game ({_context.Keys.Shortcut(EditorAction.PlayStop)})" : $"Stop and restore the scene ({_context.Keys.Shortcut(EditorAction.PlayStop)})"))
         {
             _play.TogglePlay();
         }
 
         ImGui.SameLine();
         ImGui.BeginDisabled(state == PlayState.Stopped);
-        if (PlayButton("Pause", state == PlayState.Paused, buttonWidth, "Pause or resume (Ctrl+Shift+P)"))
+        if (PlayButton("Pause", state == PlayState.Paused, buttonWidth, $"Pause or resume ({_context.Keys.Shortcut(EditorAction.Pause)})"))
         {
             _play.TogglePause();
         }
 
         ImGui.EndDisabled();
         ImGui.SameLine();
-        if (PlayButton("Step", false, buttonWidth, "Advance one frame while paused (Ctrl+Alt+P)"))
+        if (PlayButton("Step", false, buttonWidth, $"Advance one frame while paused ({_context.Keys.Shortcut(EditorAction.Step)})"))
         {
             _play.Step();
         }

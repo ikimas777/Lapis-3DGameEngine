@@ -32,7 +32,8 @@ Useful shortcuts
   1 / 2 / 3               Move / Rotate / Scale tool
   Ctrl+S                  Save the scene       Ctrl+Z / Ctrl+Y    Undo / Redo
   Ctrl+P                  Play / Stop          Ctrl+D             Duplicate
-  Options > Keybindings lists them all.
+  Ctrl+click / Shift+click  Select several objects (Hierarchy, Scene view, Assets)
+  Options > Keybindings lists them all and lets you change them.
 
 Updates
 -------

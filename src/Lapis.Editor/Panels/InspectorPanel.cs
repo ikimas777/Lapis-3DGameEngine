@@ -27,6 +27,12 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         if (context.SelectedAsset is { } asset)
         {
             _eulerOwner = null;
+            if (context.SelectedAssets.Count > 1)
+            {
+                ImGui.TextDisabled($"{context.SelectedAssets.Count} assets selected; showing the last one.");
+                ImGui.Spacing();
+            }
+
             assetInspector.Draw(asset);
             return;
         }
@@ -38,6 +44,12 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         }
 
         ImGui.PushID(entity.Id.ToString());
+
+        if (context.SelectedEntities.Count is var count and > 1)
+        {
+            ImGui.TextDisabled($"{count} entities selected; editing the last one. The gizmo moves them all.");
+            ImGui.Spacing();
+        }
 
         DrawHeader(entity);
         ImGui.Spacing();

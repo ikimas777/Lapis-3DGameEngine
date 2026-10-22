@@ -1,148 +1,148 @@
 using Hexa.NET.ImGui;
+using Lapis.Assets;
 
 namespace Lapis.Editor.Panels;
 
-/// <summary>Drag-and-drop payloads shared between panels.</summary>
+/// <summary>
+/// Drag-and-drop payloads shared between panels. Entity and asset payloads carry one or more ids, so several selected
+/// items can be dragged at once; targets that take a single item (such as Inspector fields) use the first one.
+/// </summary>
 internal static unsafe class DragDrop
 {
     private const string EntityPayload = "LAPIS_ENTITY";
-
-    /// <summary>Makes the last item a drag source carrying <paramref name="entity"/>.</summary>
-    public static void EntitySource(Entity entity)
-    {
-        if (ImGui.BeginDragDropSource())
-        {
-            var id = entity.Id;
-            ImGui.SetDragDropPayload(EntityPayload, &id, (nuint)sizeof(Guid));
-            ImGui.TextUnformatted(entity.Name);
-            ImGui.EndDragDropSource();
-        }
-    }
-
     private const string AssetPayload = "LAPIS_ASSET";
+    private const string FolderPayload = "LAPIS_FOLDER";
 
-    /// <summary>Makes the last item a drag source carrying an asset from the Assets panel.</summary>
-    public static void AssetSource(Lapis.Assets.AssetInfo asset)
+    /// <summary>Makes the last item a drag source carrying <paramref name="entities"/> (at least one).</summary>
+    public static void EntitySource(IReadOnlyList<Entity> entities)
     {
         if (ImGui.BeginDragDropSource())
         {
-            var id = asset.Id;
-            ImGui.SetDragDropPayload(AssetPayload, &id, (nuint)sizeof(Guid));
-            ImGui.TextUnformatted(Path.GetFileName(asset.FullPath));
+            SetPayload(EntityPayload, entities.Select(entity => entity.Id));
+            ImGui.TextUnformatted(entities.Count == 1 ? entities[0].Name : $"{entities.Count} entities");
             ImGui.EndDragDropSource();
         }
     }
 
-    /// <summary>Returns the asset dropped on the last item this frame, or null.</summary>
-    public static Lapis.Assets.AssetInfo? AcceptAsset(Lapis.Assets.AssetDatabase? assets)
+    /// <summary>Makes the last item a drag source carrying assets from the Assets panel (at least one).</summary>
+    public static void AssetSource(IReadOnlyList<AssetInfo> assets)
     {
-        Lapis.Assets.AssetInfo? dropped = null;
-        if (assets is not null && ImGui.BeginDragDropTarget())
+        if (ImGui.BeginDragDropSource())
         {
-            var payload = ImGui.AcceptDragDropPayload(AssetPayload);
-            if (!payload.IsNull && payload.Data != null)
-            {
-                dropped = assets.Find(*(Guid*)payload.Data);
-            }
-
-            ImGui.EndDragDropTarget();
+            SetPayload(AssetPayload, assets.Select(asset => asset.Id));
+            ImGui.TextUnformatted(assets.Count == 1 ? Path.GetFileName(assets[0].FullPath) : $"{assets.Count} assets");
+            ImGui.EndDragDropSource();
         }
-
-        return dropped;
     }
-
-    /// <summary>
-    /// Returns the asset dropped anywhere inside a screen rectangle this frame, or null. Unlike
-    /// <see cref="AcceptAsset"/> this does not depend on the last item, so overlays drawn on top
-    /// (toolbars, gizmos) do not block the drop.
-    /// </summary>
-    public static Lapis.Assets.AssetInfo? AcceptAssetInRect(Lapis.Assets.AssetDatabase? assets, System.Numerics.Vector2 min, System.Numerics.Vector2 max, string id)
-    {
-        Lapis.Assets.AssetInfo? dropped = null;
-        if (assets is not null && ImGuiP.BeginDragDropTargetCustom(new ImRect(min, max), ImGui.GetID(id)))
-        {
-            var payload = ImGui.AcceptDragDropPayload(AssetPayload);
-            if (!payload.IsNull && payload.Data != null)
-            {
-                dropped = assets.Find(*(Guid*)payload.Data);
-            }
-
-            ImGui.EndDragDropTarget();
-        }
-
-        return dropped;
-    }
-
-    private const string FolderPayload = "LAPIS_FOLDER";
 
     /// <summary>Makes the last item a drag source carrying a Hierarchy folder.</summary>
     public static void FolderSource(SceneFolder folder)
     {
         if (ImGui.BeginDragDropSource())
         {
-            var id = folder.Id;
-            ImGui.SetDragDropPayload(FolderPayload, &id, (nuint)sizeof(Guid));
+            SetPayload(FolderPayload, [folder.Id]);
             ImGui.TextUnformatted(folder.Name);
             ImGui.EndDragDropSource();
         }
     }
 
-    /// <summary>Returns the Hierarchy folder dropped on the last item this frame, or null.</summary>
-    public static SceneFolder? AcceptFolder(Scene scene)
-    {
-        SceneFolder? dropped = null;
-        if (ImGui.BeginDragDropTarget())
-        {
-            var payload = ImGui.AcceptDragDropPayload(FolderPayload);
-            if (!payload.IsNull && payload.Data != null)
-            {
-                dropped = scene.FindFolder(*(Guid*)payload.Data);
-            }
+    /// <summary>Returns the (first) asset dropped on the last item this frame, or null.</summary>
+    public static AssetInfo? AcceptAsset(AssetDatabase? assets) => AcceptAssets(assets) is [var first, ..] ? first : null;
 
-            ImGui.EndDragDropTarget();
+    /// <summary>Returns every asset dropped on the last item this frame (none when nothing was dropped).</summary>
+    public static IReadOnlyList<AssetInfo> AcceptAssets(AssetDatabase? assets)
+    {
+        if (assets is null || !ImGui.BeginDragDropTarget())
+        {
+            return [];
         }
 
+        var dropped = ReadIds(ImGui.AcceptDragDropPayload(AssetPayload)).Select(assets.Find).OfType<AssetInfo>().ToList();
+        ImGui.EndDragDropTarget();
         return dropped;
     }
 
     /// <summary>
-    /// Returns the entity being dragged over the last item, or null; <paramref name="dropped"/> tells whether it was
-    /// released this frame. Nothing is drawn, so the caller can show where the entity would land.
+    /// Returns the (first) asset dropped anywhere inside a screen rectangle this frame, or null. Unlike
+    /// <see cref="AcceptAsset"/> this does not depend on the last item, so overlays drawn on top
+    /// (toolbars, gizmos) do not block the drop.
     /// </summary>
-    public static Entity? HoverEntity(Scene scene, out bool dropped)
+    public static AssetInfo? AcceptAssetInRect(AssetDatabase? assets, System.Numerics.Vector2 min, System.Numerics.Vector2 max, string id)
     {
-        dropped = false;
-        Entity? hovering = null;
-        if (ImGui.BeginDragDropTarget())
+        if (assets is null || !ImGuiP.BeginDragDropTargetCustom(new ImRect(min, max), ImGui.GetID(id)))
         {
-            var payload = ImGui.AcceptDragDropPayload(EntityPayload, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect);
-            if (!payload.IsNull && payload.Data != null)
-            {
-                hovering = scene.FindById(*(Guid*)payload.Data);
-                dropped = payload.Delivery;
-            }
-
-            ImGui.EndDragDropTarget();
+            return null;
         }
 
+        var dropped = ReadIds(ImGui.AcceptDragDropPayload(AssetPayload)).Select(assets.Find).OfType<AssetInfo>().FirstOrDefault();
+        ImGui.EndDragDropTarget();
+        return dropped;
+    }
+
+    /// <summary>Returns the Hierarchy folder dropped on the last item this frame, or null.</summary>
+    public static SceneFolder? AcceptFolder(Scene scene)
+    {
+        if (!ImGui.BeginDragDropTarget())
+        {
+            return null;
+        }
+
+        var dropped = ReadIds(ImGui.AcceptDragDropPayload(FolderPayload)).Select(id => scene.FindFolder(id)).OfType<SceneFolder>().FirstOrDefault();
+        ImGui.EndDragDropTarget();
+        return dropped;
+    }
+
+    /// <summary>
+    /// Returns the entities being dragged over the last item (none when nothing is); <paramref name="dropped"/> tells
+    /// whether they were released this frame. Nothing is drawn, so the caller can show where they would land.
+    /// </summary>
+    public static IReadOnlyList<Entity> HoverEntities(Scene scene, out bool dropped)
+    {
+        dropped = false;
+        if (!ImGui.BeginDragDropTarget())
+        {
+            return [];
+        }
+
+        var payload = ImGui.AcceptDragDropPayload(EntityPayload, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect);
+        var hovering = ReadIds(payload).Select(scene.FindById).OfType<Entity>().ToList();
+        dropped = hovering.Count > 0 && payload.Delivery;
+        ImGui.EndDragDropTarget();
         return hovering;
     }
 
-    /// <summary>Returns the entity dropped on the last item this frame, or null.</summary>
-    public static Entity? AcceptEntity(Scene scene)
-    {
-        Entity? dropped = null;
-        if (ImGui.BeginDragDropTarget())
-        {
-            var payload = ImGui.AcceptDragDropPayload(EntityPayload);
-            if (!payload.IsNull && payload.Data != null)
-            {
-                dropped = scene.FindById(*(Guid*)payload.Data);
-            }
+    /// <summary>Returns the (first) entity dropped on the last item this frame, or null.</summary>
+    public static Entity? AcceptEntity(Scene scene) => AcceptEntities(scene) is [var first, ..] ? first : null;
 
-            ImGui.EndDragDropTarget();
+    /// <summary>Returns every entity dropped on the last item this frame (none when nothing was dropped).</summary>
+    public static IReadOnlyList<Entity> AcceptEntities(Scene scene)
+    {
+        if (!ImGui.BeginDragDropTarget())
+        {
+            return [];
         }
 
+        var dropped = ReadIds(ImGui.AcceptDragDropPayload(EntityPayload)).Select(scene.FindById).OfType<Entity>().ToList();
+        ImGui.EndDragDropTarget();
         return dropped;
+    }
+
+    private static void SetPayload(string type, IEnumerable<Guid> ids)
+    {
+        var array = ids.ToArray();
+        fixed (Guid* data = array)
+        {
+            ImGui.SetDragDropPayload(type, data, (nuint)(array.Length * sizeof(Guid)));
+        }
+    }
+
+    private static Guid[] ReadIds(ImGuiPayloadPtr payload)
+    {
+        if (payload.IsNull || payload.Data == null || payload.DataSize < sizeof(Guid))
+        {
+            return [];
+        }
+
+        return new ReadOnlySpan<Guid>(payload.Data, payload.DataSize / sizeof(Guid)).ToArray();
     }
 }

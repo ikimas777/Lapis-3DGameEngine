@@ -23,13 +23,16 @@ internal sealed partial class EditorApplication
 
     private void DrawOptionsWindow(Vector2 center)
     {
+        // Set again below while a shortcut is being changed; a closed window never leaves shortcuts switched off.
+        Keybindings.IsCapturing = false;
         if (!_showOptions)
         {
+            _capturing = null;
             return;
         }
 
         ImGui.SetNextWindowPos(center, ImGuiCond.FirstUseEver, new Vector2(0.5f, 0.5f));
-        ImGui.SetNextWindowSize(new Vector2(560, 480), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new Vector2(620, 640), ImGuiCond.FirstUseEver);
         if (_optionsTabToSelect is not null)
         {
             ImGui.SetNextWindowFocus(); // reopening brings the window to the front
@@ -91,32 +94,173 @@ internal sealed partial class EditorApplication
         ImGui.TextDisabled("Lowering it forgets the oldest steps right away.");
         ImGui.Unindent();
 
-        ImGui.SeparatorText("All shortcuts");
-        var flyKeys = onlyWithMouse ? "Right mouse + W A S D / Q E" : "W A S D / Q E";
-        var toolKeys = onlyWithMouse ? "W / E / R  or  1 / 2 / 3" : "1 / 2 / 3";
+        ImGui.SeparatorText("Keyboard shortcuts");
+        ImGui.TextDisabled("Click a shortcut, then press the new keys. Esc cancels, Backspace removes the shortcut.");
+        DrawShortcutTable();
+
+        ImGui.Spacing();
+        if (ImGui.Button("Restore Defaults"))
+        {
+            _capturing = null;
+            _context.Keys.RestoreDefaults();
+            SaveKeybindings();
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Puts every keyboard shortcut back to how Lapis comes.");
+        }
+
+        ImGui.SeparatorText("Mouse");
         DrawBindingTable(
             [
+                ("Selection", null),
+                ("Left click", "Select (Hierarchy, Scene view, Assets)"),
+                ("Ctrl + left click", "Add to or remove from the selection"),
+                ("Shift + left click", "Hierarchy and Assets: select every row up to the last clicked one; Scene view: add"),
                 ("Scene view", null),
-                ("Left click", "Select the object under the cursor"),
-                (flyKeys, "Fly (hold Shift to go faster)"),
-                ("Right mouse + drag", "Look around"),
+                ("Right mouse + drag", onlyWithMouse ? "Look around; fly with the fly keys while held" : "Look around"),
                 ("Alt + left mouse + drag", "Orbit around the focus point"),
                 ("Middle mouse + drag", "Pan"),
                 ("Mouse wheel", "Zoom"),
-                ("F", "Focus the selected entity"),
-                (toolKeys, "Move / Rotate / Scale tool"),
+                ("Shift while flying", "Fly faster"),
                 ("Ctrl while dragging the gizmo", "Toggle snapping"),
-                ("Editor", null),
-                ("Ctrl+N", "New scene"),
-                ("Ctrl+O", "Open scene"),
-                ("Ctrl+S / Ctrl+Shift+S", "Save / Save As"),
-                ("Ctrl+Z / Ctrl+Y", "Undo / Redo"),
-                ("Ctrl+D", "Duplicate the selected entity"),
-                ("Delete", "Delete the selected entity"),
-                ("Ctrl+P", "Play or stop"),
-                ("Ctrl+Shift+P", "Pause"),
-                ("Ctrl+Alt+P", "Step one frame"),
             ]);
+    }
+
+    private (EditorAction Action, int Slot)? _capturing;
+
+    /// <summary>Every command with its two shortcuts (click one to change it) and a button to restore its default.</summary>
+    private void DrawShortcutTable()
+    {
+        var keys = _context.Keys;
+        CaptureShortcut(keys);
+
+        if (!ImGui.BeginTable("##shortcuts", 4, ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerV))
+        {
+            return;
+        }
+
+        ImGui.TableSetupColumn("Command", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("Shortcut", ImGuiTableColumnFlags.WidthFixed, 130);
+        ImGui.TableSetupColumn("Alternative", ImGuiTableColumnFlags.WidthFixed, 130);
+        ImGui.TableSetupColumn("##reset", ImGuiTableColumnFlags.WidthFixed, 50);
+        ImGui.TableHeadersRow();
+
+        foreach (var action in Enum.GetValues<EditorAction>())
+        {
+            ImGui.PushID((int)action);
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(Keybindings.Label(action));
+
+            for (var slot = 0; slot < Keybindings.SlotCount; slot++)
+            {
+                ImGui.TableNextColumn();
+                DrawShortcutButton(keys, action, slot);
+            }
+
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(keys.IsDefault(action));
+            if (ImGui.Button("Reset", new Vector2(-1, 0)))
+            {
+                _capturing = null;
+                keys.RestoreDefault(action);
+                SaveKeybindings();
+            }
+
+            ImGui.EndDisabled();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip("Restore the default");
+            }
+
+            ImGui.PopID();
+        }
+
+        ImGui.EndTable();
+    }
+
+    private void DrawShortcutButton(Keybindings keys, EditorAction action, int slot)
+    {
+        var chord = keys.Get(action, slot);
+        var capturing = _capturing == (action, slot);
+        var conflicts = chord is { } bound ? keys.Conflicts(action, bound).ToList() : [];
+        var text = capturing ? "Press keys..." : chord?.ToString() ?? "—";
+
+        ImGui.PushID(slot);
+        if (capturing)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, Theme.EditorTheme.Accent);
+        }
+        else if (conflicts.Count > 0)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.EditorTheme.Warning);
+        }
+
+        if (ImGui.Button(text, new Vector2(-1, 0)))
+        {
+            _capturing = capturing ? null : (action, slot);
+        }
+
+        if (capturing || conflicts.Count > 0)
+        {
+            ImGui.PopStyleColor();
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(conflicts.Count > 0
+                ? $"Also used by: {string.Join(", ", conflicts.Select(Keybindings.Label))}"
+                : Keybindings.IsHeldKey(action) ? "Click and press a key (held while flying)" : "Click and press the new shortcut");
+        }
+
+        ImGui.PopID();
+    }
+
+    /// <summary>While a shortcut is being changed, takes the next key pressed (with Ctrl / Shift / Alt) as the new one.</summary>
+    private void CaptureShortcut(Keybindings keys)
+    {
+        Keybindings.IsCapturing = _capturing is not null;
+        if (_capturing is not { } target)
+        {
+            return;
+        }
+
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape, false))
+        {
+            _capturing = null;
+        }
+        else if (ImGui.IsKeyPressed(ImGuiKey.Backspace, false))
+        {
+            keys.Set(target.Action, target.Slot, null);
+            _capturing = null;
+            SaveKeybindings();
+        }
+        else if (KeyChord.BindableKeys().FirstOrDefault(key => ImGui.IsKeyPressed(key, false)) is var key and not ImGuiKey.None)
+        {
+            var io = ImGui.GetIO();
+            var chord = Keybindings.IsHeldKey(target.Action) ? new KeyChord(key) : new KeyChord(key, io.KeyCtrl, io.KeyShift, io.KeyAlt);
+            keys.Set(target.Action, target.Slot, chord);
+            _capturing = null;
+            SaveKeybindings();
+        }
+
+        // Clicking anywhere else cancels.
+        if (_capturing is not null && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows))
+        {
+            _capturing = null;
+        }
+
+        Keybindings.IsCapturing = _capturing is not null;
+    }
+
+    private void SaveKeybindings()
+    {
+        var changed = _context.Keys.ToSettings();
+        _settings.Keybindings = changed.Count > 0 ? changed : null;
+        _settings.Save();
     }
 
     private void SetFlyOnlyWithRightMouse(bool value)
