@@ -17,17 +17,90 @@ editor as it happens, and you can take any of them back with **Ctrl+Z**.
 
 ## Connecting an assistant
 
-**Claude Code:** click **Copy for Claude Code** and run the copied command in a terminal in your project folder:
+Set the assistant up once with one of the entries below; after that it connects whenever the server is running.
+They use the default port, 47800; if you changed the port in the MCP tab, change it here too. Start the server in
+the editor before the assistant uses it (in Claude Code, `/mcp` reconnects if the server started later).
+
+### Claude Code
+
+Run this in a terminal in your project folder:
 
 ```
 claude mcp add --transport http lapis http://127.0.0.1:47800/mcp
 ```
 
-**Claude Desktop:** click **Copy for Claude Desktop** and add the copied entry to the `mcpServers` section of
-`claude_desktop_config.json` (Settings > Developer > Edit Config), then restart Claude Desktop. It connects through
-`mcp-remote`, which needs [Node.js](https://nodejs.org/).
+It is saved for you and this folder only (in `~/.claude.json`). Add `--scope user` to have it in every project, or
+`--scope project` to save it in `.mcp.json` in the project folder, which can be committed so everyone working on the
+project gets it. You can also write `.mcp.json` yourself:
 
-Other MCP clients connect to the same address with the Streamable HTTP transport.
+```json
+{
+  "mcpServers": {
+    "lapis": {
+      "type": "http",
+      "url": "http://127.0.0.1:47800/mcp"
+    }
+  }
+}
+```
+
+`claude mcp list` shows the configured servers and `claude mcp remove lapis` removes this one. The Code tab of the
+Claude desktop app uses the same settings.
+
+### Claude Desktop
+
+Open **Settings > Developer > Edit Config** in Claude Desktop. In `claude_desktop_config.json`, add this entry inside
+`"mcpServers"` (next to any servers already there, separated by a comma), save, and restart Claude Desktop:
+
+```json
+"lapis": {
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "http://127.0.0.1:47800/mcp"]
+}
+```
+
+A file with no other servers looks like this:
+
+```json
+{
+  "mcpServers": {
+    "lapis": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:47800/mcp"]
+    }
+  }
+}
+```
+
+Claude Desktop starts the programs listed there itself; `mcp-remote` passes its requests on to the editor. It needs
+[Node.js](https://nodejs.org/).
+
+### Codex (OpenAI)
+
+Run this in a terminal:
+
+```
+codex mcp add lapis --url http://127.0.0.1:47800/mcp
+```
+
+or add this to `~/.codex/config.toml` (or `.codex/config.toml` in the project folder):
+
+```toml
+[mcp_servers.lapis]
+url = "http://127.0.0.1:47800/mcp"
+```
+
+The Codex command line, its IDE extension and the ChatGPT desktop app's Codex use the same settings. `codex mcp list`
+shows the configured servers. Codex's MCP commands are still marked experimental; if the command is not accepted,
+see `codex mcp add --help`.
+
+### Other assistants
+
+Any MCP client that supports the Streamable HTTP transport connects to `http://127.0.0.1:47800/mcp`.
+
+ChatGPT in the browser cannot connect: it runs on OpenAI's servers, which cannot reach a server on your computer.
+Exposing the server to the internet (with a tunnel) is not recommended, because anyone who knows the address could
+then control the editor.
 
 ## What the assistant may do
 
