@@ -105,6 +105,29 @@ internal static unsafe class DragDrop
         return dropped;
     }
 
+    /// <summary>
+    /// Returns the entity being dragged over the last item, or null; <paramref name="dropped"/> tells whether it was
+    /// released this frame. Nothing is drawn, so the caller can show where the entity would land.
+    /// </summary>
+    public static Entity? HoverEntity(Scene scene, out bool dropped)
+    {
+        dropped = false;
+        Entity? hovering = null;
+        if (ImGui.BeginDragDropTarget())
+        {
+            var payload = ImGui.AcceptDragDropPayload(EntityPayload, ImGuiDragDropFlags.AcceptBeforeDelivery | ImGuiDragDropFlags.AcceptNoDrawDefaultRect);
+            if (!payload.IsNull && payload.Data != null)
+            {
+                hovering = scene.FindById(*(Guid*)payload.Data);
+                dropped = payload.Delivery;
+            }
+
+            ImGui.EndDragDropTarget();
+        }
+
+        return hovering;
+    }
+
     /// <summary>Returns the entity dropped on the last item this frame, or null.</summary>
     public static Entity? AcceptEntity(Scene scene)
     {
