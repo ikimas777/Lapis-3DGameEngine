@@ -73,3 +73,4 @@ $RECYCLE.BIN/
 # ===== Private working notes (kept locally, never published) =====
 PLAN.md
 /notes/
+/.mcp.json
