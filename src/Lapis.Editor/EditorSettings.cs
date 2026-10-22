@@ -22,6 +22,9 @@ internal sealed class EditorSettings
     /// </summary>
     public bool FlyOnlyWithRightMouse { get; set; }
 
+    /// <summary>Shortcuts changed in Options > Keybindings: command name to "Ctrl+Z, Ctrl+Shift+Z" (others keep their defaults).</summary>
+    public Dictionary<string, string>? Keybindings { get; set; }
+
     /// <summary>How many steps Undo (Ctrl+Z) can go back.</summary>
     public int UndoLimit { get; set; } = Commands.UndoStack.DefaultMaxDepth;
 

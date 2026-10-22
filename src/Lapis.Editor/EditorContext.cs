@@ -8,8 +8,6 @@ namespace Lapis.Editor;
 /// </summary>
 internal sealed class EditorContext
 {
-    private Entity? _selection;
-    private Guid? _selectionId;
     private long _savedStateId;
 
     public EditorContext(Scene scene, string? scenePath = null)
@@ -23,6 +21,9 @@ internal sealed class EditorContext
 
     /// <summary>File the scene was opened from or last saved to; null for a new scene.</summary>
     public string? ScenePath { get; private set; }
+
+    /// <summary>The keyboard shortcuts of the editor's commands (Options > Keybindings).</summary>
+    public Keybindings Keys { get; } = new();
 
     /// <summary>Undo / redo history of the open scene.</summary>
     public UndoStack History { get; private set; } = new();
@@ -48,50 +49,156 @@ internal sealed class EditorContext
     public bool IsPlaying => _editState is not null;
 
     /// <summary>
-    /// The selected entity, or null. When the selected entity is deleted and later restored by undo,
-    /// the restored entity becomes selected again.
+    /// The entity shown in the Inspector and moved by the gizmo: the one selected last, or null. Setting it selects
+    /// only that entity. Entities are remembered by id, so one deleted and restored by undo (or reloaded with the
+    /// scripts) is selected again.
     /// </summary>
     public Entity? Selection
     {
         get
         {
-            if (_selection is not { IsDestroyed: false } && _selectionId is { } id && Scene.FindById(id) is { } restored)
+            for (var i = _selectedIds.Count - 1; i >= 0; i--)
             {
-                _selection = restored;
+                if (Scene.FindById(_selectedIds[i]) is { } entity)
+                {
+                    return entity;
+                }
             }
 
-            return _selection is { IsDestroyed: false } ? _selection : null;
+            return null;
         }
         set
         {
-            _selection = value;
-            _selectionId = value?.Id;
+            _selectedIds.Clear();
             if (value is not null)
             {
-                SelectedAsset = null;
+                _selectedIds.Add(value.Id);
+                ClearAssetSelection();
             }
+        }
+    }
+
+    /// <summary>Every selected entity that still exists, in the order they were selected (the last is <see cref="Selection"/>).</summary>
+    public IReadOnlyList<Entity> SelectedEntities
+    {
+        get
+        {
+            var entities = new List<Entity>(_selectedIds.Count);
+            foreach (var id in _selectedIds)
+            {
+                if (Scene.FindById(id) is { } entity)
+                {
+                    entities.Add(entity);
+                }
+            }
+
+            return entities;
         }
     }
 
     /// <summary>
-    /// The asset selected in the Assets panel, shown in the Inspector instead of an entity. Selecting an
-    /// entity clears it, and selecting an asset clears the entity selection.
+    /// The selected entities without those inside another selected entity: what to move, delete or duplicate, so a
+    /// child is not handled twice.
+    /// </summary>
+    public IReadOnlyList<Entity> SelectedRoots
+    {
+        get
+        {
+            var selected = SelectedEntities;
+            return [.. selected.Where(entity => !selected.Any(other => other != entity && entity.Transform.IsChildOf(other.Transform)))];
+        }
+    }
+
+    public bool IsSelected(Entity entity) => _selectedIds.Contains(entity.Id);
+
+    /// <summary>Adds the entity to the selection (or removes it when it is already selected), as with Ctrl+click.</summary>
+    public void ToggleSelected(Entity entity)
+    {
+        if (!_selectedIds.Remove(entity.Id))
+        {
+            _selectedIds.Add(entity.Id);
+        }
+
+        ClearAssetSelection();
+    }
+
+    /// <summary>Adds the entity to the selection and makes it the <see cref="Selection"/>.</summary>
+    public void AddToSelection(Entity entity)
+    {
+        _selectedIds.Remove(entity.Id);
+        _selectedIds.Add(entity.Id);
+        ClearAssetSelection();
+    }
+
+    /// <summary>Selects exactly these entities; the last one becomes the <see cref="Selection"/>.</summary>
+    public void SetSelection(IEnumerable<Entity> entities)
+    {
+        _selectedIds.Clear();
+        foreach (var entity in entities)
+        {
+            _selectedIds.Remove(entity.Id);
+            _selectedIds.Add(entity.Id);
+        }
+
+        if (_selectedIds.Count > 0)
+        {
+            ClearAssetSelection();
+        }
+    }
+
+    /// <summary>
+    /// The asset shown in the Inspector instead of an entity: the one selected last in the Assets panel, or null.
+    /// Setting it selects only that asset (and clears the entity selection).
     /// </summary>
     public Lapis.Assets.AssetInfo? SelectedAsset
     {
-        get => _selectedAsset;
+        get => _selectedAssets.Count > 0 ? _selectedAssets[^1] : null;
         set
         {
-            _selectedAsset = value;
+            _selectedAssets.Clear();
             if (value is not null)
             {
-                _selection = null;
-                _selectionId = null;
+                _selectedAssets.Add(value);
+                _selectedIds.Clear();
             }
         }
     }
 
-    private Lapis.Assets.AssetInfo? _selectedAsset;
+    /// <summary>Every selected asset, in the order they were selected (the last is <see cref="SelectedAsset"/>).</summary>
+    public IReadOnlyList<Lapis.Assets.AssetInfo> SelectedAssets => _selectedAssets;
+
+    public bool IsAssetSelected(Lapis.Assets.AssetInfo asset) => _selectedAssets.Exists(selected => selected.Id == asset.Id);
+
+    /// <summary>Selects exactly these assets; the last one becomes the <see cref="SelectedAsset"/>.</summary>
+    public void SetAssetSelection(IEnumerable<Lapis.Assets.AssetInfo> assets)
+    {
+        _selectedAssets.Clear();
+        foreach (var asset in assets)
+        {
+            _selectedAssets.RemoveAll(selected => selected.Id == asset.Id);
+            _selectedAssets.Add(asset);
+        }
+
+        if (_selectedAssets.Count > 0)
+        {
+            _selectedIds.Clear();
+        }
+    }
+
+    /// <summary>Adds the asset to the selection, or removes it when it is already selected (Ctrl+click).</summary>
+    public void ToggleAssetSelected(Lapis.Assets.AssetInfo asset)
+    {
+        if (_selectedAssets.RemoveAll(selected => selected.Id == asset.Id) == 0)
+        {
+            _selectedAssets.Add(asset);
+            _selectedIds.Clear();
+        }
+    }
+
+    private readonly List<Guid> _selectedIds = [];
+    private readonly List<Lapis.Assets.AssetInfo> _selectedAssets = [];
+
+    private void ClearAssetSelection() => _selectedAssets.Clear();
 
     /// <summary>The open project's assets, or null when no project is open.</summary>
 #pragma warning disable CA1822 // an instance property keeps call sites short (context.Assets)
@@ -133,10 +240,13 @@ internal sealed class EditorContext
             Log.Error($"{verb} of '{name}' failed: {exception.Message} The undo history was cleared.");
         }
 
-        // An undone asset change may have moved or removed the selected asset.
-        if (SelectedAsset is { } asset)
+        // An undone asset change may have moved or removed selected assets.
+        if (_selectedAssets.Count > 0)
         {
-            SelectedAsset = Assets?.Find(asset.Id);
+            var assets = Assets;
+            var current = _selectedAssets.Select(asset => assets?.Find(asset.Id)).OfType<Lapis.Assets.AssetInfo>().ToList();
+            _selectedAssets.Clear();
+            _selectedAssets.AddRange(current);
         }
     }
 
@@ -223,7 +333,6 @@ internal sealed class EditorContext
     {
         Scene = scene;
         History.BeginGesture();
-        _selection = _selectionId is { } id ? scene.FindById(id) : null;
     }
 
     /// <summary>
@@ -240,7 +349,6 @@ internal sealed class EditorContext
         _editState = new EditState(Scene, History, IsDirty);
         Scene = playScene;
         History = new UndoStack { MaxDepth = History.MaxDepth };
-        _selection = _selectionId is { } id ? playScene.FindById(id) : null;
     }
 
     /// <summary>Returns to the edited scene, discarding the play copy and everything done to it.</summary>
@@ -254,7 +362,6 @@ internal sealed class EditorContext
         _editState = null;
         Scene = edit.Scene;
         History = edit.History;
-        _selection = _selectionId is { } id ? edit.Scene.FindById(id) : null;
     }
 
     private EditState? _editState;

@@ -124,6 +124,33 @@ internal sealed class ReparentCommand : IEditorCommand
     }
 }
 
+/// <summary>
+/// Several changes made one after another (e.g. to every selected entity) that are undone and redone as one step.
+/// Each command must have been created right before it was applied, so it remembers the state it changed.
+/// </summary>
+internal sealed class CompositeCommand(string name, IReadOnlyList<IEditorCommand> commands) : IEditorCommand
+{
+    public string Name => name;
+
+    public bool ChangesScene => commands.Any(command => command.ChangesScene);
+
+    public void Execute(Scene scene)
+    {
+        foreach (var command in commands)
+        {
+            command.Execute(scene);
+        }
+    }
+
+    public void Undo(Scene scene)
+    {
+        for (var i = commands.Count - 1; i >= 0; i--)
+        {
+            commands[i].Undo(scene);
+        }
+    }
+}
+
 /// <summary>Where <see cref="PlaceEntityCommand"/> puts an entity relative to another one.</summary>
 internal enum Placement
 {

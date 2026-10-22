@@ -33,6 +33,7 @@ internal sealed unsafe class SceneViewPanel(
     private RenderView _lastView;
     private TransformState? _gizmoStart;
     private Entity? _gizmoEntity;
+    private readonly List<(Entity Entity, TransformState Start)> _gizmoOthers = [];
 
     private enum NavigationMode
     {
@@ -103,7 +104,7 @@ internal sealed unsafe class SceneViewPanel(
 
         if (ShowColliders)
         {
-            ColliderGizmos.Add(lines, context.Scene, context.Selection);
+            ColliderGizmos.Add(lines, context.Scene, context.IsSelected);
             lines.Render(view);
         }
         framebuffer.Unbind();
@@ -272,17 +273,35 @@ internal sealed unsafe class SceneViewPanel(
         };
         var snapValues = stackalloc float[3] { step, step, step };
 
+        var previousWorld = world;
         if (ImGuizmo.Manipulate((float*)&viewMatrix, (float*)&projection, operation, mode, (float*)&world, null, snapping ? snapValues : null))
         {
+            if (_gizmoStart is null)
+            {
+                StartGizmoDrag(selection);
+            }
+
             ApplyWorldMatrix(transform, world);
+
+            // The other selected objects follow: the same change, applied in world space around the gizmo.
+            if (Matrix4x4.Invert(previousWorld, out var previousInverse))
+            {
+                var delta = previousInverse * world;
+                foreach (var other in _gizmoOthers)
+                {
+                    if (!other.Entity.IsDestroyed)
+                    {
+                        ApplyWorldMatrix(other.Entity.Transform, other.Entity.Transform.LocalToWorld * delta);
+                    }
+                }
+            }
         }
 
         if (ImGuizmo.IsUsing())
         {
             if (_gizmoStart is null)
             {
-                _gizmoStart = before;
-                _gizmoEntity = selection;
+                StartGizmoDrag(selection, before);
             }
         }
         else
@@ -291,21 +310,51 @@ internal sealed unsafe class SceneViewPanel(
         }
     }
 
-    /// <summary>Records the finished gizmo drag as one undo step.</summary>
+    /// <summary>Remembers where the selected objects were, so the drag becomes one undo step.</summary>
+    private void StartGizmoDrag(Entity primary, TransformState? primaryStart = null)
+    {
+        _gizmoStart = primaryStart ?? TransformState.Of(primary.Transform);
+        _gizmoEntity = primary;
+        _gizmoOthers.Clear();
+        foreach (var root in context.SelectedRoots)
+        {
+            if (root != primary && !primary.Transform.IsChildOf(root.Transform) && !root.Transform.IsChildOf(primary.Transform))
+            {
+                _gizmoOthers.Add((root, TransformState.Of(root.Transform)));
+            }
+        }
+    }
+
+    /// <summary>Records the finished gizmo drag (of every selected object) as one undo step.</summary>
     private void FinishGizmoDrag()
     {
         if (_gizmoStart is { } start && _gizmoEntity is { IsDestroyed: false } entity)
         {
+            var commands = new List<IEditorCommand>();
             var end = TransformState.Of(entity.Transform);
             if (end != start)
             {
+                commands.Add(new SetTransformCommand(entity, start, end));
+            }
+
+            foreach (var (other, otherStart) in _gizmoOthers)
+            {
+                if (!other.IsDestroyed && TransformState.Of(other.Transform) is var otherEnd && otherEnd != otherStart)
+                {
+                    commands.Add(new SetTransformCommand(other, otherStart, otherEnd));
+                }
+            }
+
+            if (commands.Count > 0)
+            {
                 context.History.BeginGesture();
-                context.Record(new SetTransformCommand(entity, start, end));
+                context.Record(commands.Count == 1 ? commands[0] : new CompositeCommand($"Transform {commands.Count} entities", commands));
             }
         }
 
         _gizmoStart = null;
         _gizmoEntity = null;
+        _gizmoOthers.Clear();
     }
 
     private static void ApplyWorldMatrix(Transform transform, Matrix4x4 world)
@@ -331,7 +380,25 @@ internal sealed unsafe class SceneViewPanel(
         var mouse = ImGui.GetMousePos() - origin;
         var x = (int)(mouse.X / size.X * framebuffer.Width);
         var y = (int)(mouse.Y / size.Y * framebuffer.Height);
-        context.Selection = picker.Pick(context.Scene, view, framebuffer.Width, framebuffer.Height, x, y);
+        var picked = picker.Pick(context.Scene, view, framebuffer.Width, framebuffer.Height, x, y);
+
+        // Ctrl+click adds or removes an object, Shift+click adds it; clicking empty space with either keeps the selection.
+        var io = ImGui.GetIO();
+        if (io.KeyCtrl || io.KeyShift)
+        {
+            if (picked is not null && io.KeyCtrl)
+            {
+                context.ToggleSelected(picked);
+            }
+            else if (picked is not null)
+            {
+                context.AddToSelection(picked);
+            }
+
+            return;
+        }
+
+        context.Selection = picked;
     }
 
     /// <returns>True when the mouse is over a toolbar button.</returns>
@@ -389,26 +456,27 @@ internal sealed unsafe class SceneViewPanel(
     private void HandleShortcuts()
     {
         var io = ImGui.GetIO();
-        if (!ImGui.IsWindowFocused() || io.WantTextInput || io.KeyCtrl || _mode == NavigationMode.Look)
+        if (!ImGui.IsWindowFocused() || io.WantTextInput || _mode == NavigationMode.Look)
         {
             return;
         }
 
         // W / E / R are free for the tools when flying needs the right mouse button.
-        var letters = FlyOnlyWithRightMouse;
-        if (ImGui.IsKeyPressed(ImGuiKey.Key1, false) || (letters && ImGui.IsKeyPressed(ImGuiKey.W, false)))
+        var keys = context.Keys;
+        var letters = FlyOnlyWithRightMouse && !io.KeyCtrl && !io.KeyAlt && !Keybindings.IsCapturing;
+        if (keys.Pressed(EditorAction.MoveTool) || (letters && ImGui.IsKeyPressed(ImGuiKey.W, false)))
         {
             Tool = GizmoTool.Move;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Key2, false) || (letters && ImGui.IsKeyPressed(ImGuiKey.E, false)))
+        else if (keys.Pressed(EditorAction.RotateTool) || (letters && ImGui.IsKeyPressed(ImGuiKey.E, false)))
         {
             Tool = GizmoTool.Rotate;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Key3, false) || (letters && ImGui.IsKeyPressed(ImGuiKey.R, false)))
+        else if (keys.Pressed(EditorAction.ScaleTool) || (letters && ImGui.IsKeyPressed(ImGuiKey.R, false)))
         {
             Tool = GizmoTool.Scale;
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.F, false))
+        else if (keys.Pressed(EditorAction.FocusSelection))
         {
             FocusSelection();
         }
@@ -470,35 +538,36 @@ internal sealed unsafe class SceneViewPanel(
         }
     }
 
-    private static Vector3 ReadFlyInput()
+    private Vector3 ReadFlyInput()
     {
+        var keys = context.Keys;
         var move = Vector3.Zero;
-        if (ImGui.IsKeyDown(ImGuiKey.W))
+        if (keys.Down(EditorAction.FlyForward))
         {
             move.Z += 1;
         }
 
-        if (ImGui.IsKeyDown(ImGuiKey.S))
+        if (keys.Down(EditorAction.FlyBack))
         {
             move.Z -= 1;
         }
 
-        if (ImGui.IsKeyDown(ImGuiKey.D))
+        if (keys.Down(EditorAction.FlyRight))
         {
             move.X += 1;
         }
 
-        if (ImGui.IsKeyDown(ImGuiKey.A))
+        if (keys.Down(EditorAction.FlyLeft))
         {
             move.X -= 1;
         }
 
-        if (ImGui.IsKeyDown(ImGuiKey.E))
+        if (keys.Down(EditorAction.FlyUp))
         {
             move.Y += 1;
         }
 
-        if (ImGui.IsKeyDown(ImGuiKey.Q))
+        if (keys.Down(EditorAction.FlyDown))
         {
             move.Y -= 1;
         }
@@ -514,8 +583,8 @@ internal sealed unsafe class SceneViewPanel(
             NavigationMode.Look => "Look  ·  WASD / Q / E to fly, Shift = faster",
             NavigationMode.Orbit => "Orbit",
             NavigationMode.Pan => "Pan",
-            _ when FlyOnlyWithRightMouse => "Click select  ·  RMB look + WASD / Q / E fly  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
-            _ => "Click select  ·  WASD / Q / E fly  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
+            _ when FlyOnlyWithRightMouse => "Click select (Ctrl/Shift: add)  ·  RMB look + WASD / Q / E fly  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
+            _ => "Click select (Ctrl/Shift: add)  ·  WASD / Q / E fly  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
         };
 
         var textSize = ImGui.CalcTextSize(text);

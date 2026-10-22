@@ -57,6 +57,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         _play = new PlayMode(_context);
         _settings = EditorSettings.Load();
         _context.UndoLimit = _settings.UndoLimit;
+        _context.Keys.Load(_settings.Keybindings);
 
         if (launchOptions.ProjectPath is { } projectPath)
         {
@@ -279,68 +280,50 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             return; // text fields have their own undo and editing keys
         }
 
-        if (!io.KeyCtrl)
+        var keys = _context.Keys;
+        if (keys.Pressed(EditorAction.Delete) && _gameInput?.Enabled != true)
         {
-            if (ImGui.IsKeyPressed(ImGuiKey.Delete, false) && _context.Selection is { } selected && _gameInput?.Enabled != true)
-            {
-                EditorActions.Delete(_context, selected);
-            }
-
-            return;
+            EditorActions.DeleteSelection(_context);
         }
-
-        if (ImGui.IsKeyPressed(ImGuiKey.P, false))
+        else if (keys.Pressed(EditorAction.PlayStop))
         {
-            if (io.KeyAlt)
-            {
-                _play.Step();
-            }
-            else if (io.KeyShift)
-            {
-                _play.TogglePause();
-            }
-            else
-            {
-                _play.TogglePlay();
-            }
+            _play.TogglePlay();
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Z, false))
+        else if (keys.Pressed(EditorAction.Pause))
         {
-            if (io.KeyShift)
-            {
-                _context.Redo();
-            }
-            else
-            {
-                _context.Undo();
-            }
+            _play.TogglePause();
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.Y, false))
+        else if (keys.Pressed(EditorAction.Step))
+        {
+            _play.Step();
+        }
+        else if (keys.Pressed(EditorAction.Undo))
+        {
+            _context.Undo();
+        }
+        else if (keys.Pressed(EditorAction.Redo))
         {
             _context.Redo();
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.D, false) && _context.Selection is { } toDuplicate)
+        else if (keys.Pressed(EditorAction.Duplicate))
         {
-            EditorActions.Duplicate(_context, toDuplicate);
+            EditorActions.DuplicateSelection(_context);
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.N, false))
+        else if (keys.Pressed(EditorAction.NewScene))
         {
             NewScene();
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.O, false))
+        else if (keys.Pressed(EditorAction.OpenScene))
         {
             RequestPopup(OpenScenePopup);
         }
-        else if (ImGui.IsKeyPressed(ImGuiKey.S, false))
+        else if (keys.Pressed(EditorAction.SaveSceneAs) || (keys.Pressed(EditorAction.SaveScene) && _context.ScenePath is null))
         {
-            if (io.KeyShift || _context.ScenePath is null)
-            {
-                RequestPopup(SaveScenePopup);
-            }
-            else
-            {
-                _context.SaveScene();
-            }
+            RequestPopup(SaveScenePopup);
+        }
+        else if (keys.Pressed(EditorAction.SaveScene))
+        {
+            _context.SaveScene();
         }
     }
 
@@ -366,19 +349,19 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         if (ImGui.BeginMenu("File"))
         {
-            if (ImGui.MenuItem("New Scene", "Ctrl+N"))
+            if (ImGui.MenuItem("New Scene", _context.Keys.Shortcut(EditorAction.NewScene)))
             {
                 NewScene();
             }
 
-            if (ImGui.MenuItem("Open Scene...", "Ctrl+O"))
+            if (ImGui.MenuItem("Open Scene...", _context.Keys.Shortcut(EditorAction.OpenScene)))
             {
                 RequestPopup(OpenScenePopup);
             }
 
             ImGui.Separator();
 
-            if (ImGui.MenuItem("Save", "Ctrl+S"))
+            if (ImGui.MenuItem("Save", _context.Keys.Shortcut(EditorAction.SaveScene)))
             {
                 if (_context.ScenePath is null)
                 {
@@ -390,7 +373,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
                 }
             }
 
-            if (ImGui.MenuItem("Save As...", "Ctrl+Shift+S"))
+            if (ImGui.MenuItem("Save As...", _context.Keys.Shortcut(EditorAction.SaveSceneAs)))
             {
                 RequestPopup(SaveScenePopup);
             }
@@ -421,12 +404,12 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         if (ImGui.BeginMenu("Edit"))
         {
             var history = _context.History;
-            if (ImGui.MenuItem(history.UndoName is { } undo ? $"Undo {undo}" : "Undo", "Ctrl+Z", false, history.CanUndo))
+            if (ImGui.MenuItem(history.UndoName is { } undo ? $"Undo {undo}" : "Undo", _context.Keys.Shortcut(EditorAction.Undo), false, history.CanUndo))
             {
                 _context.Undo();
             }
 
-            if (ImGui.MenuItem(history.RedoName is { } redo ? $"Redo {redo}" : "Redo", "Ctrl+Y", false, history.CanRedo))
+            if (ImGui.MenuItem(history.RedoName is { } redo ? $"Redo {redo}" : "Redo", _context.Keys.Shortcut(EditorAction.Redo), false, history.CanRedo))
             {
                 _context.Redo();
             }
@@ -434,14 +417,14 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             ImGui.Separator();
             var selection = _context.Selection;
 
-            if (ImGui.MenuItem("Duplicate", "Ctrl+D", false, selection is not null))
+            if (ImGui.MenuItem("Duplicate", _context.Keys.Shortcut(EditorAction.Duplicate), false, selection is not null))
             {
-                EditorActions.Duplicate(_context, selection!);
+                EditorActions.DuplicateSelection(_context);
             }
 
-            if (ImGui.MenuItem("Delete", "Del", false, selection is not null))
+            if (ImGui.MenuItem("Delete", _context.Keys.Shortcut(EditorAction.Delete), false, selection is not null))
             {
-                EditorActions.Delete(_context, selection!);
+                EditorActions.DeleteSelection(_context);
             }
 
             ImGui.Separator();
@@ -505,7 +488,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
             ImGui.Separator();
 
-            if (ImGui.MenuItem("Focus Selection", "F", false, _context.Selection is not null))
+            if (ImGui.MenuItem("Focus Selection", _context.Keys.Shortcut(EditorAction.FocusSelection), false, _context.Selection is not null))
             {
                 _sceneView?.FocusSelection();
             }

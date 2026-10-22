@@ -17,16 +17,44 @@ internal static class EditorActions
         context.Execute(EntityLifetimeCommand.Deleting([entity]));
     }
 
-    /// <summary>Copies the entity and its children next to the original and selects the copy.</summary>
-    public static Entity Duplicate(EditorContext context, Entity entity)
+    /// <summary>Deletes every selected entity (with its children) as one undoable step.</summary>
+    public static void DeleteSelection(EditorContext context)
     {
-        var json = SceneSerializer.EntitiesToJson([entity]);
-        var copy = SceneSerializer.EntitiesFromJson(context.Scene, json, entity.Parent, assignNewIds: true)[0];
-        copy.Transform.SetSiblingIndex(entity.Transform.SiblingIndex + 1);
+        if (context.SelectedRoots is { Count: > 0 } roots)
+        {
+            context.Execute(EntityLifetimeCommand.Deleting(roots));
+        }
+    }
 
-        context.Record(EntityLifetimeCommand.Created($"Duplicate {entity.Name}", copy));
-        context.Selection = copy;
-        return copy;
+    /// <summary>Copies the entity and its children next to the original and selects the copy.</summary>
+    public static Entity Duplicate(EditorContext context, Entity entity) => DuplicateAll(context, [entity])[0];
+
+    /// <summary>Copies every selected entity (with its children) next to its original and selects the copies.</summary>
+    public static void DuplicateSelection(EditorContext context)
+    {
+        if (context.SelectedRoots is { Count: > 0 } roots)
+        {
+            DuplicateAll(context, roots);
+        }
+    }
+
+    private static List<Entity> DuplicateAll(EditorContext context, IReadOnlyList<Entity> entities)
+    {
+        var copies = new List<Entity>(entities.Count);
+        foreach (var entity in entities)
+        {
+            var json = SceneSerializer.EntitiesToJson([entity]);
+            var copy = SceneSerializer.EntitiesFromJson(context.Scene, json, entity.Parent, assignNewIds: true)[0];
+            copy.Transform.SetSiblingIndex(entity.Transform.SiblingIndex + 1);
+            copy.FolderId = entity.FolderId;
+            copies.Add(copy);
+        }
+
+        var name = entities.Count == 1 ? $"Duplicate {entities[0].Name}" : $"Duplicate {entities.Count} entities";
+        context.History.BeginGesture();
+        context.Record(EntityLifetimeCommand.Created(name, [.. copies]));
+        context.SetSelection(copies);
+        return copies;
     }
 
     /// <summary>

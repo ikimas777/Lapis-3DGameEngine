@@ -10,15 +10,15 @@ internal static class ColliderGizmos
     private static readonly Color Selected = new(0.55f, 1f, 0.6f, 1f);
     private static readonly Color Trigger = new(0.45f, 0.75f, 1f, 0.6f);
 
-    public static void Add(LineRenderer lines, Scene scene, Entity? selection)
+    public static void Add(LineRenderer lines, Scene scene, Predicate<Entity> isSelected)
     {
         foreach (var root in scene.Roots)
         {
-            Add(lines, root, selection);
+            Add(lines, root, isSelected);
         }
     }
 
-    private static void Add(LineRenderer lines, Transform transform, Entity? selection)
+    private static void Add(LineRenderer lines, Transform transform, Predicate<Entity> isSelected)
     {
         var entity = transform.entity;
         if (!entity.IsActive)
@@ -33,7 +33,7 @@ internal static class ColliderGizmos
                 continue;
             }
 
-            var color = entity == selection ? Selected : collider.IsTrigger ? Trigger : Normal;
+            var color = isSelected(entity) ? Selected : collider.IsTrigger ? Trigger : Normal;
             var scale = Vector3.Abs(transform.LossyScale);
             var rotation = transform.Rotation;
             var center = transform.TransformPoint(collider.Center);
@@ -57,7 +57,7 @@ internal static class ColliderGizmos
 
         foreach (var child in transform.Children)
         {
-            Add(lines, child, selection);
+            Add(lines, child, isSelected);
         }
     }
 
