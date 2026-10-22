@@ -124,6 +124,89 @@ internal sealed class ReparentCommand : IEditorCommand
     }
 }
 
+/// <summary>Where <see cref="PlaceEntityCommand"/> puts an entity relative to another one.</summary>
+internal enum Placement
+{
+    /// <summary>Just before the other entity, under the same parent (and in the same folder at the top level).</summary>
+    Before,
+
+    /// <summary>Just after the other entity, under the same parent (and in the same folder at the top level).</summary>
+    After,
+
+    /// <summary>As the other entity's first child.</summary>
+    FirstChild,
+}
+
+/// <summary>
+/// Moves an entity next to another one (or to the top of its children), keeping its world transform. This is how an
+/// entity is taken out of its parent to a chosen level and position, rather than only to the very top level.
+/// </summary>
+internal sealed class PlaceEntityCommand : IEditorCommand
+{
+    private readonly Guid _entityId;
+    private readonly Guid _anchorId;
+    private readonly Placement _placement;
+    private readonly Guid? _oldParentId;
+    private readonly int _oldIndex;
+    private readonly Guid? _oldFolderId;
+    private readonly TransformState _oldLocal;
+
+    public PlaceEntityCommand(Entity entity, Entity anchor, Placement placement)
+    {
+        if (anchor == entity || anchor.Transform.IsChildOf(entity.Transform))
+        {
+            throw new ArgumentException($"Cannot place '{entity.Name}' next to itself or one of its own children.", nameof(anchor));
+        }
+
+        _entityId = entity.Id;
+        _anchorId = anchor.Id;
+        _placement = placement;
+        _oldParentId = entity.Parent?.Id;
+        _oldIndex = entity.Transform.SiblingIndex;
+        _oldFolderId = entity.FolderId;
+        _oldLocal = TransformState.Of(entity.Transform);
+        Name = $"Move {entity.Name}";
+    }
+
+    public string Name { get; }
+
+    public void Execute(Scene scene)
+    {
+        var entity = CommandTarget.Entity(scene, _entityId);
+        var anchor = CommandTarget.Entity(scene, _anchorId);
+        if (_placement == Placement.FirstChild)
+        {
+            entity.Transform.SetParent(anchor.Transform);
+            entity.Transform.SetSiblingIndex(0);
+            return;
+        }
+
+        entity.Transform.SetParent(anchor.Parent?.Transform);
+        if (anchor.Parent is null)
+        {
+            entity.FolderId = anchor.FolderId;
+        }
+
+        // SetSiblingIndex takes the entity out of the list before inserting it, which shifts later siblings up.
+        var index = anchor.Transform.SiblingIndex;
+        if (entity.Transform.SiblingIndex < index)
+        {
+            index--;
+        }
+
+        entity.Transform.SetSiblingIndex(_placement == Placement.After ? index + 1 : index);
+    }
+
+    public void Undo(Scene scene)
+    {
+        var entity = CommandTarget.Entity(scene, _entityId);
+        entity.Transform.SetParent(CommandTarget.OptionalEntity(scene, _oldParentId)?.Transform, keepWorldTransform: false);
+        entity.FolderId = _oldFolderId;
+        entity.Transform.SetSiblingIndex(_oldIndex);
+        _oldLocal.ApplyTo(entity.Transform);
+    }
+}
+
 /// <summary>
 /// Creates or deletes whole entity subtrees. The entities are stored as JSON so they can be
 /// restored with the same ids, components and children.

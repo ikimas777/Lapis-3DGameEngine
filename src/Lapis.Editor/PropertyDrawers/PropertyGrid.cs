@@ -207,7 +207,7 @@ internal static unsafe class PropertyGrid
 
     /// <summary>
     /// A field that refers to an entity or component. Assign by dropping an entity from the
-    /// Hierarchy; clear with the right-click menu.
+    /// Hierarchy or by clicking it and searching the scene; clear with the right-click menu.
     /// </summary>
     public static bool Reference(string label, Type type, ref object? value, Scene scene, string? tooltip = null)
     {
@@ -221,12 +221,12 @@ internal static unsafe class PropertyGrid
         };
 
         ImGui.PushStyleColor(ImGuiCol.Button, ImGui.GetStyle().Colors[(int)ImGuiCol.FrameBg]);
-        ImGui.Button(display, new Vector2(-1, 0));
+        var open = ImGui.Button($"{display}##reference", new Vector2(-1, 0));
         ImGui.PopStyleColor();
 
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip("Drag an entity from the Hierarchy here. Right-click to clear.");
+            ImGui.SetTooltip("Drag an entity from the Hierarchy here, or click to search the scene. Right-click to clear.");
         }
 
         var changed = false;
@@ -255,8 +255,89 @@ internal static unsafe class PropertyGrid
             ImGui.EndPopup();
         }
 
+        if (open)
+        {
+            ImGui.OpenPopup("##pickEntity");
+        }
+
+        if (BeginPicker("##pickEntity"))
+        {
+            if (ImGui.Selectable("None"))
+            {
+                value = null;
+                changed = true;
+            }
+
+            foreach (var entity in scene.AllEntities)
+            {
+                object? candidate = type == typeof(Entity) ? entity : entity.GetComponent(type);
+                if (candidate is null || !MatchesPicker(entity.Name))
+                {
+                    continue;
+                }
+
+                var current = value is Entity e ? e == entity : value is Component c && c.IsAttached && c.entity == entity;
+                if (ImGui.Selectable($"{entity.Name}##{entity.Id}", current))
+                {
+                    value = candidate;
+                    changed = true;
+                }
+
+                if (ImGui.IsItemHovered() && entity.Parent is not null)
+                {
+                    ImGui.SetTooltip(EntityPath(entity));
+                }
+            }
+
+            EndPicker(close: changed);
+        }
+
         return changed;
     }
+
+    private static string _pickerFilter = string.Empty;
+
+    /// <summary>
+    /// Opens a choose-from-list popup with a search field at the top (focused when it opens). Filter the items with
+    /// <see cref="MatchesPicker"/>; call <see cref="EndPicker"/> when this returns true.
+    /// </summary>
+    private static bool BeginPicker(string id)
+    {
+        if (!ImGui.BeginPopup(id))
+        {
+            return false;
+        }
+
+        if (ImGui.IsWindowAppearing())
+        {
+            _pickerFilter = string.Empty;
+            ImGui.SetKeyboardFocusHere();
+        }
+
+        ImGui.SetNextItemWidth(260);
+        ImGui.InputTextWithHint("##search", "Search...", ref _pickerFilter, 128);
+        ImGui.BeginChild("##items", new Vector2(260, 300));
+        return true;
+    }
+
+    /// <param name="close">True when an item was chosen.</param>
+    private static void EndPicker(bool close)
+    {
+        ImGui.EndChild();
+        if (close)
+        {
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private static bool MatchesPicker(string name) =>
+        _pickerFilter.Length == 0 || name.Contains(_pickerFilter.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>"Parent/Child/Entity", shown so entities with the same name can be told apart.</summary>
+    private static string EntityPath(Entity entity) =>
+        entity.Parent is { } parent ? $"{EntityPath(parent)}/{entity.Name}" : entity.Name;
 
     /// <summary>
     /// A slot holding an asset reference. Accepts assets dragged from the Assets panel; clicking it opens a
@@ -303,7 +384,7 @@ internal static unsafe class PropertyGrid
             ImGui.OpenPopup("##choose");
         }
 
-        if (ImGui.BeginPopup("##choose"))
+        if (BeginPicker("##choose"))
         {
             if (ImGui.Selectable("None"))
             {
@@ -315,7 +396,8 @@ internal static unsafe class PropertyGrid
             {
                 foreach (var builtIn in BuiltInMeshes.All)
                 {
-                    if (ImGui.Selectable($"{Nicify(builtIn["builtin:".Length..])} (built-in)", builtIn == reference))
+                    var name = $"{Nicify(builtIn["builtin:".Length..])} (built-in)";
+                    if (MatchesPicker(name) && ImGui.Selectable(name, builtIn == reference))
                     {
                         reference = builtIn;
                         changed = true;
@@ -325,7 +407,8 @@ internal static unsafe class PropertyGrid
 
             if (assets is not null)
             {
-                foreach (var asset in assets.Assets.Where(a => a.Type == type).OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
+                foreach (var asset in assets.Assets.Where(a => a.Type == type && MatchesPicker(Path.GetFileName(a.FullPath)))
+                    .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
                 {
                     if (ImGui.Selectable($"{Path.GetFileName(asset.FullPath)}##{asset.Id}", asset.Reference == reference))
                     {
@@ -340,7 +423,7 @@ internal static unsafe class PropertyGrid
                 }
             }
 
-            ImGui.EndPopup();
+            EndPicker(close: changed);
         }
 
         if (ImGui.BeginPopupContextItem("##slotContext"))

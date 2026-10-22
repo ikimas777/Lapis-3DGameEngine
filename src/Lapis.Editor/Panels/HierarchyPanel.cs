@@ -17,6 +17,8 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     private Guid? _renamingFolder;
     private string _renameText = string.Empty;
     private bool _focusRename;
+    private Guid? _pressedRow;
+    private bool _pressDragged;
 
     protected override void DrawContent()
     {
@@ -91,6 +93,38 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
 
         _pendingChanges.Clear();
+    }
+
+    /// <summary>
+    /// True when the last item (a row) was clicked: the mouse button was pressed on it and released over it without
+    /// dragging. Selecting on release means dragging a row (onto an Inspector field, another parent or folder) keeps
+    /// the current selection and the Inspector does not switch.
+    /// </summary>
+    private bool ClickedWithoutDrag(Guid rowId)
+    {
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen())
+        {
+            _pressedRow = rowId;
+            _pressDragged = false;
+        }
+
+        if (_pressedRow != rowId)
+        {
+            return false;
+        }
+
+        if (ImGui.IsMouseDragging(ImGuiMouseButton.Left))
+        {
+            _pressDragged = true;
+        }
+
+        if (!ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        {
+            return false;
+        }
+
+        _pressedRow = null;
+        return !_pressDragged && ImGui.IsItemHovered();
     }
 
     /// <summary>The search box and the "new folder" button next to it.</summary>
@@ -192,14 +226,16 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
         // Clicking the icon picks a colour; clicking the rest of the row selects the folder.
         var overIcon = ImGui.IsMouseHoveringRect(iconPosition - new Vector2(2), iconPosition + new Vector2(iconSize + 2));
-        if (ImGui.IsItemClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen())
+        if (overIcon && ImGui.IsItemClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen())
         {
             context.Selection = null;
             _selectedFolder = folder.Id;
-            if (overIcon)
-            {
-                ImGui.OpenPopup($"##color{folder.Id}");
-            }
+            ImGui.OpenPopup($"##color{folder.Id}");
+        }
+        else if (ClickedWithoutDrag(folder.Id) && !overIcon)
+        {
+            context.Selection = null;
+            _selectedFolder = folder.Id;
         }
 
         if (overIcon && ImGui.IsItemHovered())
@@ -504,10 +540,12 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4, 2));
         var open = ImGui.TreeNodeEx($"{entity.Name}##{entity.Id}", flags);
+        var rowMin = ImGui.GetItemRectMin();
+        var rowMax = ImGui.GetItemRectMax();
         ImGui.PopStyleVar();
         ImGui.PopStyleColor(colorCount);
 
-        if (ImGui.IsItemClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen())
+        if (ClickedWithoutDrag(entity.Id))
         {
             context.Selection = entity;
         }
@@ -543,9 +581,19 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
 
         DragDrop.EntitySource(entity);
-        if (DragDrop.AcceptEntity(context.Scene) is { } dropped)
+        if (DragDrop.HoverEntity(context.Scene, out var released) is { } dragged)
         {
-            _pendingChanges.Add(() => Reparent(dropped, entity));
+            var childrenShown = open && !flags.HasFlag(ImGuiTreeNodeFlags.NoTreePushOnOpen);
+            var placement = DropPlacement(rowMin, rowMax, childrenShown);
+            if (dragged != entity && !entity.Transform.IsChildOf(dragged.Transform))
+            {
+                DrawDropMarker(rowMin, rowMax, placement);
+            }
+
+            if (released)
+            {
+                _pendingChanges.Add(() => Place(dragged, entity, placement));
+            }
         }
 
         // Assets dropped on an entity: a model becomes a child, a script is added to it, a material or texture is applied to it.
@@ -609,6 +657,72 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
         Items(null, 0);
         ImGui.EndMenu();
+    }
+
+    /// <summary>
+    /// Where an entity dropped on a row goes: the top and bottom edges of the row put it before / after that entity
+    /// (on the same level), the middle makes it a child (null). The bottom edge of an expanded row puts it first among
+    /// the children shown right below.
+    /// </summary>
+    private static Placement? DropPlacement(Vector2 rowMin, Vector2 rowMax, bool childrenShown)
+    {
+        var edge = (rowMax.Y - rowMin.Y) * 0.3f;
+        var y = ImGui.GetMousePos().Y;
+        if (y < rowMin.Y + edge)
+        {
+            return Placement.Before;
+        }
+
+        if (y > rowMax.Y - edge)
+        {
+            return childrenShown ? Placement.FirstChild : Placement.After;
+        }
+
+        return null;
+    }
+
+    /// <summary>Shows where a dragged entity would land: a line between rows, or a frame around the new parent.</summary>
+    private static void DrawDropMarker(Vector2 rowMin, Vector2 rowMax, Placement? placement)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var color = ImGui.GetColorU32(EditorTheme.Accent);
+        switch (placement)
+        {
+            case null:
+                drawList.AddRect(rowMin, rowMax, color, 3f, ImDrawFlags.None, 2f);
+                break;
+            case Placement.Before:
+                drawList.AddLine(rowMin, new Vector2(rowMax.X, rowMin.Y), color, 2f);
+                break;
+            case Placement.After:
+                drawList.AddLine(new Vector2(rowMin.X, rowMax.Y), rowMax, color, 2f);
+                break;
+            case Placement.FirstChild:
+                drawList.AddLine(new Vector2(rowMin.X + ImGui.GetStyle().IndentSpacing, rowMax.Y), rowMax, color, 2f);
+                break;
+        }
+    }
+
+    private void Place(Entity entity, Entity anchor, Placement? placement)
+    {
+        if (placement is not { } where)
+        {
+            Reparent(entity, anchor);
+            return;
+        }
+
+        if (anchor == entity)
+        {
+            return;
+        }
+
+        if (anchor.Transform.IsChildOf(entity.Transform))
+        {
+            Log.Warning($"Cannot move '{entity.Name}' next to one of its own children.");
+            return;
+        }
+
+        context.Execute(new PlaceEntityCommand(entity, anchor, where));
     }
 
     private void Reparent(Entity entity, Entity? newParent)
