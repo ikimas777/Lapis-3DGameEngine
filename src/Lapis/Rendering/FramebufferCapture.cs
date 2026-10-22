@@ -3,7 +3,7 @@ using StbImageWriteSharp;
 
 namespace Lapis.Rendering;
 
-/// <summary>Saves the contents of the current back buffer to an image file.</summary>
+/// <summary>Saves rendered images (the back buffer or a texture) as PNG.</summary>
 public static unsafe class FramebufferCapture
 {
     /// <summary>
@@ -13,9 +13,7 @@ public static unsafe class FramebufferCapture
     {
         ArgumentNullException.ThrowIfNull(gl);
 
-        var stride = width * 4;
-        var pixels = new byte[stride * height];
-
+        var pixels = new byte[width * 4 * height];
         gl.ReadBuffer(ReadBufferMode.Back);
         gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
         fixed (byte* data = pixels)
@@ -23,7 +21,37 @@ public static unsafe class FramebufferCapture
             gl.ReadPixels(0, 0, (uint)width, (uint)height, PixelFormat.Rgba, PixelType.UnsignedByte, data);
         }
 
+        var directory = Path.GetDirectoryName(Path.GetFullPath(path));
+        if (directory is not null)
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        using var stream = File.Create(path);
+        WritePng(pixels, width, height, stream);
+    }
+
+    /// <summary>Reads an RGBA8 texture (such as <see cref="Framebuffer.ColorTexture"/>) and returns it as PNG bytes.</summary>
+    public static byte[] EncodeTextureAsPng(GL gl, uint texture, int width, int height)
+    {
+        ArgumentNullException.ThrowIfNull(gl);
+
+        var pixels = new byte[width * 4 * height];
+        gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
+        fixed (byte* data = pixels)
+        {
+            gl.GetTextureImage(texture, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (uint)pixels.Length, data);
+        }
+
+        using var stream = new MemoryStream();
+        WritePng(pixels, width, height, stream);
+        return stream.ToArray();
+    }
+
+    private static void WritePng(byte[] pixels, int width, int height, Stream stream)
+    {
         // OpenGL rows start at the bottom; image files start at the top.
+        var stride = width * 4;
         var flipped = new byte[pixels.Length];
         for (var row = 0; row < height; row++)
         {
@@ -35,13 +63,6 @@ public static unsafe class FramebufferCapture
             flipped[i] = 255;
         }
 
-        var directory = Path.GetDirectoryName(Path.GetFullPath(path));
-        if (directory is not null)
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        using var stream = File.Create(path);
         new ImageWriter().WritePng(flipped, width, height, ColorComponents.RedGreenBlueAlpha, stream);
     }
 }

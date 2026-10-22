@@ -65,6 +65,15 @@ internal sealed unsafe class SceneViewPanel(
 
     public float ScaleSnap { get; set; } = 0.1f;
 
+    /// <summary>Vertical tabs along the right edge of the view (MCP and other tools); null for none.</summary>
+    public SceneSidebar? Sidebar { get; set; }
+
+    /// <summary>The camera the view is rendered from.</summary>
+    public EditorCamera Camera => camera;
+
+    /// <summary>The rendered view (without the toolbar and gizmos drawn over it).</summary>
+    public Framebuffer Framebuffer => framebuffer;
+
     protected override ImGuiWindowFlags WindowFlags => ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
 
     protected override void BeforeBegin() => ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
@@ -106,8 +115,9 @@ internal sealed unsafe class SceneViewPanel(
         DrawGizmo(view, origin, size);
 
         var toolbarHovered = DrawToolbar(origin);
+        var sidebarHovered = Sidebar?.Draw(origin, size) ?? false;
         var gizmoBusy = ImGuizmo.IsOver() || ImGuizmo.IsUsing();
-        var hovered = imageHovered && !toolbarHovered;
+        var hovered = imageHovered && !toolbarHovered && !sidebarHovered;
 
         HandleNavigation(hovered, size);
         HandleShortcuts();

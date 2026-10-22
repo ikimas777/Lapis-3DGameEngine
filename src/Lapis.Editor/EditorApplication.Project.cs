@@ -59,6 +59,7 @@ internal sealed unsafe partial class EditorApplication
         _settings.AddRecentProject(project.FilePath, project.Name, DateTime.Now);
         _inLauncher = false;
         SaveSettings();
+        StartMcpIfWanted();
         return true;
     }
 

@@ -43,6 +43,18 @@ internal sealed class MoveAssetCommand(string from, string to) : IEditorCommand
     }
 }
 
+/// <summary>Replaces the contents of an existing text asset (such as a script); undo writes the old contents back.</summary>
+internal sealed class ReplaceFileCommand(string path, string before, string after) : IEditorCommand
+{
+    public string Name { get; } = $"Edit {Path.GetFileName(path)}";
+
+    public bool ChangesScene => false;
+
+    public void Execute(Scene scene) => File.WriteAllText(path, after);
+
+    public void Undo(Scene scene) => File.WriteAllText(path, before);
+}
+
 /// <summary>
 /// Creates or deletes asset files and folders. Their contents (with the <c>.lmeta</c> files, so asset ids and the
 /// references to them stay the same) are kept in memory; removing moves them to the Recycle Bin / Trash.
