@@ -69,7 +69,7 @@ public sealed unsafe class EntityPicker : IDisposable
                 continue;
             }
 
-            _shader.Set("u_Model", renderer.transform.LocalToWorld);
+            _shader.Set("u_Model", renderer.ModelMatrix);
             _shader.Set("u_ObjectId", (uint)(i + 1));
             mesh.Draw();
         }

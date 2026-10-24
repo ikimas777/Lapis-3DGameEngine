@@ -15,6 +15,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     private string _filter = string.Empty;
     private Guid? _selectedFolder;
     private Guid? _renamingFolder;
+    private Guid? _renamingEntity;
     private string _renameText = string.Empty;
     private bool _focusRename;
     private Guid? _pressedRow;
@@ -42,6 +43,11 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             _renamingFolder = null;
         }
 
+        if (_renamingEntity is { } renamingId && scene.FindById(renamingId) is null)
+        {
+            _renamingEntity = null; // deleted or undone while being renamed
+        }
+
         DrawToolbar();
 
         if (_filter.Length == 0)
@@ -64,6 +70,9 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             context.Selection = null;
             _selectedFolder = null;
         }
+
+        // The empty space is an item, so the window's context menu below would not open over it on its own.
+        ImGui.OpenPopupOnItemClick("##hierarchyContext", ImGuiPopupFlags.MouseButtonRight);
 
         if (DragDrop.AcceptEntities(scene) is { Count: > 0 } toRoot)
         {
@@ -452,9 +461,18 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
     private void HandleFolderShortcuts(Scene scene)
     {
-        if (!ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) || ImGui.GetIO().WantTextInput ||
-            scene.FindFolder(_selectedFolder) is not { } folder)
+        if (!ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) || ImGui.GetIO().WantTextInput)
         {
+            return;
+        }
+
+        if (scene.FindFolder(_selectedFolder) is not { } folder)
+        {
+            if (context.SelectedEntities.Count == 1 && context.Selection is { } entity && context.Keys.Pressed(EditorAction.RenameFolder))
+            {
+                StartRename(entity);
+            }
+
             return;
         }
 
@@ -487,8 +505,52 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     private void StartRename(SceneFolder folder)
     {
         _renamingFolder = folder.Id;
+        _renamingEntity = null;
         _renameText = folder.Name;
         _focusRename = true;
+    }
+
+    private void StartRename(Entity entity)
+    {
+        _renamingEntity = entity.Id;
+        _renamingFolder = null;
+        _renameText = entity.Name;
+        _focusRename = true;
+    }
+
+    /// <summary>A text field in place of the entity's row; Enter or clicking away renames, Escape cancels.</summary>
+    private void DrawRenameField(Entity entity)
+    {
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetTreeNodeToLabelSpacing());
+        ImGui.SetNextItemWidth(-1);
+        if (_focusRename)
+        {
+            ImGui.SetKeyboardFocusHere();
+            _focusRename = false;
+        }
+
+        var submitted = ImGui.InputText($"##rename{entity.Id}", ref _renameText, 128,
+            ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.AutoSelectAll);
+
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            _renamingEntity = null;
+        }
+        else if (submitted || ImGui.IsItemDeactivated())
+        {
+            var name = _renameText.Trim();
+            if (name.Length > 0 && name != entity.Name)
+            {
+                var before = entity.Name;
+                _pendingChanges.Add(() =>
+                {
+                    context.History.BeginGesture(); // never merge with an earlier rename of the same entity
+                    context.Execute(new RenameEntityCommand(entity, before, name));
+                });
+            }
+
+            _renamingEntity = null;
+        }
     }
 
     /// <summary>Moves entities into a folder (null: the top level), as one undo step.</summary>
@@ -582,8 +644,8 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
     private void DrawNode(Entity entity, bool flat = false)
     {
-        var flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick | ImGuiTreeNodeFlags.SpanAvailWidth |
-                    ImGuiTreeNodeFlags.FramePadding;
+        // Double-clicking a row renames the entity, so it does not also open the row (the arrow does that).
+        var flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.FramePadding;
         var hasChildren = entity.Transform.Children.Count > 0;
         if (flat || !hasChildren)
         {
@@ -591,6 +653,24 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
 
         _rows.Add(entity);
+
+        if (_renamingEntity == entity.Id)
+        {
+            DrawRenameField(entity);
+            if (!flat && hasChildren)
+            {
+                ImGui.Indent();
+                foreach (var child in entity.Children.ToList())
+                {
+                    DrawNode(child);
+                }
+
+                ImGui.Unindent();
+            }
+
+            return;
+        }
+
         var selected = context.IsSelected(entity);
         if (selected)
         {
@@ -623,6 +703,12 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             ClickRow(entity);
         }
 
+        if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen() &&
+            !ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift)
+        {
+            _pendingChanges.Add(() => StartRename(entity));
+        }
+
         if (ImGui.BeginPopupContextItem())
         {
             // Right-clicking a row outside the selection selects just that row; inside it, the menu acts on the selection.
@@ -633,6 +719,18 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             }
 
             var count = context.SelectedEntities.Count;
+            if (ImGui.MenuItem("Create Parent"))
+            {
+                _pendingChanges.Add(() => EditorActions.CreateParent(context, InHierarchyOrder(context.SelectedRoots)));
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(count > 1
+                    ? "Puts the selected entities under a new empty entity, in the middle of them."
+                    : "Puts this entity under a new empty entity at its position.");
+            }
+
             if (ImGui.BeginMenu("Create Child"))
             {
                 CreateMenu.DrawItems(context, entity, Vector3.Zero);

@@ -87,6 +87,18 @@ public sealed class MeshRenderer : Component
     /// <summary>Whether this object casts shadows from the sun.</summary>
     public bool CastShadows { get; set; } = true;
 
+    /// <summary>
+    /// Where the mesh sits relative to the entity's origin (pivot), in the entity's local space. The editor's
+    /// Set Origin changes it to move the pivot without moving the mesh.
+    /// </summary>
+    public System.Numerics.Vector3 MeshOffset { get; set; }
+
+    /// <summary>Mesh-to-world matrix: the mesh offset followed by the entity's transform.</summary>
+    public System.Numerics.Matrix4x4 ModelMatrix =>
+        MeshOffset == System.Numerics.Vector3.Zero
+            ? transform.LocalToWorld
+            : System.Numerics.Matrix4x4.CreateTranslation(MeshOffset) * transform.LocalToWorld;
+
     /// <summary>The surface to draw with: the material when set and found, otherwise this renderer's own settings.</summary>
     internal (Color Color, string TextureId, float Metallic, float Roughness) ResolveSurface()
     {

@@ -261,7 +261,7 @@ while holding the right mouse button — then W / E / R also pick the Move / Rot
 | Ctrl+P / Ctrl+Shift+P / Ctrl+Alt+P | Play or stop / Pause / Step |
 | Delete | Delete the selection |
 | 1 / 2 / 3 (Scene view) | Move / Rotate / Scale tool |
-| F2 (Hierarchy) | Rename the selected folder |
+| F2 (Hierarchy) | Rename the selected entity or folder |
 | Ctrl while dragging the gizmo | Toggle snapping |
 
 These are the defaults. In **Options > Keybindings** every command (including the fly keys) can have two shortcuts:
@@ -282,6 +282,23 @@ Each of these is one Ctrl+Z step.
 Drag entities in the Hierarchy to re-parent them: drop on the middle of a row to make the entity a child, or on
 the top or bottom edge of a row to put it before or after that entity on the same level. Drop an entity onto an
 entity / component field in the Inspector to assign it, or click the field to search the scene.
+
+Double-click an entity in the Hierarchy (or select it and press F2) to rename it; Enter or clicking away keeps the
+name, Esc cancels. Right-click > **Create Parent** puts the entity (or every selected entity) under a new empty
+entity at the same place in the list, positioned at the entity (or in the middle of the selection).
+
+### Setting the origin
+
+An entity's origin (pivot) is the point its Position refers to and where the gizmo sits. **Set Origin** under
+the Transform in the Inspector moves it without moving the object:
+
+- **Center** — the middle of everything the entity shows, its children included.
+- **Bottom Center** — centred and at the bottom, so the object stands on its origin (handy for placing it on the
+  ground).
+- **Reset to Mesh Pivot** — back to the pivot the mesh came with.
+
+The entity moves to the new origin while its mesh, colliders and children move back by the same amount. How far
+the mesh is from the origin is stored in the Mesh Renderer's **Mesh Offset**. One Ctrl+Z undoes it.
 
 ### Hierarchy folders
 

@@ -176,7 +176,7 @@ internal sealed class Keybindings
         EditorAction.FlyRight => "Fly right",
         EditorAction.FlyUp => "Fly up",
         EditorAction.FlyDown => "Fly down",
-        EditorAction.RenameFolder => "Rename folder (Hierarchy)",
+        EditorAction.RenameFolder => "Rename entity or folder (Hierarchy)",
         _ => action.ToString(),
     };
 
