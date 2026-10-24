@@ -37,6 +37,9 @@ internal sealed unsafe partial class ProjectLauncher(EditorSettings settings, IL
     private string _newName = "MyGame";
     private string _newLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Lapis Projects");
     private string _openPath = string.Empty;
+    private RecentProject? _toDelete;
+    private bool _openDeletePopup;
+    private bool _deleteUnderstood;
 
     /// <summary>Message shown when opening or creating a project failed.</summary>
     public string? Error { get; set; }
@@ -171,6 +174,144 @@ internal sealed unsafe partial class ProjectLauncher(EditorSettings settings, IL
             settings.RemoveRecentProject(toRemove.Path);
             settings.Save();
         }
+
+        DrawDeletePopup();
+    }
+
+    private void AskToDelete(RecentProject project)
+    {
+        Error = null;
+        if (!File.Exists(project.Path))
+        {
+            // Nothing left to delete: the folder was moved or deleted outside the editor.
+            settings.RemoveRecentProject(project.Path);
+            settings.Save();
+            Error = $"'{project.Path}' no longer exists, so there was nothing to delete. It was removed from the list.";
+            return;
+        }
+
+        _toDelete = project;
+        _deleteUnderstood = false;
+        _openDeletePopup = true;
+    }
+
+    private void DrawDeletePopup()
+    {
+        const string popupId = "Delete Project?";
+        if (_openDeletePopup)
+        {
+            ImGui.OpenPopup(popupId);
+            _openDeletePopup = false;
+        }
+
+        ImGui.SetNextWindowSize(new Vector2(460, 0));
+        if (!ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings))
+        {
+            return;
+        }
+
+        if (_toDelete is not { } project)
+        {
+            ImGui.CloseCurrentPopup();
+            ImGui.EndPopup();
+            return;
+        }
+
+        var folder = Path.GetDirectoryName(project.Path) ?? project.Path;
+        ImGui.PushTextWrapPos(0);
+        ImGui.TextUnformatted($"Delete '{project.Name}' and everything in its folder?");
+        ImGui.Spacing();
+        ImGui.TextDisabled(folder);
+        ImGui.Spacing();
+        ImGui.TextColored(EditorTheme.Error, "The files are deleted permanently, not moved to the Recycle Bin. This cannot be undone.");
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+        ImGui.Checkbox("I understand that this cannot be undone", ref _deleteUnderstood);
+        ImGui.Dummy(new Vector2(0, 8));
+
+        ImGui.BeginDisabled(!_deleteUnderstood);
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.62f, 0.18f, 0.18f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.74f, 0.22f, 0.22f, 1f));
+        var delete = ImGui.Button("Delete Project", new Vector2(140, 0));
+        ImGui.PopStyleColor(2);
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        var cancel = ImGui.Button("Cancel", new Vector2(120, 0)) || ImGui.IsKeyPressed(ImGuiKey.Escape);
+
+        if (delete)
+        {
+            Error = DeleteProject(project.Path);
+            if (!File.Exists(project.Path))
+            {
+                settings.RemoveRecentProject(project.Path);
+                settings.Save();
+            }
+        }
+
+        if (delete || cancel)
+        {
+            _toDelete = null;
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    /// <summary>
+    /// Permanently deletes the folder that holds the project file <paramref name="projectFile"/>.
+    /// Returns why it could not, or null when the folder is gone.
+    /// </summary>
+    internal static string? DeleteProject(string projectFile)
+    {
+        if (!File.Exists(projectFile))
+        {
+            return $"'{projectFile}' no longer exists, so there was nothing to delete. It was removed from the list.";
+        }
+
+        var fullPath = Path.GetFullPath(projectFile);
+        var folder = Path.GetDirectoryName(fullPath);
+        if (!string.Equals(Path.GetExtension(fullPath), LapisProject.FileExtension, StringComparison.OrdinalIgnoreCase)
+            || folder is null || IsProtectedFolder(folder))
+        {
+            return $"'{folder ?? fullPath}' was not deleted: it is not a folder of its own for the project. Delete the files by hand if you are sure.";
+        }
+
+        try
+        {
+            // Directory.Delete refuses read-only files (for example ones checked out by some tools).
+            foreach (var file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+
+            Directory.Delete(folder, recursive: true);
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"Could not delete everything in '{folder}': {ex.Message} Close any program using the project and try again.";
+        }
+    }
+
+    /// <summary>Drive roots and the user's well-known folders, which are never deleted as a project.</summary>
+    private static bool IsProtectedFolder(string folder)
+    {
+        var normalized = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        if (string.Equals(normalized, Path.TrimEndingDirectorySeparator(Path.GetPathRoot(normalized) ?? string.Empty), StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        Environment.SpecialFolder[] special =
+        [
+            Environment.SpecialFolder.UserProfile, Environment.SpecialFolder.MyDocuments, Environment.SpecialFolder.Desktop,
+            Environment.SpecialFolder.DesktopDirectory, Environment.SpecialFolder.MyPictures, Environment.SpecialFolder.MyMusic,
+            Environment.SpecialFolder.MyVideos, Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.Windows,
+        ];
+        return special
+            .Select(Environment.GetFolderPath)
+            .Where(path => path.Length > 0)
+            .Any(path => string.Equals(Path.TrimEndingDirectorySeparator(path), normalized, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <returns>True when the user asked to remove the project from the list.</returns>
@@ -210,6 +351,11 @@ internal sealed unsafe partial class ProjectLauncher(EditorSettings settings, IL
             if (ImGui.MenuItem("Remove from List"))
             {
                 remove = true;
+            }
+
+            if (ImGui.MenuItem("Delete Project..."))
+            {
+                AskToDelete(project);
             }
 
             ImGui.EndPopup();

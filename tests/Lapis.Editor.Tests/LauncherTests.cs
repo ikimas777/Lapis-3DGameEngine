@@ -81,4 +81,52 @@ public class LauncherTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public void DeleteProject_RemovesTheWholeProjectFolder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lapis-launcher-tests", Guid.NewGuid().ToString("N"));
+        var project = Path.Combine(root, "MyGame");
+        Directory.CreateDirectory(Path.Combine(project, "Assets", "Scenes"));
+        File.WriteAllText(Path.Combine(project, "MyGame.lapis"), "{}");
+        var readOnly = Path.Combine(project, "Assets", "Scenes", "Main.lscene");
+        File.WriteAllText(readOnly, "{}");
+        File.SetAttributes(readOnly, FileAttributes.ReadOnly);
+        try
+        {
+            Assert.Null(ProjectLauncher.DeleteProject(Path.Combine(project, "MyGame.lapis")));
+            Assert.False(Directory.Exists(project));
+            Assert.True(Directory.Exists(root)); // only the project's own folder goes
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DeleteProject_ReportsAProjectThatIsAlreadyGone()
+    {
+        var missing = Path.Combine(Path.GetTempPath(), "lapis-launcher-tests", Guid.NewGuid().ToString("N"), "Gone.lapis");
+
+        Assert.Contains("no longer exists", ProjectLauncher.DeleteProject(missing));
+    }
+
+    [Fact]
+    public void DeleteProject_RefusesFilesThatAreNotProjects()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "lapis-launcher-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var notAProject = Path.Combine(root, "notes.txt");
+        File.WriteAllText(notAProject, "x");
+        try
+        {
+            Assert.NotNull(ProjectLauncher.DeleteProject(notAProject));
+            Assert.True(File.Exists(notAProject));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }
