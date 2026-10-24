@@ -111,7 +111,7 @@ internal static unsafe class PropertyGrid
     public static bool Float(string label, ref float value, float speed = 0.05f, string? tooltip = null)
     {
         Label(label, tooltip);
-        return ImGui.DragFloat("##value", ref value, speed);
+        return ImGui.DragFloat($"##{label}", ref value, speed);
     }
 
     public static bool Slider(string label, ref float value, float min, float max, string? tooltip = null)
@@ -119,7 +119,7 @@ internal static unsafe class PropertyGrid
         Label(label, tooltip);
         fixed (float* pointer = &value)
         {
-            return ImGui.SliderFloat("##value", pointer, min, max);
+            return ImGui.SliderFloat($"##{label}", pointer, min, max);
         }
     }
 
@@ -127,20 +127,20 @@ internal static unsafe class PropertyGrid
     {
         Label(label, tooltip);
         return range is null
-            ? ImGui.DragInt("##value", ref value, 0.2f)
-            : ImGui.DragInt("##value", ref value, 0.2f, (int)range.Min, (int)range.Max);
+            ? ImGui.DragInt($"##{label}", ref value, 0.2f)
+            : ImGui.DragInt($"##{label}", ref value, 0.2f, (int)range.Min, (int)range.Max);
     }
 
     public static bool Bool(string label, ref bool value, string? tooltip = null)
     {
         Label(label, tooltip);
-        return ImGui.Checkbox("##value", ref value);
+        return ImGui.Checkbox($"##{label}", ref value);
     }
 
     public static bool Text(string label, ref string value, string? tooltip = null)
     {
         Label(label, tooltip);
-        return ImGui.InputText("##value", ref value, 256);
+        return ImGui.InputText($"##{label}", ref value, 256);
     }
 
     public static bool Vector2(string label, ref Vector2 value, string? tooltip = null)
@@ -148,7 +148,7 @@ internal static unsafe class PropertyGrid
         Label(label, tooltip);
         fixed (Vector2* pointer = &value)
         {
-            return ImGui.DragFloat2("##value", (float*)pointer, 0.05f);
+            return ImGui.DragFloat2($"##{label}", (float*)pointer, 0.05f);
         }
     }
 
@@ -157,7 +157,7 @@ internal static unsafe class PropertyGrid
         Label(label, tooltip);
         fixed (Vector3* pointer = &value)
         {
-            return ImGui.DragFloat3("##value", (float*)pointer, speed);
+            return ImGui.DragFloat3($"##{label}", (float*)pointer, speed);
         }
     }
 
@@ -166,7 +166,7 @@ internal static unsafe class PropertyGrid
         Label(label, tooltip);
         fixed (Vector4* pointer = &value)
         {
-            return ImGui.DragFloat4("##value", (float*)pointer, 0.05f);
+            return ImGui.DragFloat4($"##{label}", (float*)pointer, 0.05f);
         }
     }
 
@@ -174,7 +174,7 @@ internal static unsafe class PropertyGrid
     {
         Label(label, tooltip);
         var vector = value.ToVector4();
-        if (!ImGui.ColorEdit4("##value", ref vector, ImGuiColorEditFlags.Float | ImGuiColorEditFlags.AlphaPreviewHalf))
+        if (!ImGui.ColorEdit4($"##{label}", ref vector, ImGuiColorEditFlags.Float | ImGuiColorEditFlags.AlphaPreviewHalf))
         {
             return false;
         }
@@ -187,7 +187,7 @@ internal static unsafe class PropertyGrid
     {
         Label(label, tooltip);
         var changed = false;
-        if (ImGui.BeginCombo("##value", Nicify(value.ToString())))
+        if (ImGui.BeginCombo($"##{label}", Nicify(value.ToString())))
         {
             foreach (Enum option in Enum.GetValues(value.GetType()))
             {
