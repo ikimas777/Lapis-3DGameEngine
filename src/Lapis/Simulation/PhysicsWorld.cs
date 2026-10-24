@@ -566,6 +566,8 @@ public sealed class PhysicsWorld : IDisposable
             return null;
         }
 
+        var meshOffset = renderer.MeshOffset; // the collider follows the mesh when its origin was moved
+
         if (motion == MotionType.Dynamic)
         {
             // Jolt cannot simulate concave triangle meshes as dynamic bodies; use the mesh bounds instead.
@@ -574,20 +576,31 @@ public sealed class PhysicsWorld : IDisposable
             var max = new Vector3(float.MinValue);
             foreach (var vertex in mesh.Vertices)
             {
-                min = Vector3.Min(min, vertex.Position * scale);
-                max = Vector3.Max(max, vertex.Position * scale);
+                min = Vector3.Min(min, (vertex.Position + meshOffset) * scale);
+                max = Vector3.Max(max, (vertex.Position + meshOffset) * scale);
             }
 
             var half = Vector3.Max((max - min) * 0.5f, new Vector3(0.005f));
-            return new BoxShapeSettings(half, MathF.Min(Foundation.DefaultConvexRadius, MathF.Min(half.X, MathF.Min(half.Y, half.Z)) * 0.5f));
+            var box = new BoxShapeSettings(half, MathF.Min(Foundation.DefaultConvexRadius, MathF.Min(half.X, MathF.Min(half.Y, half.Z)) * 0.5f));
+            var boxCenter = (min + max) * 0.5f;
+            if (boxCenter.LengthSquared() < 1e-8f)
+            {
+                return box;
+            }
+
+            // The box sits around the mesh, which is not centred on the origin (e.g. after Set Origin).
+            using (box)
+            {
+                return new RotatedTranslatedShapeSettings(boxCenter, Quaternion.Identity, box);
+            }
         }
 
         var triangles = new Triangle[mesh.TriangleCount];
         for (var i = 0; i < triangles.Length; i++)
         {
-            var a = mesh.Vertices[mesh.Indices[i * 3]].Position * scale;
-            var b = mesh.Vertices[mesh.Indices[i * 3 + 1]].Position * scale;
-            var c = mesh.Vertices[mesh.Indices[i * 3 + 2]].Position * scale;
+            var a = (mesh.Vertices[mesh.Indices[i * 3]].Position + meshOffset) * scale;
+            var b = (mesh.Vertices[mesh.Indices[i * 3 + 1]].Position + meshOffset) * scale;
+            var c = (mesh.Vertices[mesh.Indices[i * 3 + 2]].Position + meshOffset) * scale;
             triangles[i] = new Triangle(a, b, c, 0);
         }
 
@@ -742,7 +755,7 @@ public sealed class PhysicsWorld : IDisposable
                 body?.Type,
                 body is null ? Vector4.Zero : new Vector4(body.Mass, body.LinearDamping, body.AngularDamping, 0f),
                 flags,
-                collider is MeshCollider ? collider.entity.GetComponent<MeshRenderer>()?.MeshId : null);
+                collider is MeshCollider && collider.entity.GetComponent<MeshRenderer>() is { } renderer ? $"{renderer.MeshId}@{renderer.MeshOffset}" : null);
         }
 
         // Tiny float noise from transform math must not trigger a rebuild every step.

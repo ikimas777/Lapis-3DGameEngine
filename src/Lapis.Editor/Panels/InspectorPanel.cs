@@ -155,7 +155,55 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             context.Record(new SetTransformCommand(entity, before, TransformState.Of(transform)));
         }
 
+        DrawSetOrigin(entity);
         ImGui.Spacing();
+    }
+
+    /// <summary>"Set Origin" button: moves the entity's pivot to its centre, its bottom or back to the mesh's own pivot.</summary>
+    private void DrawSetOrigin(Entity entity)
+    {
+        const string popup = "##setOrigin";
+        ImGui.Spacing();
+        if (ImGui.Button("Set Origin", new Vector2(-1, 0)))
+        {
+            ImGui.OpenPopup(popup);
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Moves the pivot (where the gizmo is and what Position refers to) without moving the object.");
+        }
+
+        if (!ImGui.BeginPopup(popup))
+        {
+            return;
+        }
+
+        var hasMesh = OriginTool.LocalBounds(entity) is not null;
+        if (!hasMesh)
+        {
+            ImGui.TextDisabled("Nothing to measure: no mesh on this entity or its children.");
+            ImGui.Separator();
+        }
+
+        void Item(string label, OriginMode mode, string tooltip)
+        {
+            if (ImGui.MenuItem(label, string.Empty, false, OriginTool.CanSetOrigin(entity, mode)))
+            {
+                OriginTool.SetOrigin(context, entity, mode);
+            }
+
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip(tooltip);
+            }
+        }
+
+        Item("Center", OriginMode.Center, "The middle of the object (with its children).");
+        Item("Bottom Center", OriginMode.BottomCenter, "Centred and at the bottom, so the object stands on its origin.");
+        ImGui.Separator();
+        Item("Reset to Mesh Pivot", OriginMode.MeshPivot, "Back to the pivot the mesh came with.");
+        ImGui.EndPopup();
     }
 
     /// <returns>False when the user asked to remove the component.</returns>

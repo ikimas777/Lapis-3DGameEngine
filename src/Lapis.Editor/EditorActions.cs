@@ -138,6 +138,39 @@ internal static class EditorActions
         return true;
     }
 
+    /// <summary>
+    /// Creates an empty entity where <paramref name="entities"/>[0] is (same parent, folder and place in the list,
+    /// at the middle of their positions) and moves them all under it, keeping where they are in the world.
+    /// One undo step; the new parent is selected. <paramref name="entities"/> must not contain each other's children.
+    /// </summary>
+    public static Entity? CreateParent(EditorContext context, IReadOnlyList<Entity> entities)
+    {
+        if (entities.Count == 0)
+        {
+            return null;
+        }
+
+        var anchor = entities[0];
+        var parent = context.Scene.CreateEntity(entities.Count == 1 ? $"{anchor.Name} Parent" : "Group", anchor.Parent);
+        parent.FolderId = anchor.Parent is null ? anchor.FolderId : null;
+        parent.Transform.SetSiblingIndex(anchor.Transform.SiblingIndex);
+        var middle = entities.Aggregate(System.Numerics.Vector3.Zero, (sum, entity) => sum + entity.Transform.Position) / entities.Count;
+        parent.Transform.Position = middle;
+
+        List<IEditorCommand> commands = [EntityLifetimeCommand.Created($"Create {parent.Name}", parent)];
+        foreach (var entity in entities)
+        {
+            var command = new ReparentCommand(entity, parent);
+            command.Execute(context.Scene);
+            commands.Add(command);
+        }
+
+        context.History.BeginGesture();
+        context.Record(new CompositeCommand($"Create parent {parent.Name}", commands));
+        context.Selection = parent;
+        return parent;
+    }
+
     /// <summary>Records an entity created by the editor UI so it can be undone.</summary>
     public static void RecordCreated(EditorContext context, Entity entity)
     {

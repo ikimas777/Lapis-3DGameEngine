@@ -50,7 +50,7 @@ internal static class ColliderGizmos
                     lines.AddCapsule(center, rotation, capsule.Radius * MathF.Max(scale.X, scale.Z), capsule.Height * scale.Y, color);
                     break;
                 case MeshCollider when entity.GetComponent<MeshRenderer>() is { } renderer && BuiltInMeshes.GetData(renderer.MeshId) is { } mesh:
-                    AddMeshBounds(lines, transform.LocalToWorld, mesh, color);
+                    AddMeshBounds(lines, renderer.ModelMatrix, mesh, color);
                     break;
             }
         }

@@ -105,8 +105,10 @@ internal sealed unsafe class SceneViewPanel(
         if (ShowColliders)
         {
             ColliderGizmos.Add(lines, context.Scene, context.IsSelected);
-            lines.Render(view);
         }
+
+        CameraGizmos.Add(lines, context.Scene, context.IsSelected);
+        lines.Render(view);
         framebuffer.Unbind();
 
         var origin = ImGui.GetCursorScreenPos();

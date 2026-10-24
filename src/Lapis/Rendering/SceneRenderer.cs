@@ -114,7 +114,7 @@ public sealed class SceneRenderer : IDisposable
                 continue;
             }
 
-            shader.Set("u_Model", renderer.transform.LocalToWorld);
+            shader.Set("u_Model", renderer.ModelMatrix);
             var (color, textureId, metallic, roughness) = renderer.ResolveSurface();
             (_textures.Get(textureId) ?? _textures.White).Bind(0);
             shader.Set("u_Albedo", color.ToLinear().ToVector3());
@@ -165,7 +165,7 @@ public sealed class SceneRenderer : IDisposable
         {
             if (renderer.CastShadows && _meshes.Get(renderer.MeshId) is { } mesh)
             {
-                _shadowShader.Set("u_Model", renderer.transform.LocalToWorld);
+                _shadowShader.Set("u_Model", renderer.ModelMatrix);
                 mesh.Draw();
             }
         }
