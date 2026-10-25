@@ -2,6 +2,8 @@ using Lapis.Scripting;
 
 namespace Lapis.Tests.Scripting;
 
+// Tick replaces the global Time values while scripts run.
+[Collection(GlobalState.Collection)]
 public class ScriptRunnerTests
 {
     [Fact]
