@@ -119,4 +119,32 @@ public class OriginAndParentTests
         Assert.Same(root, parent.Parent);
         Assert.Same(parent, child.Parent);
     }
+
+    [Fact]
+    public void NewChild_OfScaledParent_HasNaturalSize()
+    {
+        var scene = new Scene();
+        var parent = scene.CreateEntity("Parent");
+        parent.Transform.LocalScale = new Vector3(2, 4, 0.5f);
+        parent.Transform.LocalEulerAngles = new Vector3(0, 90, 0);
+
+        var cube = EntityFactory.CreateMesh(scene, BuiltInMeshes.Cube, parent);
+        AssertNear(new Vector3(0.5f, 0.25f, 2), cube.Transform.LocalScale);
+        AssertNear(Vector3.One, cube.Transform.LossyScale);
+        AssertNear(Vector3.Zero, cube.Transform.LocalEulerAngles); // rotation stays relative to the parent
+
+        var plane = EntityFactory.CreateMesh(scene, BuiltInMeshes.Plane, parent);
+        AssertNear(new Vector3(10, 1, 10), plane.Transform.LossyScale);
+    }
+
+    [Fact]
+    public void NewChild_OfZeroScaledParent_KeepsUnitScaleOnThatAxis()
+    {
+        var scene = new Scene();
+        var parent = scene.CreateEntity("Parent");
+        parent.Transform.LocalScale = new Vector3(0, 2, 1);
+
+        var child = EntityFactory.CreateEmpty(scene, parent);
+        AssertNear(new Vector3(1, 0.5f, 1), child.Transform.LocalScale);
+    }
 }

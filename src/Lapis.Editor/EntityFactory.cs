@@ -5,7 +5,25 @@ namespace Lapis.Editor;
 /// <summary>Creates the ready-made entities offered by the editor's Create menus.</summary>
 internal static class EntityFactory
 {
-    public static Entity CreateEmpty(Scene scene, Entity? parent = null) => scene.CreateEntity("Entity", parent);
+    /// <summary>
+    /// Creates an entity under <paramref name="parent"/> at its natural size: the local scale cancels the
+    /// parent's scale, so a new child is not stretched by a scaled parent. Rotation stays relative to the parent.
+    /// </summary>
+    public static Entity Create(Scene scene, string name, Entity? parent)
+    {
+        var entity = scene.CreateEntity(name, parent);
+        if (parent is not null)
+        {
+            var parentScale = parent.Transform.LossyScale;
+            entity.Transform.LocalScale = new Vector3(Inverse(parentScale.X), Inverse(parentScale.Y), Inverse(parentScale.Z));
+        }
+
+        return entity;
+    }
+
+    private static float Inverse(float value) => MathF.Abs(value) < 1e-6f ? 1f : 1f / value;
+
+    public static Entity CreateEmpty(Scene scene, Entity? parent = null) => Create(scene, "Entity", parent);
 
     public static Entity CreateMesh(Scene scene, string meshId, Entity? parent = null)
     {
@@ -17,7 +35,7 @@ internal static class EntityFactory
             _ => "Mesh",
         };
 
-        var entity = scene.CreateEntity(name, parent);
+        var entity = Create(scene, name, parent);
         entity.AddComponent<MeshRenderer>().MeshId = meshId;
 
         // Shapes come with a matching collider, so they are solid as soon as physics runs.
@@ -30,7 +48,7 @@ internal static class EntityFactory
                 entity.AddComponent<SphereCollider>();
                 break;
             case BuiltInMeshes.Plane:
-                entity.Transform.LocalScale = new Vector3(10f, 1f, 10f);
+                entity.Transform.LocalScale *= new Vector3(10f, 1f, 10f);
                 var floor = entity.AddComponent<BoxCollider>();
                 floor.Size = new Vector3(1f, 0.1f, 1f);
                 floor.Center = new Vector3(0f, -0.05f, 0f);
@@ -51,14 +69,14 @@ internal static class EntityFactory
 
     public static Entity CreateCamera(Scene scene, Entity? parent = null)
     {
-        var entity = scene.CreateEntity("Camera", parent);
+        var entity = Create(scene, "Camera", parent);
         entity.AddComponent<Camera>();
         return entity;
     }
 
     public static Entity CreateLight(Scene scene, LightType type, Entity? parent = null)
     {
-        var entity = scene.CreateEntity(type == LightType.Directional ? "Directional Light" : "Point Light", parent);
+        var entity = Create(scene, type == LightType.Directional ? "Directional Light" : "Point Light", parent);
         var light = entity.AddComponent<Light>();
         light.Type = type;
 
