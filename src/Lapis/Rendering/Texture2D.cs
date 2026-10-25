@@ -1,3 +1,4 @@
+using Lapis.Diagnostics;
 using Silk.NET.OpenGL;
 using StbImageSharp;
 
@@ -15,7 +16,11 @@ public sealed unsafe class Texture2D : IDisposable
         Handle = handle;
         Width = width;
         Height = height;
+        EngineMetrics.TextureCreated(GpuBytes);
     }
+
+    // RGBA8 plus a full mipmap chain (a third more).
+    private long GpuBytes => (long)Width * Height * 4 * 4 / 3;
 
     /// <summary>OpenGL texture name.</summary>
     public uint Handle { get; }
@@ -74,6 +79,7 @@ public sealed unsafe class Texture2D : IDisposable
         if (!_disposed)
         {
             _gl.DeleteTexture(Handle);
+            EngineMetrics.TextureDeleted(GpuBytes);
             _disposed = true;
         }
     }

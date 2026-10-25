@@ -194,6 +194,7 @@ internal sealed class ScriptManager(EditorContext context) : IDisposable
         }
 
         _host.UnloadPrevious();
+        Lapis.Diagnostics.EngineMetrics.ScriptsCompiled(elapsed);
 
         var scriptCount = compilation.TypeLocations.Count;
         Log.Info($"Scripts compiled in {elapsed} ms ({scriptCount} class{(scriptCount == 1 ? string.Empty : "es")}).");

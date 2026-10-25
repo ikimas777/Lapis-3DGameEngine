@@ -1,4 +1,5 @@
 using System.Numerics;
+using Lapis.Diagnostics;
 using Silk.NET.OpenGL;
 
 namespace Lapis.Rendering;
@@ -37,6 +38,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly ShadowMap _shadowMap;
     private readonly uint _emptyVertexArray;
     private Light? _directionalLight;
+    private int _shadowDrawCount;
 
     /// <summary>Loads the built-in shaders.</summary>
     public SceneRenderer(GL gl)
@@ -68,6 +70,7 @@ public sealed class SceneRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(scene);
 
+        var metricsStart = EngineMetrics.Start();
         Collect(scene);
         var environment = scene.Environment;
 
@@ -81,6 +84,7 @@ public sealed class SceneRenderer : IDisposable
         _gl.CullFace(TriangleFace.Back);
         _gl.FrontFace(FrontFaceDirection.Ccw);
 
+        _shadowDrawCount = 0;
         var shadows = _directionalLight is { CastShadows: true } && RenderShadowMap(view, _directionalLight, environment.ShadowDistance);
 
         var background = view.BackgroundColor.ToLinear();
@@ -128,6 +132,9 @@ public sealed class SceneRenderer : IDisposable
         {
             DrawSky(view, environment);
         }
+
+        EngineMetrics.AddDrawCalls(DrawCount + _shadowDrawCount + (environment.Skybox ? 1 : 0));
+        EngineMetrics.EndRender(metricsStart);
     }
 
     /// <inheritdoc />
@@ -167,6 +174,7 @@ public sealed class SceneRenderer : IDisposable
             {
                 _shadowShader.Set("u_Model", renderer.ModelMatrix);
                 mesh.Draw();
+                _shadowDrawCount++;
             }
         }
 

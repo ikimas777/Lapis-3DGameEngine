@@ -1,3 +1,5 @@
+using Lapis.Diagnostics;
+
 namespace Lapis.Scripting;
 
 /// <summary>
@@ -41,10 +43,13 @@ public sealed class ScriptRunner(Scene scene)
         GameTime += deltaTime;
         FrameCount++;
 
+        var metricsStart = EngineMetrics.Start();
         using (Time.Use(deltaTime, GameTime, FrameCount, FixedDeltaTime))
         {
             RunFrame(deltaTime);
         }
+
+        EngineMetrics.EndSimulation(metricsStart);
     }
 
     private void RunFrame(float deltaTime)
@@ -151,6 +156,7 @@ public sealed class ScriptRunner(Scene scene)
         catch (Exception exception)
         {
             behaviour.Enabled = false;
+            EngineMetrics.ScriptException();
             var where = behaviour.IsAttached ? $" on '{behaviour.entity.Name}'" : string.Empty;
             Log.Error(exception, $"{behaviour.GetType().Name}.{method}{where} threw an exception; the script has been disabled.");
         }

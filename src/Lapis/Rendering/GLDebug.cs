@@ -28,6 +28,7 @@ internal static class GLDebug
         var text = $"OpenGL [{type}] {Marshal.PtrToStringAnsi(message, length)}";
         if (severity == GLEnum.DebugSeverityHigh || type == GLEnum.DebugTypeError)
         {
+            Diagnostics.EngineMetrics.GLError();
             Log.Error(text);
         }
         else
