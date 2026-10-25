@@ -67,6 +67,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         var entity = ResolveEntity(entityReference);
         var transform = entity.Transform;
         var result = Summary(entity);
+        result["tag"] = entity.tag;
         result["active"] = entity.IsActive;
         result["activeInHierarchy"] = entity.IsActiveInHierarchy;
         result["parent"] = entity.Parent?.Id.ToString();
@@ -110,12 +111,13 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         return result.ToJsonString();
     }
 
-    public string FindEntities(string? name, string? componentType)
+    public string FindEntities(string? name, string? componentType, string? tag = null)
     {
         var type = string.IsNullOrWhiteSpace(componentType) ? null : ResolveComponentType(componentType);
         var found = context.Scene.AllEntities
             .Where(entity => string.IsNullOrWhiteSpace(name) || entity.Name.Contains(name.Trim(), StringComparison.OrdinalIgnoreCase))
             .Where(entity => type is null || entity.GetComponent(type) is not null)
+            .Where(entity => string.IsNullOrWhiteSpace(tag) || entity.CompareTag(tag.Trim()))
             .Take(200)
             .Select(entity => (JsonNode)Summary(entity));
         return new JsonArray([.. found]).ToJsonString();
@@ -273,6 +275,22 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         }
 
         Execute(new RenameEntityCommand(entity, entity.Name, name.Trim()));
+        return WithPlayNote(Summary(entity)).ToJsonString();
+    }
+
+    public string SetTag(string entityReference, string tag)
+    {
+        RequireSceneEdits();
+        var entity = ResolveEntity(entityReference);
+        var before = entity.tag;
+        entity.tag = tag;
+        if (entity.tag != before)
+        {
+            var after = entity.tag;
+            entity.tag = before;
+            Execute(new SetTagCommand(entity, before, after));
+        }
+
         return WithPlayNote(Summary(entity)).ToJsonString();
     }
 
@@ -982,16 +1000,31 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     private static JsonArray Vector(Vector3 value) =>
         [MathF.Round(value.X, 4), MathF.Round(value.Y, 4), MathF.Round(value.Z, 4)];
 
-    private static JsonObject Summary(Entity entity) => new()
+    private static JsonObject Summary(Entity entity)
     {
-        ["id"] = entity.Id.ToString(),
-        ["name"] = entity.Name,
-        ["path"] = EntityPath(entity),
-    };
+        var summary = new JsonObject
+        {
+            ["id"] = entity.Id.ToString(),
+            ["name"] = entity.Name,
+            ["path"] = EntityPath(entity),
+        };
+
+        if (!entity.CompareTag(Entity.Untagged))
+        {
+            summary["tag"] = entity.tag;
+        }
+
+        return summary;
+    }
 
     private static JsonNode TreeNode(Entity entity)
     {
         var node = new JsonObject { ["id"] = entity.Id.ToString(), ["name"] = entity.Name };
+        if (!entity.CompareTag(Entity.Untagged))
+        {
+            node["tag"] = entity.tag;
+        }
+
         if (!entity.IsActive)
         {
             node["active"] = false;

@@ -123,6 +123,20 @@ public sealed class Scene
     /// <summary>Returns the first entity (depth-first) with the given name, or null.</summary>
     public Entity? FindByName(string name) => AllEntities.FirstOrDefault(entity => entity.Name == name);
 
+    /// <summary>
+    /// Returns the first active entity (depth-first) with the given <see cref="Entity.tag"/>, or null.
+    /// Entities that are inactive, or under an inactive parent, are skipped.
+    /// </summary>
+    public Entity? FindWithTag(string tag) =>
+        AllEntities.FirstOrDefault(entity => entity.CompareTag(tag) && entity.IsActiveInHierarchy);
+
+    /// <summary>
+    /// Returns every active entity with the given <see cref="Entity.tag"/>, in hierarchy order (an empty array when
+    /// there are none). Inactive entities are skipped.
+    /// </summary>
+    public Entity[] FindGameObjectsWithTag(string tag) =>
+        [.. AllEntities.Where(entity => entity.CompareTag(tag) && entity.IsActiveInHierarchy)];
+
     /// <summary>Returns the first component of type <typeparamref name="T"/> in the scene (depth-first), or null.</summary>
     public T? Find<T>()
         where T : class

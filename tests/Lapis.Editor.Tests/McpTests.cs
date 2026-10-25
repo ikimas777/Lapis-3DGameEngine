@@ -165,7 +165,7 @@ public sealed class McpTests : IDisposable
 
             var listed = await client.ListToolsAsync(cancellationToken: TestContext.Current.CancellationToken);
             var names = listed.Select(tool => tool.Name).ToList();
-            Assert.Equal(31, names.Count); // docs/mcp.md lists every tool
+            Assert.Equal(32, names.Count); // docs/mcp.md lists every tool
             Assert.Contains("get_scene", names);
             Assert.Contains("create_entity", names);
 

@@ -334,6 +334,21 @@ for organising the scene. Folders only exist in the editor: they have no positio
 - **Delete** (or Del) removes only the folder: what was inside moves up one level. **Delete Folder and
   Contents** also deletes everything inside. Both can be undone.
 
+### Tags
+
+Every entity has one tag (`Untagged` by default), chosen in the **Tag** list under its name in the Inspector;
+**Add Tag...** adds a new one to the project and the **x** next to a tag removes it. Scripts use tags to find and
+recognise objects:
+
+```csharp
+var player = FindWithTag("Player");
+foreach (var enemy in FindGameObjectsWithTag("Enemy")) { enemy.IsActive = false; }
+if (other.CompareTag("Player")) { /* ... */ }
+tag = "Enemy";
+```
+
+See [tags in the scripting guide](docs/scripting.md#tags).
+
 ### Command-line options
 
 `--help` lists them all:

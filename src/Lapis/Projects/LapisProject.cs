@@ -31,11 +31,14 @@ public sealed class LapisProject
     /// <summary>Current version of the project file format.</summary>
     public const int FormatVersion = 1;
 
-    private LapisProject(string filePath, string name, string? startScene)
+    private readonly List<string> _tags;
+
+    private LapisProject(string filePath, string name, string? startScene, IEnumerable<string>? tags = null)
     {
         FilePath = Path.GetFullPath(filePath);
         Name = name;
         StartScene = startScene;
+        _tags = [.. (tags ?? DefaultTags).Select(tag => tag.Trim()).Where(IsUsableTag).Distinct(StringComparer.Ordinal)];
     }
 
     /// <summary>Full path of the <c>.lapis</c> file.</summary>
@@ -58,6 +61,33 @@ public sealed class LapisProject
 
     /// <summary>Folder for generated files; safe to delete.</summary>
     public string CacheDirectory => Path.Combine(Directory, ".lapis");
+
+    /// <summary>Tags new projects start with (besides <see cref="Entity.Untagged"/>, which always exists).</summary>
+    public static IReadOnlyList<string> DefaultTags { get; } = ["Player", "Enemy"];
+
+    /// <summary>
+    /// The project's tags, offered in the Inspector's Tag list. <see cref="Entity.Untagged"/> is not stored; every
+    /// entity can use it.
+    /// </summary>
+    public IReadOnlyList<string> Tags => _tags;
+
+    /// <summary>Adds a tag to <see cref="Tags"/>; returns false when it is blank, Untagged or already there.</summary>
+    /// <remarks>Call <see cref="Save"/> to keep it.</remarks>
+    public bool AddTag(string tag)
+    {
+        tag = tag?.Trim() ?? string.Empty;
+        if (!IsUsableTag(tag) || _tags.Contains(tag, StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        _tags.Add(tag);
+        return true;
+    }
+
+    /// <summary>Removes a tag from <see cref="Tags"/>; returns false when it is not there.</summary>
+    /// <remarks>Entities keep the tag until it is changed; call <see cref="Save"/> to keep the change.</remarks>
+    public bool RemoveTag(string tag) => _tags.Remove(tag);
 
     /// <summary>Full path of the start scene, or null when none is set.</summary>
     public string? StartScenePath => StartScene is null ? null : Path.GetFullPath(Path.Combine(Directory, StartScene));
@@ -99,7 +129,8 @@ public sealed class LapisProject
         }
 
         var name = (string?)root["name"] ?? Path.GetFileNameWithoutExtension(filePath);
-        return new LapisProject(filePath, name, (string?)root["startScene"]);
+        var tags = root["tags"] is JsonArray array ? array.Select(node => (string?)node ?? string.Empty) : null;
+        return new LapisProject(filePath, name, (string?)root["startScene"], tags);
     }
 
     /// <summary>
@@ -142,10 +173,13 @@ public sealed class LapisProject
             ["name"] = Name,
             ["engineVersion"] = EngineInfo.Version.ToString(3),
             ["startScene"] = StartScene,
+            ["tags"] = new JsonArray([.. _tags.Select(tag => JsonValue.Create(tag))]),
         };
 
         File.WriteAllText(FilePath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine);
     }
+
+    private static bool IsUsableTag(string tag) => !string.IsNullOrWhiteSpace(tag) && tag != Entity.Untagged;
 
     /// <summary>Converts a full path inside the project to a project-relative path with forward slashes.</summary>
     public string ToProjectPath(string fullPath) => Path.GetRelativePath(Directory, fullPath).Replace('\\', '/');

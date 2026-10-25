@@ -232,6 +232,11 @@ public static partial class SceneSerializer
             ["name"] = entity.Name,
         };
 
+        if (!entity.CompareTag(Entity.Untagged))
+        {
+            data["tag"] = entity.tag;
+        }
+
         if (!entity.IsActive)
         {
             data["active"] = false;
@@ -357,6 +362,7 @@ public static partial class SceneSerializer
         }
 
         entity.IsActive = (bool?)data["active"] ?? true;
+        entity.tag = (string?)data["tag"] ?? Entity.Untagged;
 
         // Folders only apply at the top level; entities placed under a parent leave their folder.
         if (parent is null && Guid.TryParse((string?)data["folder"], out var folderId))
