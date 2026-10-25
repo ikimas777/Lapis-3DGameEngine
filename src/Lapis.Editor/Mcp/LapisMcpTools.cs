@@ -34,11 +34,12 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
     public Task<string> GetEntity([Description("Entity id, path (\"Parent/Child\") or unique name.")] string entity) =>
         Run("get_entity", t => t.GetEntity(entity));
 
-    [McpServerTool(Name = "find_entities", ReadOnly = true), Description("Entities whose name contains a text and/or that have a component.")]
+    [McpServerTool(Name = "find_entities", ReadOnly = true), Description("Entities whose name contains a text, that have a component and/or that have a tag.")]
     public Task<string> FindEntities(
         [Description("Part of the name (case-insensitive); empty for any.")] string? name = null,
-        [Description("Component type the entity must have, e.g. Light.")] string? component = null) =>
-        Run("find_entities", t => t.FindEntities(name, component));
+        [Description("Component type the entity must have, e.g. Light.")] string? component = null,
+        [Description("Exact tag the entity must have, e.g. Enemy (case-sensitive).")] string? tag = null) =>
+        Run("find_entities", t => t.FindEntities(name, component, tag));
 
     [McpServerTool(Name = "list_component_types", ReadOnly = true), Description("Every component type that can be added (engine and game scripts) with its properties and their types.")]
     public Task<string> ListComponentTypes() => Run("list_component_types", _ => McpEditorTools.ListComponentTypes());
@@ -93,6 +94,10 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
     [McpServerTool(Name = "rename_entity"), Description("Renames an entity.")]
     public Task<string> RenameEntity([Description("Entity id, path or unique name.")] string entity, [Description("New name.")] string name) =>
         Run("rename_entity", t => t.RenameEntity(entity, name));
+
+    [McpServerTool(Name = "set_tag"), Description("Sets an entity's tag (one per entity), which scripts use to find it, e.g. Player or Enemy. An empty tag means Untagged.")]
+    public Task<string> SetTag([Description("Entity id, path or unique name.")] string entity, [Description("The tag, e.g. Enemy.")] string tag) =>
+        Run("set_tag", t => t.SetTag(entity, tag));
 
     [McpServerTool(Name = "set_active"), Description("Activates or deactivates an entity (inactive entities and their children are not drawn or updated).")]
     public Task<string> SetActive([Description("Entity id, path or unique name.")] string entity, bool active) =>

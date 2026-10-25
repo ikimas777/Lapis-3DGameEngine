@@ -9,6 +9,7 @@ public sealed class Entity
 {
     private readonly List<Component> _components = [];
     private string _name;
+    private string _tag = Untagged;
 
     internal Entity(Scene scene, string name, Guid id)
     {
@@ -28,6 +29,22 @@ public sealed class Entity
         get => _name;
         set => _name = value ?? string.Empty;
     }
+
+    /// <summary>The tag of an entity that has none.</summary>
+    public const string Untagged = "Untagged";
+
+    /// <summary>
+    /// A label scripts use to find and recognise entities, e.g. <c>"Player"</c> or <c>"Enemy"</c>; one per entity.
+    /// Empty or blank values become <see cref="Untagged"/>. See <see cref="Scene.FindWithTag"/>.
+    /// </summary>
+    public string tag
+    {
+        get => _tag;
+        set => _tag = string.IsNullOrWhiteSpace(value) ? Untagged : value.Trim();
+    }
+
+    /// <summary>True when the entity has exactly this tag (case-sensitive).</summary>
+    public bool CompareTag(string tag) => string.Equals(_tag, tag, StringComparison.Ordinal);
 
     /// <summary>The scene that owns this entity.</summary>
     public Scene Scene { get; }

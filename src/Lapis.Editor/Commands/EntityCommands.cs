@@ -73,6 +73,20 @@ internal sealed class RenameEntityCommand(Entity entity, string before, string a
     }
 }
 
+/// <summary>Changes an entity's tag.</summary>
+internal sealed class SetTagCommand(Entity entity, string before, string after) : IEditorCommand
+{
+    private readonly Guid _entityId = entity.Id;
+
+    public string Name { get; } = $"Tag {entity.Name} as {after}";
+
+    public void Execute(Scene scene) => CommandTarget.Entity(scene, _entityId).tag = after;
+
+    public void Undo(Scene scene) => CommandTarget.Entity(scene, _entityId).tag = before;
+
+    public bool TryMerge(IEditorCommand next) => false;
+}
+
 /// <summary>Activates or deactivates an entity.</summary>
 internal sealed class SetActiveCommand(Entity entity, bool active) : IEditorCommand
 {

@@ -35,6 +35,25 @@ public class CommandTests
     }
 
     [Fact]
+    public void SetTag_UndoAndRedo_AndDuplicatesKeepTheTag()
+    {
+        var context = new EditorContext(new Scene());
+        var enemy = context.Scene.CreateEntity("Enemy");
+
+        context.Execute(new SetTagCommand(enemy, Entity.Untagged, "Enemy"));
+        Assert.Equal("Enemy", enemy.tag);
+
+        context.Undo();
+        Assert.Equal(Entity.Untagged, enemy.tag);
+        context.Redo();
+        Assert.Equal("Enemy", enemy.tag);
+
+        context.Selection = enemy;
+        EditorActions.DuplicateSelection(context);
+        Assert.Equal(2, context.Scene.FindGameObjectsWithTag("Enemy").Length);
+    }
+
+    [Fact]
     public void CommandsRecordedBeforeDelete_StillWorkAfterUndoDelete()
     {
         var scene = new Scene();

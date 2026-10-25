@@ -15,8 +15,24 @@ public abstract class Component
     /// <summary>The transform of the entity this component is attached to.</summary>
     public Transform transform => entity.Transform;
 
+    /// <summary>The tag of the entity this component is attached to (see <see cref="Entity.tag"/>); can be assigned.</summary>
+    public string tag
+    {
+        get => entity.tag;
+        set => entity.tag = value;
+    }
+
     /// <summary>True while the component is attached to an entity.</summary>
     public bool IsAttached => _entity is not null;
+
+    /// <summary>True when this component's entity has exactly this tag (case-sensitive).</summary>
+    public bool CompareTag(string tag) => entity.CompareTag(tag);
+
+    /// <summary>Returns the first active entity in this entity's scene with the tag, or null.</summary>
+    public Entity? FindWithTag(string tag) => entity.Scene.FindWithTag(tag);
+
+    /// <summary>Returns every active entity in this entity's scene with the tag (an empty array when there are none).</summary>
+    public Entity[] FindGameObjectsWithTag(string tag) => entity.Scene.FindGameObjectsWithTag(tag);
 
     /// <summary>Called right after the component is attached to its entity.</summary>
     protected internal virtual void OnAdded()

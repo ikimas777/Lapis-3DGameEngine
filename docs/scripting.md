@@ -220,6 +220,7 @@ Attributes for the Inspector:
 | `transform.LookAt(target)`, `transform.SetParent(other)` | Orientation and hierarchy |
 | `entity.GetComponent<T>()`, `entity.AddComponent<T>()`, `entity.Destroy()` | Components and lifetime |
 | `entity.Scene.Find<T>()`, `entity.Scene.FindByName("Player")` | Finding other objects |
+| `tag`, `CompareTag("Player")`, `FindWithTag("Player")`, `FindGameObjectsWithTag("Enemy")` | Tags (see below) |
 | `entity.Parent`, `entity.Children`, `transform.Parent` | Parent and children (never a folder) |
 | `entity.Folder`, `entity.FolderPath`, `entity.IsInFolder("Enemies")`, `entity.Scene.FindEntitiesInFolder("Enemies")` | Hierarchy folders (see below) |
 | `Time.DeltaTime`, `Time.TimeSinceStart`, `Time.FrameCount` | Timing |
@@ -228,6 +229,70 @@ Attributes for the Inspector:
 | `Input.GetMouseButton(MouseButton.Left)`, `Input.MousePosition` | Mouse |
 | `Log.Info("...")`, `Log.Warning`, `Log.Error` | Messages in the Console |
 | `MathUtil.FromEulerDegrees`, `Vector3.ClampLength`, `MathUtil.Lerp` | Math helpers |
+
+## Tags
+
+A tag is a short label such as `Player`, `Enemy` or `Pickup` that scripts use to find and recognise objects.
+Every entity has exactly one tag; a new entity is `Untagged`.
+
+**In the editor:** pick the tag in the **Tag** list under the name in the Inspector. **Add Tag...** at the bottom of
+the list creates a new one; the project keeps its tags in the `.lapis` file (new projects start with `Player` and
+`Enemy`), so the same list is offered for every scene. The **x** next to a tag in the list removes it from the
+project after asking; objects in the open scene that use it become `Untagged` (Ctrl+Z gives the tag back to them).
+Changing a tag can be undone with Ctrl+Z.
+
+**In scripts** (inside a `Behaviour`, or on any component such as the `Collider` of a collision):
+
+| Code | Result |
+|---|---|
+| `tag` | The tag of this script's entity, e.g. `"Player"` |
+| `tag = "Enemy";` | Gives the entity a new tag (any text; it does not have to be in the project's list) |
+| `CompareTag("Player")` | `true` when the entity has exactly this tag (case-sensitive) |
+| `FindWithTag("Player")` | The first active entity with the tag, or `null` |
+| `FindGameObjectsWithTag("Enemy")` | An array of every active entity with the tag (empty when there are none) |
+
+The same members exist on `Entity` (`enemy.tag`, `enemy.CompareTag("Boss")`) and the searches on `Scene`
+(`entity.Scene.FindWithTag("Player")`). Searches skip inactive entities and entities under an inactive parent.
+
+```csharp
+public class Turret : Behaviour
+{
+    private Entity? _player;
+
+    public override void Start()
+    {
+        _player = FindWithTag("Player");
+        tag = "Enemy";
+    }
+
+    public override void Update()
+    {
+        if (_player is not null)
+        {
+            transform.LookAt(_player.Transform.Position);
+        }
+    }
+
+    public override void OnTriggerBegin(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Log.Info("The player is in range.");
+        }
+    }
+}
+
+public class Alarm : Behaviour
+{
+    public override void Start()
+    {
+        foreach (var enemy in FindGameObjectsWithTag("Enemy"))
+        {
+            enemy.IsActive = true; // wake every enemy
+        }
+    }
+}
+```
 
 ## Hierarchy folders
 

@@ -30,6 +30,7 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 {
   "id": "0ed5aaaf-7504-46b0-ab66-ab56463b571e",
   "name": "Box Marker",
+  "tag": "Pickup",
   "parent": "6a1f0c2e-...",
   "active": false,
   "transform": { "position": [0, 0.75, 0], "rotation": [0, 0, 0, 1], "scale": [0.3, 0.3, 0.3] },
@@ -43,6 +44,7 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 |---|---|
 | `id` | GUID that stays the same across saves. References between objects use it. |
 | `parent` | Id of the parent entity. Omitted for root entities. |
+| `tag` | The entity's tag. Omitted for `Untagged`. |
 | `folder` | Root entities only: id of the Hierarchy folder the entity is shown in. Omitted at the top level. |
 | `active` | Omitted when `true`. |
 | `transform` | Local position, rotation (quaternion `x, y, z, w`) and scale. |

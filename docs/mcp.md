@@ -120,7 +120,7 @@ The **Activity** list shows the latest calls; a red name failed, and hovering it
 
 ## Tools for AI
 
-The server offers 31 tools. Assistants read this list (with the same descriptions) when they connect.
+The server offers 32 tools. Assistants read this list (with the same descriptions) when they connect.
 
 **Conventions**
 
@@ -141,7 +141,7 @@ The server offers 31 tools. Assistants read this list (with the same description
 |---|---|---|---|
 | `get_scene` | — | The open scene: entity tree (ids, names, components, inactive entities, folders), the scene file, unsaved changes, the selection and the Play mode state | — |
 | `get_entity` | `entity` | One entity: local position / rotation / scale and world position, parent, folder, children, and every component with its property values in the format `set_property` takes | — |
-| `find_entities` | *`name`*, *`component`* | Entities whose name contains a text and/or that have a component type (up to 200) | — |
+| `find_entities` | *`name`*, *`component`*, *`tag`* | Entities whose name contains a text, that have a component type and/or that have a tag (up to 200) | — |
 | `list_component_types` | — | Every component type that can be added (engine and game scripts), whether it is a script, and its properties with their types | — |
 | `get_scene_settings` | — | Environment (ambient light, sky, shadow distance) and physics (gravity, steps per second) settings | — |
 | `get_console` | *`count`* (1-500, default 30), *`level`* (`Info` / `Warning` / `Error`) | The latest Console messages, with the file and line for script errors | — |
@@ -155,6 +155,7 @@ The server offers 31 tools. Assistants read this list (with the same description
 | `delete_entity` | `entity` | Deletes the entity and its children | Edit the scene |
 | `duplicate_entity` | `entity` | Copies the entity with its children and components next to the original | Edit the scene |
 | `rename_entity` | `entity`, `name` | Renames the entity | Edit the scene |
+| `set_tag` | `entity`, `tag` | Sets the entity's tag (empty = Untagged) | Edit the scene |
 | `set_active` | `entity`, `active` | Activates or deactivates the entity | Edit the scene |
 | `set_transform` | `entity`, *`position`*, *`rotation`*, *`scale`*, *`world`* | Changes only the given values; local to the parent by default, `world: true` for world position and rotation | Edit the scene |
 | `move_entity` | `entity` and one of *`parent`* (`""` = top level), *`before`*, *`after`*, *`folder`* | Moves the entity in the Hierarchy, keeping its place in the world: under a parent, just before or after another entity on its level, or into a Hierarchy folder at the top level | Edit the scene |

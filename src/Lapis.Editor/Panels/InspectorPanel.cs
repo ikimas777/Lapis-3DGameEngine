@@ -14,8 +14,14 @@ namespace Lapis.Editor.Panels;
 internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager scripts, AssetInspector assetInspector) : EditorPanel("Inspector")
 {
     private const string AddComponentPopup = "##addComponent";
+    private const string AddTagPopup = "Add Tag##addTag";
+    private const string RemoveTagPopup = "Remove Tag##removeTag";
 
     private string _componentFilter = string.Empty;
+    private string _newTag = string.Empty;
+    private bool _openAddTag;
+    private string? _tagToRemove;
+    private string? _removingTag;
 
     // Euler angles are cached while editing so values like 180° do not flip to -180° mid-drag.
     private Transform? _eulerOwner;
@@ -109,6 +115,170 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             entity.Name = name;
             context.Record(new RenameEntityCommand(entity, before, name));
         }
+
+        DrawTag(entity);
+    }
+
+    /// <summary>
+    /// The Tag list: Untagged, the project's tags (each with an x to remove it from the project) and "Add Tag...".
+    /// The project's tags are saved in its .lapis file.
+    /// </summary>
+    private void DrawTag(Entity entity)
+    {
+        var project = scripts.Project;
+        var projectTags = project?.Tags ?? Projects.LapisProject.DefaultTags;
+        List<string> tags = [Entity.Untagged, .. projectTags];
+        if (!tags.Contains(entity.tag))
+        {
+            tags.Add(entity.tag); // set by a script, or the scene comes from another project
+        }
+
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextUnformatted("Tag");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.BeginCombo("##tag", entity.tag))
+        {
+            var removeWidth = ImGui.GetFrameHeight();
+            foreach (var tag in tags)
+            {
+                ImGui.PushID(tag);
+                var removable = project is not null && projectTags.Contains(tag);
+                var width = removable ? ImGui.GetContentRegionAvail().X - removeWidth - ImGui.GetStyle().ItemSpacing.X : 0;
+                if (ImGui.Selectable(tag, entity.CompareTag(tag), ImGuiSelectableFlags.None, new Vector2(width, 0)) && !entity.CompareTag(tag))
+                {
+                    SetTag(entity, tag);
+                }
+
+                if (removable)
+                {
+                    ImGui.SameLine();
+                    if (ImGui.SmallButton("x"))
+                    {
+                        _tagToRemove = tag;
+                        ImGui.CloseCurrentPopup();
+                    }
+
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.SetTooltip("Remove this tag from the project");
+                    }
+                }
+
+                ImGui.PopID();
+            }
+
+            ImGui.Separator();
+            if (ImGui.Selectable("Add Tag..."))
+            {
+                _newTag = string.Empty;
+                _openAddTag = true;
+            }
+
+            ImGui.EndCombo();
+        }
+
+        DrawAddTagPopup(entity, project);
+        DrawRemoveTagPopup(entity.Scene, project);
+    }
+
+    private void DrawAddTagPopup(Entity entity, Projects.LapisProject? project)
+    {
+        if (_openAddTag)
+        {
+            ImGui.OpenPopup(AddTagPopup);
+            _openAddTag = false;
+        }
+
+        if (!ImGui.BeginPopupModal(AddTagPopup, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            return;
+        }
+
+        ImGui.TextUnformatted("New tag:");
+        if (ImGui.IsWindowAppearing())
+        {
+            ImGui.SetKeyboardFocusHere();
+        }
+
+        ImGui.SetNextItemWidth(260);
+        var entered = ImGui.InputText("##newTag", ref _newTag, 64, ImGuiInputTextFlags.EnterReturnsTrue);
+        var newTag = _newTag.Trim();
+        var valid = newTag.Length > 0 && newTag != Entity.Untagged;
+
+        ImGui.BeginDisabled(!valid);
+        if ((ImGui.Button("Add", new Vector2(120, 0)) || entered) && valid)
+        {
+            if (project?.AddTag(newTag) == true)
+            {
+                project.Save();
+            }
+
+            SetTag(entity, newTag);
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel", new Vector2(120, 0)) || ImGui.IsKeyPressed(ImGuiKey.Escape, false))
+        {
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    /// <summary>Asks before removing a tag from the project; objects in the open scene that use it become Untagged.</summary>
+    private void DrawRemoveTagPopup(Scene scene, Projects.LapisProject? project)
+    {
+        if (_tagToRemove is not null)
+        {
+            ImGui.OpenPopup(RemoveTagPopup);
+            _removingTag = _tagToRemove;
+            _tagToRemove = null;
+        }
+
+        if (!ImGui.BeginPopupModal(RemoveTagPopup, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            return;
+        }
+
+        var tag = _removingTag ?? string.Empty;
+        var users = scene.AllEntities.Where(entity => entity.CompareTag(tag)).ToList();
+        ImGui.TextUnformatted($"Remove the tag \"{tag}\" from the project?");
+        ImGui.TextDisabled(users.Count == 0
+            ? "No object in this scene uses it."
+            : $"{users.Count} object(s) in this scene use it and become {Entity.Untagged} (Ctrl+Z gives the tag back to them).");
+
+        if (ImGui.Button("Remove", new Vector2(120, 0)))
+        {
+            if (project?.RemoveTag(tag) == true)
+            {
+                project.Save();
+            }
+
+            if (users.Count > 0)
+            {
+                context.Execute(new CompositeCommand($"Remove tag {tag}", [.. users.Select(entity => (IEditorCommand)new SetTagCommand(entity, tag, Entity.Untagged))]));
+            }
+
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel", new Vector2(120, 0)) || ImGui.IsKeyPressed(ImGuiKey.Escape, false))
+        {
+            ImGui.CloseCurrentPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private void SetTag(Entity entity, string tag)
+    {
+        var before = entity.tag;
+        entity.tag = tag;
+        context.Record(new SetTagCommand(entity, before, entity.tag));
     }
 
     private void DrawTransform(Entity entity)
