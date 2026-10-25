@@ -4,6 +4,7 @@ using Lapis.Serialization;
 
 namespace Lapis.Editor.Tests;
 
+[Collection(GlobalState.Collection)] // sets AssetDatabase.Active
 public sealed class SettingsAndAssetCommandTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-undo-asset-tests", Guid.NewGuid().ToString("N"));
