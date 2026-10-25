@@ -2,8 +2,8 @@ using Lapis.Simulation;
 
 namespace Lapis.Tests.Simulation;
 
-// Physics.Raycast uses the active world, which is global; run these tests one at a time.
-[Collection(nameof(PhysicsWorldTests))]
+// Physics.Raycast uses the active world and scripts read Time, both global; run these tests one at a time.
+[Collection(GlobalState.Collection)]
 public class PhysicsWorldTests
 {
     private const float Frame = 1f / 60f;

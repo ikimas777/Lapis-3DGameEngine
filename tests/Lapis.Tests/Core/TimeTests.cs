@@ -1,5 +1,6 @@
 namespace Lapis.Tests.Core;
 
+[Collection(GlobalState.Collection)]
 public class TimeTests
 {
     [Fact]
