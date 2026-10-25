@@ -9,6 +9,7 @@ using ModelContextProtocol.Protocol;
 
 namespace Lapis.Editor.Tests;
 
+[Collection(GlobalState.Collection)] // sets AssetDatabase.Active
 public sealed class McpTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-mcp-tests", Guid.NewGuid().ToString("N"));
