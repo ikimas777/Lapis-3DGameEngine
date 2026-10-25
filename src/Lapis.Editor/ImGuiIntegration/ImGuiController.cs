@@ -58,6 +58,12 @@ internal sealed unsafe class ImGuiController : IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops passing mouse movement, clicks and the wheel to the UI, e.g. while a running game has the mouse.
+    /// Button releases still go through.
+    /// </summary>
+    public bool IgnoreMouse { get; set; }
+
     /// <summary>Starts a new ImGui frame. Call once per frame before any ImGui widgets.</summary>
     public void NewFrame(float deltaTime)
     {
@@ -133,10 +139,23 @@ internal sealed unsafe class ImGuiController : IDisposable
 
     private static void OnKeyChar(IKeyboard keyboard, char character) => ImGui.GetIO().AddInputCharacter(character);
 
-    private static void OnMouseMove(IMouse mouse, Vector2 position) => ImGui.GetIO().AddMousePosEvent(position.X, position.Y);
+    private void OnMouseMove(IMouse mouse, Vector2 position)
+    {
+        if (!IgnoreMouse)
+        {
+            ImGui.GetIO().AddMousePosEvent(position.X, position.Y);
+        }
+    }
 
-    private static void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button) => SendMouseButton(button, true);
+    private void OnMouseDown(IMouse mouse, Silk.NET.Input.MouseButton button)
+    {
+        if (!IgnoreMouse)
+        {
+            SendMouseButton(button, true);
+        }
+    }
 
+    // Releases always go through, so a button pressed before the mouse was ignored is not left held.
     private static void OnMouseUp(IMouse mouse, Silk.NET.Input.MouseButton button) => SendMouseButton(button, false);
 
     private static void SendMouseButton(Silk.NET.Input.MouseButton button, bool down)
@@ -157,7 +176,13 @@ internal sealed unsafe class ImGuiController : IDisposable
         }
     }
 
-    private static void OnScroll(IMouse mouse, ScrollWheel wheel) => ImGui.GetIO().AddMouseWheelEvent(wheel.X, wheel.Y);
+    private void OnScroll(IMouse mouse, ScrollWheel wheel)
+    {
+        if (!IgnoreMouse)
+        {
+            ImGui.GetIO().AddMouseWheelEvent(wheel.X, wheel.Y);
+        }
+    }
 
     private void UpdateMouseCursor()
     {

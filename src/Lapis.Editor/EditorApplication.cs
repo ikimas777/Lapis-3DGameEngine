@@ -234,7 +234,16 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         if (_gameInput is not null && _gameView is not null)
         {
-            _gameInput.Enabled = _gameView.IsOpen && _gameView.WantsInput;
+            var playing = _gameView.IsOpen && _gameView.WantsInput;
+            _gameInput.Enabled = playing;
+
+            // While the game has the mouse, the cursor is hidden and held in the window, and the editor UI ignores
+            // the mouse: clicks must reach only the game (a click would otherwise move focus away and end the
+            // capture). Esc gives the mouse back.
+            _gameInput.CaptureCursor = playing;
+            _imgui.IgnoreMouse = playing;
+            var io = ImGui.GetIO();
+            io.ConfigFlags = playing ? io.ConfigFlags | ImGuiConfigFlags.NoMouseCursorChange : io.ConfigFlags & ~ImGuiConfigFlags.NoMouseCursorChange;
         }
 
         DrawPopups();
