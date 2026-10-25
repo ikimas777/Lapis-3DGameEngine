@@ -40,6 +40,23 @@ public sealed class MonitorLauncherTests : IDisposable
     }
 
     [Fact]
+    public void NotFoundMessage_ExplainsHowToBuildTheMonitorInAClone()
+    {
+        var project = Path.Combine(_root, "src", "Lapis.Monitor", "Lapis.Monitor.csproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(project)!);
+        File.WriteAllText(project, string.Empty);
+
+        var repository = MonitorLauncher.FindRepository(_root);
+        var message = MonitorLauncher.NotFoundMessage(repository);
+
+        Assert.Equal(new DirectoryInfo(_root).FullName, repository);
+        Assert.Contains(".NET 10 SDK", message, StringComparison.Ordinal);
+        Assert.Contains(_root, message, StringComparison.Ordinal);
+        Assert.Contains("dotnet build src/Lapis.Monitor", message, StringComparison.Ordinal);
+        Assert.Contains("/releases", MonitorLauncher.NotFoundMessage(null), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FindExecutable_ReturnsNullWhenThereIsNoMonitor()
     {
         var editor = Directory.CreateDirectory(Path.Combine(_root, "elsewhere")).FullName;
