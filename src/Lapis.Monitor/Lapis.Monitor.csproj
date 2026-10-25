@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- scripts/publish-editor.ps1 builds a windowed app without a console window. -->
+    <OutputType Condition="'$(LapisWindowedApp)' == 'true'">WinExe</OutputType>
+    <RootNamespace>Lapis.Monitor</RootNamespace>
+    <AssemblyTitle>Lapis Monitor</AssemblyTitle>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lapis\Lapis.csproj" />
+    <InternalsVisibleTo Include="Lapis.Editor.Tests" />
+    <!-- The monitor shares the editor's Dear ImGui backend and theme, so both look and behave the same. -->
+    <Compile Include="..\Lapis.Editor\ImGuiIntegration\*.cs" LinkBase="Shared" />
+    <Compile Include="..\Lapis.Editor\Theme\EditorTheme.cs" LinkBase="Shared" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hexa.NET.ImGui" />
+    <PackageReference Include="Hexa.NET.ImGuizmo" />
+    <PackageReference Include="Hexa.NET.ImPlot" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
+  </ItemGroup>
+
+</Project>

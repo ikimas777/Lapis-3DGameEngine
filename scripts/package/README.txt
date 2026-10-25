@@ -8,8 +8,11 @@ What is in this folder
                           copies it next to your game as MyGame(.exe) together with your compiled
                           scripts and assets. Keep this folder next to the editor, or exporting
                           games will not work.
+  Lapis.Monitor(.exe)     Live performance monitor: frame time, rendering, physics, memory,
+                          errors and alerts. Start it from the editor (Debug > Lapis Monitor)
+                          or on its own; it attaches to the running editor by itself.
   Docs/                   Guides: scripting.md, assets.md, export.md, mcp.md (AI assistants),
-                          scene-format.md.
+                          monitor.md, scene-format.md.
   README.txt              This file.
   LICENSE.txt             MIT licence.
 
@@ -43,5 +46,7 @@ documentation and this file in this folder; your projects and settings are not t
 Messages from the editor are also written to:
   Windows: %LOCALAPPDATA%\Lapis\editor.log
   Linux:   ~/.local/share/Lapis/editor.log
+Lapis Monitor records every run in the Monitor\Sessions folder next to that log
+(Debug > Open Monitor Sessions Folder).
 
 Source code, releases and issues: https://github.com/ikimas777/Lapis-3DGameEngine

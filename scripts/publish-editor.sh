@@ -2,7 +2,8 @@
 # Builds the Lapis editor for Linux as a single self-contained executable.
 #
 # The result is publish/Lapis.Editor-linux/Lapis.Editor, plus Runtime/Lapis.Runtime (the game runtime that
-# File > Export Game turns into every exported game), Docs/, README.txt and LICENSE.txt. Both programs include
+# File > Export Game turns into every exported game), Lapis.Monitor (live performance monitor), Docs/,
+# README.txt and LICENSE.txt. The programs include
 # the .NET runtime, the native libraries and the built-in shaders, so they run on 64-bit Linux without
 # installing .NET.
 #
@@ -32,8 +33,10 @@ publish() {
 publish "$root/src/Lapis.Editor/Lapis.Editor.csproj" "$output"
 # The game runtime, copied into every exported game (File > Export Game).
 publish "$root/src/Lapis.Runtime/Lapis.Runtime.csproj" "$output/Runtime"
+# Lapis Monitor, next to the editor (Debug > Lapis Monitor starts it; it can also be run on its own).
+publish "$root/src/Lapis.Monitor/Lapis.Monitor.csproj" "$output"
 
-chmod +x "$output/Lapis.Editor" "$output/Runtime/Lapis.Runtime"
+chmod +x "$output/Lapis.Editor" "$output/Runtime/Lapis.Runtime" "$output/Lapis.Monitor"
 
 # Documentation, a short read-me and the licence next to the programs.
 mkdir -p "$output/Docs"

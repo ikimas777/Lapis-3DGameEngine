@@ -12,6 +12,7 @@
     <Project Path="src/Lapis/Lapis.csproj" />
     <Project Path="src/Lapis.Editor/Lapis.Editor.csproj" />
     <Project Path="src/Lapis.Runtime/Lapis.Runtime.csproj" />
+    <Project Path="src/Lapis.Monitor/Lapis.Monitor.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Lapis.Tests/Lapis.Tests.csproj" />
