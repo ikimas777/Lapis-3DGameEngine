@@ -168,6 +168,14 @@ codex mcp add lapis --url http://127.0.0.1:47800/mcp
 The [MCP guide](docs/mcp.md) has more options (project-wide `.mcp.json`, `config.toml` for Codex) and lists every
 tool the assistant can use.
 
+## Performance monitor
+
+**Debug > Lapis Monitor** opens Lapis Monitor, a separate window with live charts of the running editor or game:
+frame time, rendering, physics, memory and garbage collection, errors, cache misses and free disk space. It raises
+alerts (hitches, leaks, errors, a filling disk) and records every run to `%LOCALAPPDATA%\Lapis\Monitor\Sessions`.
+It can also be started on its own (`Lapis.Monitor.exe`, or `dotnet run --project src/Lapis.Monitor`) and attaches
+to the editor by itself. See the [monitor guide](docs/monitor.md).
+
 ## Running
 
 ```bash
@@ -335,6 +343,7 @@ The editor stores its window layout in `%LOCALAPPDATA%\Lapis\editor-layout.ini`;
 | `src/Lapis` | Engine library (`Lapis.dll`) — the API game scripts use |
 | `src/Lapis.Editor` | The editor application |
 | `src/Lapis.Runtime` | Game runtime (the engine without the editor) that runs exported games |
+| `src/Lapis.Monitor` | Lapis Monitor: live performance charts, alerts and recorded sessions |
 | `samples/Sandbox` | Sample game project |
 | `tests/Lapis.Tests` | Unit tests |
 

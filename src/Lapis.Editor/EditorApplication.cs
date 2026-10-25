@@ -53,6 +53,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     protected override void OnLoad()
     {
         _context = new EditorContext(DemoScene.Create());
+        Lapis.Diagnostics.EngineMetrics.EntityCountSource = () => _context.Scene.EntityCount;
         _scripts = new ScriptManager(_context);
         _play = new PlayMode(_context);
         _settings = EditorSettings.Load();
@@ -511,6 +512,28 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             if (ImGui.MenuItem("Keybindings..."))
             {
                 ShowOptions(OptionsTab.Keybindings);
+            }
+
+            ImGui.EndMenu();
+        }
+
+        if (ImGui.BeginMenu("Debug"))
+        {
+            if (ImGui.MenuItem("Lapis Monitor"))
+            {
+                MonitorLauncher.Start();
+            }
+
+            if (ImGui.MenuItem("Open Monitor Sessions Folder"))
+            {
+                Directory.CreateDirectory(MonitorLauncher.SessionsFolder);
+                PlatformShell.ShowInFileManager(MonitorLauncher.SessionsFolder);
+            }
+
+            ImGui.Separator();
+            if (ImGui.MenuItem("Show Editor Log"))
+            {
+                PlatformShell.ShowInFileManager(EditorLogFile.LogPath, select: true);
             }
 
             ImGui.EndMenu();

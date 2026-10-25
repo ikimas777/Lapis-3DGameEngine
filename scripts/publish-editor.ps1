@@ -4,7 +4,8 @@
 
 .DESCRIPTION
     The result is publish\Lapis.Editor\Lapis.Editor.exe, plus Runtime\Lapis.Runtime.exe (the game runtime that
-    File > Export Game turns into every exported game), Docs\, README.txt and LICENSE.txt. Both programs include
+    File > Export Game turns into every exported game), Lapis.Monitor.exe (live performance monitor), Docs\,
+    README.txt and LICENSE.txt. The programs include
     the .NET runtime, the native libraries and the built-in shaders, so they run on any 64-bit Windows 10/11 PC
     without installing .NET. The editor is a windowed app (no console window); messages go to
     %LOCALAPPDATA%\Lapis\editor.log.
@@ -17,7 +18,8 @@
 
 .PARAMETER RepoRoot
     Also copy Lapis.Editor.exe and Runtime\Lapis.Runtime.exe into the repository root, where they are committed
-    so the editor can be started right after cloning.
+    so the editor can be started right after cloning. Lapis.Monitor.exe is not copied: from a clone, the editor
+    starts a build of src\Lapis.Monitor instead.
 
     On Linux use scripts/publish-editor.sh instead.
 
@@ -73,6 +75,25 @@ dotnet publish $runtime `
 
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish of the runtime failed with exit code $LASTEXITCODE."
+}
+
+# Lapis Monitor, next to the editor (Debug > Lapis Monitor starts it; it can also be run on its own).
+$monitor = Join-Path $PSScriptRoot "..\src\Lapis.Monitor\Lapis.Monitor.csproj"
+dotnet publish $monitor `
+    --configuration Release `
+    --runtime win-x64 `
+    --self-contained true `
+    --output $Output `
+    -p:LapisWindowedApp=true `
+    -p:PublishSingleFile=true `
+    -p:IncludeNativeLibrariesForSelfExtract=true `
+    -p:IncludeAllContentForSelfExtract=true `
+    -p:EnableCompressionInSingleFile=true `
+    -p:DebugType=none `
+    $versionArgument
+
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet publish of the monitor failed with exit code $LASTEXITCODE."
 }
 
 # Documentation, a short read-me and the licence next to the programs.

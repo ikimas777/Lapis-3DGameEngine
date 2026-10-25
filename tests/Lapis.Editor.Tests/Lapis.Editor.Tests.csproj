@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lapis.Editor\Lapis.Editor.csproj" />
+    <ProjectReference Include="..\..\src\Lapis.Monitor\Lapis.Monitor.csproj" />
   </ItemGroup>
 
 </Project>
