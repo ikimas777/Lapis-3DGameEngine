@@ -69,7 +69,7 @@ internal static class EditorActions
             return null;
         }
 
-        var entity = context.Scene.CreateEntity(asset.Name, parent);
+        var entity = EntityFactory.Create(context.Scene, asset.Name, parent);
         if (parent is null)
         {
             entity.Transform.Position = position;
