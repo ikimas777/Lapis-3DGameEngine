@@ -11,8 +11,17 @@ records every run, so you can look at it again later.
   a terminal. It waits until a Lapis editor (`Lapis.Editor`) or game runtime (`Lapis.Runtime`) is running and
   attaches by itself. When that program exits, the monitor saves the run and waits for the next one, so it can
   stay open while you restart the editor.
-- **From a clone of the repository:** `dotnet run --project src/Lapis.Monitor`. Once it has been built,
-  Debug > Lapis Monitor in an editor started from the repository finds it too.
+- **From a clone of the repository:** the editor in the repository root (`Lapis.Editor.exe`) is ready to run,
+  but the monitor is not committed as a program; build it once from its sources:
+  1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (`dotnet --version` should
+     print 10.x).
+  2. Open a terminal in the repository folder.
+  3. Run `dotnet build src/Lapis.Monitor`.
+  4. Click **Debug > Lapis Monitor** in the editor (again). The editor finds the build in `src/Lapis.Monitor/bin`.
+
+  If the monitor has not been built yet, Debug > Lapis Monitor writes these steps to the Console.
+  `dotnet run --project src/Lapis.Monitor` builds and starts it in one go. After pulling changes to the monitor,
+  build it again.
 
 Command-line options (`--help` lists them):
 

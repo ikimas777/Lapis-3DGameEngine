@@ -176,6 +176,14 @@ alerts (hitches, leaks, errors, a filling disk) and records every run to `%LOCAL
 It can also be started on its own (`Lapis.Monitor.exe`, or `dotnet run --project src/Lapis.Monitor`) and attaches
 to the editor by itself. See the [monitor guide](docs/monitor.md).
 
+Release packages include the monitor. In a clone of the repository it is built once from its sources (the committed
+`Lapis.Editor.exe` does not need this):
+
+1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+2. In a terminal in the repository folder, run `dotnet build src/Lapis.Monitor`.
+3. Click **Debug > Lapis Monitor** in the editor.
+
+
 ## Running
 
 ```bash
