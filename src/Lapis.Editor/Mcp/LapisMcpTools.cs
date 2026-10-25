@@ -240,6 +240,7 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
     /// <summary>Runs <paramref name="work"/> on the main thread, logging the call and turning failures into tool errors.</summary>
     private async Task<T> Invoke<T>(string tool, Func<McpEditorTools, T> work, bool log = true)
     {
+        Lapis.Diagnostics.EngineMetrics.McpCall();
         try
         {
             var result = await dispatcher.InvokeAsync(() => work(tools)).ConfigureAwait(false);

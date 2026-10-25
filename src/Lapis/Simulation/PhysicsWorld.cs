@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using JoltPhysicsSharp;
+using Lapis.Diagnostics;
 
 namespace Lapis.Simulation;
 
@@ -85,6 +86,7 @@ public sealed class PhysicsWorld : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
+        var metricsStart = EngineMetrics.Start();
         _system.Gravity = _scene.Physics.Gravity;
         SyncBodies(deltaTime);
 
@@ -96,6 +98,7 @@ public sealed class PhysicsWorld : IDisposable
 
         WriteBackDynamicBodies();
         DispatchContactEvents();
+        EngineMetrics.EndPhysicsStep(metricsStart);
     }
 
     /// <summary>Casts a ray against all colliders, including triggers.</summary>

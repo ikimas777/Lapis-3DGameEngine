@@ -66,6 +66,7 @@ public static class Log
             Console.ForegroundColor = previousColor;
         }
 
+        Diagnostics.EngineMetrics.Logged(level);
         MessageLogged?.Invoke(entry);
     }
 }

@@ -75,6 +75,7 @@ internal sealed class ScriptHost
             else if (checks + 1 >= MaxUnloadChecks)
             {
                 _unloading.RemoveAt(i);
+                Lapis.Diagnostics.EngineMetrics.ScriptContextLeaked();
                 Log.Warning("Old script code is still in memory after a reload; something still refers to it. Restart the editor if memory use grows.");
             }
             else

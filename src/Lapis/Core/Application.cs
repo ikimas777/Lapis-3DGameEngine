@@ -1,3 +1,4 @@
+using Lapis.Diagnostics;
 using Lapis.Rendering;
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -146,11 +147,16 @@ public abstract class Application : IDisposable
 
     private void HandleUpdate(double deltaSeconds)
     {
+        EngineMetrics.BeginFrame(deltaSeconds);
         Time.Advance(deltaSeconds);
         OnUpdate();
     }
 
-    private void HandleRender(double deltaSeconds) => OnRender();
+    private void HandleRender(double deltaSeconds)
+    {
+        OnRender();
+        EngineMetrics.EndFrame();
+    }
 
     private void HandleFramebufferResize(Vector2D<int> size)
     {

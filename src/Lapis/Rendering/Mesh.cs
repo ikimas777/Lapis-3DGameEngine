@@ -1,3 +1,4 @@
+using Lapis.Diagnostics;
 using Silk.NET.OpenGL;
 
 namespace Lapis.Rendering;
@@ -11,6 +12,7 @@ public sealed unsafe class Mesh : IDisposable
     private readonly uint _vertexArray;
     private readonly uint _vertexBuffer;
     private readonly uint _indexBuffer;
+    private readonly long _gpuBytes;
     private bool _disposed;
 
     /// <summary>Uploads <paramref name="data"/> to immutable GPU buffers.</summary>
@@ -41,6 +43,9 @@ public sealed unsafe class Mesh : IDisposable
         SetAttribute(0, 3, Vertex.PositionOffset);
         SetAttribute(1, 3, Vertex.NormalOffset);
         SetAttribute(2, 2, Vertex.TexCoordOffset);
+
+        _gpuBytes = ((long)data.Vertices.Length * Vertex.SizeInBytes) + ((long)data.Indices.Length * sizeof(uint));
+        EngineMetrics.MeshCreated(_gpuBytes);
     }
 
     /// <summary>Number of indices drawn by <see cref="Draw"/>.</summary>
@@ -64,6 +69,7 @@ public sealed unsafe class Mesh : IDisposable
         _gl.DeleteVertexArray(_vertexArray);
         _gl.DeleteBuffer(_vertexBuffer);
         _gl.DeleteBuffer(_indexBuffer);
+        EngineMetrics.MeshDeleted(_gpuBytes);
         _disposed = true;
     }
 

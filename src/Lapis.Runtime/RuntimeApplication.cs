@@ -48,6 +48,7 @@ internal sealed class RuntimeApplication(RuntimeOptions options, GameManifest ma
 
         _renderer = new SceneRenderer(GL);
         _game = new GameSimulation(_scene);
+        Diagnostics.EngineMetrics.EntityCountSource = () => _scene.EntityCount;
         _input = new InputBridge(InputContext) { Enabled = true };
 
         foreach (var keyboard in InputContext.Keyboards)
