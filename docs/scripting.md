@@ -123,7 +123,10 @@ If a method throws an exception, the error is logged with its stack trace and th
 so one broken script does not stop the rest of the game.
 
 > Scripts run in **Play mode**: press **Play** (Ctrl+P) in the menu bar. Keyboard and mouse input reach the game
-> while the Game view has focus. Everything changed while playing is discarded on **Stop**.
+> while the Game view has focus. The mouse cursor is then hidden and held in the window, so `Input.MouseDelta` and
+> the `Mouse X` / `Mouse Y` axes keep working for a first-person camera however far the mouse moves. **Esc** gives
+> the mouse back to the editor (the game keeps running); click the game picture in the Game view to continue playing.
+> Everything changed while playing is discarded on **Stop**.
 
 ## Physics
 

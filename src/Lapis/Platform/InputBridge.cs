@@ -14,6 +14,8 @@ public sealed class InputBridge : IDisposable
 {
     private readonly IInputContext _input;
     private bool _enabled;
+    private bool _captureCursor;
+    private bool _skipNextMove;
 
     /// <summary>Starts listening to the window's keyboards and mice.</summary>
     public InputBridge(IInputContext input)
@@ -51,12 +53,36 @@ public sealed class InputBridge : IDisposable
         }
     }
 
+    /// <summary>
+    /// Hides the mouse cursor and keeps it inside the window, so the mouse can turn a camera without
+    /// ever reaching the screen edge. <see cref="Input.MouseDelta"/> keeps reporting movement.
+    /// </summary>
+    public bool CaptureCursor
+    {
+        get => _captureCursor;
+        set
+        {
+            if (_captureCursor == value)
+            {
+                return;
+            }
+
+            _captureCursor = value;
+            _skipNextMove = true; // the cursor jumps when it is captured or released; that is not a movement
+            foreach (var mouse in _input.Mice)
+            {
+                mouse.Cursor.CursorMode = value ? CursorMode.Disabled : CursorMode.Normal;
+            }
+        }
+    }
+
     /// <summary>Top-left corner of the Game view in window coordinates; mouse positions are relative to it.</summary>
     public Vector2 ViewOrigin { get; set; }
 
     /// <inheritdoc />
     public void Dispose()
     {
+        CaptureCursor = false;
         foreach (var keyboard in _input.Keyboards)
         {
             keyboard.KeyDown -= OnKeyDown;
@@ -99,7 +125,11 @@ public sealed class InputBridge : IDisposable
         }
     }
 
-    private void OnMouseMove(IMouse mouse, Vector2 position) => Input.SetMousePosition(position - ViewOrigin, accumulateDelta: _enabled);
+    private void OnMouseMove(IMouse mouse, Vector2 position)
+    {
+        Input.SetMousePosition(position - ViewOrigin, accumulateDelta: _enabled && !_skipNextMove);
+        _skipNextMove = false;
+    }
 
     private void OnScroll(IMouse mouse, ScrollWheel wheel)
     {

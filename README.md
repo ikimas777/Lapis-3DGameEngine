@@ -215,6 +215,10 @@ project, W A S D / arrow keys move the blue ball and the box spins. **Pause** (C
 game and **Step** (Ctrl+Alt+P) advances it by one frame. The menu bar turns blue while playing: changes
 made during play are thrown away on **Stop**, and the scene returns to exactly how it was.
 
+While the game has the mouse, the cursor is hidden and held in the window (handy for a first-person camera).
+**Esc** releases it so you can use the editor while the game keeps running; click the game picture in the Game view to return to the
+game. Ctrl+P stops Play mode at any time.
+
 ![Play mode](docs/images/play-mode.png)
 
 ### Console
