@@ -27,7 +27,16 @@ jobs:
         run: dotnet build Lapis.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --solution Lapis.slnx --configuration Release --no-build
+        shell: bash
+        # On failure, the failed tests and the end of the output also become an annotation, which can be read
+        # on the run's summary page (and through the API) without opening the log.
+        run: |
+          set -o pipefail
+          if ! dotnet test --solution Lapis.slnx --configuration Release --no-build 2>&1 | tee test.log; then
+            report=$( (grep -E -A6 "failed |crashed|Unhandled" test.log | head -60; echo "----- end of output -----"; tail -25 test.log) | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Tests failed on ${{ matrix.os }}::$report"
+            exit 1
+          fi
 
   # On milestone branches, also build the macOS packages so they can be downloaded from the run and tried on a Mac.
   macos-packages:
