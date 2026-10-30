@@ -55,7 +55,7 @@ internal sealed unsafe partial class EditorApplication
         ImGui.SetNextItemWidth(-1);
         ImGui.InputText("##folder", ref _exportFolder, 1024);
 
-        ImGui.TextUnformatted(OperatingSystem.IsWindows() ? "Game name (the .exe file):" : "Game name (the executable file):");
+        ImGui.TextUnformatted(OperatingSystem.IsWindows() ? "Game name (the .exe file):" : OperatingSystem.IsMacOS() ? "Game name (the .app):" : "Game name (the executable file):");
         ImGui.SetNextItemWidth(-1);
         ImGui.InputText("##name", ref _exportName, 128);
 

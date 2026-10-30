@@ -187,7 +187,7 @@ internal sealed partial class EditorApplication
         var chord = keys.Get(action, slot);
         var capturing = _capturing == (action, slot);
         var conflicts = chord is { } bound ? keys.Conflicts(action, bound).ToList() : [];
-        var text = capturing ? "Press keys..." : chord?.ToString() ?? "—";
+        var text = capturing ? "Press keys..." : chord?.DisplayText ?? "—";
 
         ImGui.PushID(slot);
         if (capturing)

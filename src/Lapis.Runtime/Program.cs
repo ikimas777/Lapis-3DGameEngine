@@ -24,8 +24,8 @@ internal static class Program
             return 0;
         }
 
-        // The exported game has no console window, so messages also go to a log file next to it.
-        using var log = RuntimeLog.Open(Path.Combine(options.GameFolder, "log.txt"));
+        // The exported game has no console window, so messages also go to a log file (see RuntimeOptions.LogFile).
+        using var log = RuntimeLog.Open(options.LogFile);
 
         try
         {
@@ -58,6 +58,7 @@ internal sealed class RuntimeLog : IDisposable
     {
         try
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             return new RuntimeLog(new StreamWriter(path, append: false) { AutoFlush = true });
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

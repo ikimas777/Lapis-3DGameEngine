@@ -29,11 +29,19 @@ internal sealed record RuntimeOptions(
     /// <summary>The <c>Data</c> folder of the game.</summary>
     public string DataFolder => Path.Combine(GameFolder, GameManifest.DataFolderName);
 
+    /// <summary>
+    /// Where the game writes <c>log.txt</c>: next to the game, or on macOS, where an app bundle should not change,
+    /// in <c>~/Library/Logs/&lt;game&gt;</c>.
+    /// </summary>
+    public string LogFile => FindAppBundle(GameFolder) is { } bundle
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", Path.GetFileNameWithoutExtension(bundle), "log.txt")
+        : Path.Combine(GameFolder, "log.txt");
+
     /// <summary>Parses arguments; returns null when the help text should be shown.</summary>
     public static RuntimeOptions? Parse(string[] args)
     {
         // The executable may be a single-file bundle extracted to a temporary folder, so use the real path.
-        var options = new RuntimeOptions(Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory);
+        var options = new RuntimeOptions(DefaultGameFolder(Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory));
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -62,6 +70,29 @@ internal sealed record RuntimeOptions(
         }
 
         return options;
+    }
+
+    /// <summary>
+    /// The folder of the program, or for a macOS app (<c>Game.app/Contents/MacOS/Game</c>) its
+    /// <c>Contents/Resources</c> folder, where the exporter puts the scripts and the data.
+    /// </summary>
+    internal static string DefaultGameFolder(string programFolder)
+    {
+        var resources = Path.Combine(Path.GetDirectoryName(programFolder) ?? programFolder, "Resources");
+        return Path.GetFileName(programFolder) == "MacOS" && Directory.Exists(Path.Combine(resources, GameManifest.DataFolderName))
+            ? resources
+            : programFolder;
+    }
+
+    /// <summary>The <c>.app</c> folder when <paramref name="gameFolder"/> is its <c>Contents/Resources</c>, or null.</summary>
+    private static string? FindAppBundle(string gameFolder)
+    {
+        var contents = Path.GetDirectoryName(gameFolder);
+        var bundle = Path.GetDirectoryName(contents);
+        return Path.GetFileName(gameFolder) == "Resources" && Path.GetFileName(contents) == "Contents" &&
+               bundle is not null && bundle.EndsWith(".app", StringComparison.OrdinalIgnoreCase)
+            ? bundle
+            : null;
     }
 
     private static string Value(string[] args, ref int index) =>

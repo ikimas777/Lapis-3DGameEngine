@@ -24,7 +24,7 @@ internal sealed record UpdateCheckResult(ReleaseInfo? Latest, bool IsNewer, stri
 
 /// <summary>
 /// Looks up the newest editor release on GitHub and downloads the package for this system
-/// (the Windows <c>.zip</c> or the Linux <c>.tar.gz</c> built by <c>.github/workflows/release.yml</c>).
+/// (the Windows or macOS <c>.zip</c> or the Linux <c>.tar.gz</c> built by <c>.github/workflows/release.yml</c>).
 /// </summary>
 internal static class UpdateChecker
 {
@@ -37,13 +37,13 @@ internal static class UpdateChecker
     private static readonly HttpClient Http = CreateClient();
 
     /// <summary>Name of the package for the system the editor runs on.</summary>
-    public static string PackageName => PackageNameFor(OperatingSystem.IsWindows());
+    public static string PackageName =>
+        OperatingSystem.IsWindows() ? "Lapis-Windows-x64.zip"
+        : OperatingSystem.IsMacOS() ? (HostPlatform.IsAppleSilicon ? "Lapis-macOS-arm64.zip" : "Lapis-macOS-x64.zip")
+        : "Lapis-Linux-x64.tar.gz";
 
-    /// <summary>"Windows x64" or "Linux x64".</summary>
-    public static string SystemName => OperatingSystem.IsWindows() ? "Windows x64" : "Linux x64";
-
-    /// <summary>Package name for Windows or Linux.</summary>
-    internal static string PackageNameFor(bool windows) => windows ? "Lapis-Windows-x64.zip" : "Lapis-Linux-x64.tar.gz";
+    /// <summary>"Windows x64", "Linux x64", "macOS (Apple Silicon)" or "macOS (Intel)".</summary>
+    public static string SystemName => HostPlatform.DisplayName;
 
     /// <summary>
     /// Asks GitHub for the newest release on <paramref name="channel"/>: Stable gets stable releases only, Beta also
@@ -68,7 +68,7 @@ internal static class UpdateChecker
             }
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var latest = PickLatest(ParseReleases(json, OperatingSystem.IsWindows()), channel);
+            var latest = PickLatest(ParseReleases(json, PackageName), channel);
             return latest is null
                 ? new UpdateCheckResult(null, false, $"No {channel.ToString().ToLowerInvariant()} release has been published yet.")
                 : new UpdateCheckResult(latest, latest.Version > ReleaseVersion.Current, null);
@@ -84,14 +84,14 @@ internal static class UpdateChecker
         releases.Where(release => release.Version.Stage >= channel).MaxBy(release => release.Version);
 
     /// <summary>Reads the GitHub API's list of releases, skipping drafts and tags that are not versions.</summary>
-    internal static List<ReleaseInfo> ParseReleases(string json, bool windows)
+    internal static List<ReleaseInfo> ParseReleases(string json, string packageName)
     {
         var releases = new List<ReleaseInfo>();
         if (JsonNode.Parse(json) is JsonArray list)
         {
             foreach (var node in list)
             {
-                if (node is JsonObject release && (bool?)release["draft"] != true && ParseRelease(release, windows) is { } info)
+                if (node is JsonObject release && (bool?)release["draft"] != true && ParseRelease(release, packageName) is { } info)
                 {
                     releases.Add(info);
                 }
@@ -102,17 +102,16 @@ internal static class UpdateChecker
     }
 
     /// <summary>Reads one release from the GitHub API's JSON; null when its tag is not a version.</summary>
-    internal static ReleaseInfo? ParseRelease(string json, bool windows) =>
-        JsonNode.Parse(json) is JsonObject release ? ParseRelease(release, windows) : null;
+    internal static ReleaseInfo? ParseRelease(string json, string packageName) =>
+        JsonNode.Parse(json) is JsonObject release ? ParseRelease(release, packageName) : null;
 
-    private static ReleaseInfo? ParseRelease(JsonObject release, bool windows)
+    private static ReleaseInfo? ParseRelease(JsonObject release, string wanted)
     {
         if (ReleaseVersion.Parse((string?)release["tag_name"]) is not { } version)
         {
             return null;
         }
 
-        var wanted = PackageNameFor(windows);
         ReleaseAsset? asset = null;
         if (release["assets"] is JsonArray assets)
         {

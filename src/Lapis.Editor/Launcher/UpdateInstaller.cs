@@ -22,7 +22,7 @@ internal static class UpdateInstaller
     public static string InstallFolder => Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
 
     /// <summary>The editor executable inside <see cref="InstallFolder"/>.</summary>
-    public static string EditorExecutable => Path.Combine(InstallFolder, OperatingSystem.IsWindows() ? "Lapis.Editor.exe" : "Lapis.Editor");
+    public static string EditorExecutable => Path.Combine(InstallFolder, HostPlatform.Executable("Lapis.Editor"));
 
     /// <summary>
     /// True when the editor runs as a published single-file program, which can be replaced. When it runs from
@@ -40,7 +40,23 @@ internal static class UpdateInstaller
             var package = await UpdateChecker.DownloadAsync(asset, work, progress, cancellationToken).ConfigureAwait(false);
             var unpacked = Path.Combine(work, "unpacked");
             await ExtractAsync(package, unpacked, cancellationToken).ConfigureAwait(false);
-            return ReplaceFiles(FindPackageRoot(unpacked), InstallFolder);
+            if (HostPlatform.AppBundle is not { } bundle)
+            {
+                return ReplaceFiles(FindPackageRoot(unpacked), InstallFolder);
+            }
+
+            // macOS: the package holds Lapis.app next to Docs and README.txt, so everything is replaced in the folder
+            // that holds the app. A running program may be deleted on macOS, so the old copies go at once, and the
+            // changed app is signed again (Apple Silicon only runs signed programs).
+            var oldFiles = new List<string>();
+            var count = ReplaceFiles(FindPackageRoot(unpacked), Path.GetDirectoryName(bundle)!, oldFiles);
+            foreach (var old in oldFiles)
+            {
+                File.Delete(old);
+            }
+
+            MacApp.SignAdHoc(bundle);
+            return count;
         }
         finally
         {
@@ -74,7 +90,10 @@ internal static class UpdateInstaller
     /// Moves every file from <paramref name="source"/> to the same place under <paramref name="target"/>, renaming
     /// files that are already there to <c>.old</c> first. Returns the number of files written.
     /// </summary>
-    internal static int ReplaceFiles(string source, string target)
+    /// <param name="source">The unpacked package.</param>
+    /// <param name="target">The installation.</param>
+    /// <param name="oldFiles">Receives the paths of the renamed <c>.old</c> copies.</param>
+    internal static int ReplaceFiles(string source, string target, List<string>? oldFiles = null)
     {
         var count = 0;
         foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
@@ -83,13 +102,15 @@ internal static class UpdateInstaller
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             if (File.Exists(destination))
             {
-                File.Move(destination, FreeOldName(destination));
+                var old = FreeOldName(destination);
+                File.Move(destination, old);
+                oldFiles?.Add(old);
             }
 
             File.Move(file, destination);
-            if (!OperatingSystem.IsWindows() && Path.GetExtension(destination).Length == 0)
+            if (!OperatingSystem.IsWindows() && IsProgram(destination))
             {
-                // Linux executables (Lapis.Editor, Runtime/Lapis.Runtime) must stay runnable.
+                // Linux and macOS programs (Lapis.Editor, Runtime/Lapis.Runtime...) must stay runnable.
                 File.SetUnixFileMode(destination, File.GetUnixFileMode(destination)
                     | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
             }
@@ -99,6 +120,10 @@ internal static class UpdateInstaller
 
         return count;
     }
+
+    /// <summary>True for the programs in a Linux or macOS package: files without an extension and the Lapis programs.</summary>
+    internal static bool IsProgram(string path) =>
+        Path.GetFileName(path) is "Lapis.Editor" or "Lapis.Monitor" or "Lapis.Runtime" || Path.GetExtension(path).Length == 0;
 
     /// <summary>Deletes <c>.old</c> files left by an earlier update (call when the editor starts).</summary>
     public static void DeleteLeftovers(string? folder = null)

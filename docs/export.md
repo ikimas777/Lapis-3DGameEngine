@@ -1,7 +1,7 @@
 # Exporting a game
 
 **File > Export Game...** turns the open project into a standalone game for the system the editor runs on
-(Windows or Linux) that runs without the
+(Windows, Linux or macOS) that runs without the
 editor and without installing .NET.
 
 1. Choose the output folder (default: `Builds/<project name>` inside the project), the name of the `.exe`
@@ -52,3 +52,15 @@ kept (`tar -czf MyGame.tar.gz MyGame`). To make a Windows build of a game, expor
 and the other way round.
 
 The Linux editor ships `Runtime/Lapis.Runtime`; build it with `scripts/publish-editor.sh`.
+
+## macOS
+
+On macOS the game is an app: `MyGame.app`, with the program in `Contents/MacOS`, the compiled scripts and the
+`Data` folder in `Contents/Resources`, and an `Info.plist`. The editor signs it ad hoc (Apple Silicon Macs only
+run signed programs). Give players the app as a `.zip` made in Finder (right-click > Compress) or with
+`ditto -c -k --keepParent MyGame.app MyGame.zip`, which keeps the signature. Because it is not signed with an
+Apple developer certificate, players open it the first time with right-click > **Open**. The game writes its
+log to `~/Library/Logs/MyGame/log.txt`.
+
+The Mac editor ships `Lapis.app/Contents/MacOS/Runtime/Lapis.Runtime`; build it with `scripts/publish-editor.sh`
+on a Mac.

@@ -1,9 +1,9 @@
 # Lapis
 
 Lapis is a small 3D game engine with a visual editor, written entirely in C#.
-Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone app for Windows or Linux.
+Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone app for Windows, Linux or macOS.
 
-> **Status:** early development — the editor, C# scripting, physics, assets and export work on Windows and Linux.
+> **Status:** early development — the editor, C# scripting, physics, assets and export work on Windows, Linux and macOS.
 
 ## Quick start
 
@@ -19,6 +19,12 @@ curl -L https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download
 
 ```powershell
 irm https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download/Lapis-Windows-x64.zip -OutFile Lapis.zip; Expand-Archive Lapis.zip .; .\Lapis\Lapis.Editor.exe
+```
+
+**macOS** (Terminal; use `Lapis-macOS-x64.zip` on an Intel Mac):
+
+```bash
+curl -LO https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download/Lapis-macOS-arm64.zip && ditto -x -k Lapis-macOS-arm64.zip . && open Lapis/Lapis.app
 ```
 
 While the repository is private, these links need a signed-in account: use the [GitHub CLI](https://cli.github.com)
@@ -53,9 +59,9 @@ public class PlayerController : Behaviour
 
 ## Requirements
 
-- Windows 10/11 x64, or 64-bit Linux (X11 or Wayland with XWayland)
+- Windows 10/11 x64, 64-bit Linux (X11 or Wayland with XWayland), or macOS 13+ (Apple Silicon or Intel)
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- GPU with OpenGL 4.5 support
+- GPU with OpenGL 4.5 support (on macOS: the system's OpenGL 4.1, which every supported Mac has)
 
 ## Building
 
@@ -69,20 +75,26 @@ dotnet test --solution Lapis.slnx
 
 ## Download
 
-Ready-to-run builds for both systems are on the [Releases](../../releases) page. They include .NET, so
+Ready-to-run builds for every system are on the [Releases](../../releases) page. They include .NET, so
 nothing else needs to be installed:
 
 - **Windows:** `Lapis-Windows-x64.zip` — unzip and run `Lapis.Editor.exe`.
 - **Linux:** `Lapis-Linux-x64.tar.gz` — extract (`tar -xzf Lapis-Linux-x64.tar.gz`) and run `Lapis/Lapis.Editor`.
   Optional: install `zenity` (or `kdialog`) for the folder chooser and `code` (VS Code) for editing scripts.
+- **macOS:** `Lapis-macOS-arm64.zip` (Apple Silicon: M1 and newer) or `Lapis-macOS-x64.zip` (Intel) — unzip and
+  open `Lapis/Lapis.app` (you can move it to Applications). The app is not signed with an Apple developer
+  certificate, so a downloaded copy is stopped the first time: right-click `Lapis.app` > **Open** > **Open**, or
+  allow it under System Settings > Privacy & Security > **Open Anyway**. Updates from the launcher are not
+  stopped. On a Mac, Cmd takes the place of Ctrl in every shortcut (Cmd+S, Cmd+Z, Cmd+click).
+  The renderer uses OpenGL 4.1, the newest version Apple provides; the picture is the same as on Windows and Linux.
 
-Keep the `Runtime` folder next to the editor: it is the game runtime (the engine without the editor) that exported games are built from. The package also has `Docs/` (these guides), `README.txt` and `LICENSE.txt`.
+Keep the `Runtime` folder next to the editor (inside `Lapis.app/Contents/MacOS` on a Mac): it is the game runtime (the engine without the editor) that exported games are built from. The package also has `Docs/` (these guides), `README.txt` and `LICENSE.txt`.
 
 ### Updates
 
 The project launcher checks GitHub for a newer release when it opens (this can be turned off in the update
 window). When one is found, the **Lapis Update** window shows what is new, and **Update to x.y.z** downloads the
-package for your system (`Lapis-Windows-x64.zip` on Windows, `Lapis-Linux-x64.tar.gz` on Linux) and replaces the
+package for your system (`Lapis-Windows-x64.zip` on Windows, `Lapis-Linux-x64.tar.gz` on Linux, `Lapis-macOS-arm64.zip` or `Lapis-macOS-x64.zip` on a Mac) and replaces the
 editor's files in the folder it runs from — `Lapis.Editor`, `Runtime/Lapis.Runtime`, `Docs`, `README.txt` and `LICENSE.txt`, like pulling a new
 version. Other files there, settings and projects are not touched. **Restart Now** starts the new version; the
 replaced files are kept as `.old` until the next start and then deleted. The **Check for updates** link under the
@@ -133,6 +145,10 @@ On Linux, build the editor with:
 ```
 
 The result is `publish/Lapis.Editor-linux/Lapis.Editor` (messages go to `~/.local/share/Lapis/editor.log`).
+
+On macOS the same script builds `publish/Lapis.Editor-macos/Lapis.app` for the Mac it runs on (`LAPIS_RID=osx-x64`
+builds for Intel Macs); messages go to `~/Library/Application Support/Lapis/editor.log`. From a clone you can
+also start the editor directly with `dotnet run --project src/Lapis.Editor`.
 
 ## AI assistants (MCP)
 

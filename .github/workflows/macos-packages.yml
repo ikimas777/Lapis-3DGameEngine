@@ -1,0 +1,51 @@
+name: macOS packages
+
+# Builds Lapis-macOS-arm64.zip (Apple Silicon) and Lapis-macOS-x64.zip (Intel) as workflow artifacts.
+# Used by release.yml for every release, by release-macos.yml to add macOS to an existing release, and by
+# build.yml on milestone branches so the packages can be tried before a release.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version written into the programs, e.g. 0.10.0 (a leading "v" or "macos-v" is dropped; empty = Directory.Build.props)
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        rid: [osx-arm64, osx-x64]
+    # Apple Silicon runner; the Intel build is cross-compiled there.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION#macos-}"
+          LAPIS_VERSION="${version#v}" LAPIS_RID="${{ matrix.rid }}" ./scripts/publish-editor.sh publish/Lapis
+
+      - name: Check the signatures
+        run: |
+          codesign --verify --verbose publish/Lapis/Lapis.app
+          file publish/Lapis/Lapis.app/Contents/MacOS/Lapis.Editor publish/Lapis/Lapis.app/Contents/MacOS/Runtime/Lapis.Runtime
+
+      - name: Package
+        # ditto keeps the executable permissions and the signatures; the zip holds one top folder, Lapis/.
+        run: |
+          name="Lapis-macOS-${{ matrix.rid == 'osx-arm64' && 'arm64' || 'x64' }}.zip"
+          ditto -c -k --keepParent publish/Lapis "$name"
+          echo "PACKAGE=$name" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.rid }}
+          path: ${{ env.PACKAGE }}

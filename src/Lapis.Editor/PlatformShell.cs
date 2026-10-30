@@ -2,11 +2,11 @@ using System.Diagnostics;
 
 namespace Lapis.Editor;
 
-/// <summary>Opens folders in the system's file manager (Explorer on Windows, the desktop's file manager on Linux).</summary>
+/// <summary>Opens folders in the system's file manager (Explorer on Windows, Finder on macOS, the desktop's file manager on Linux).</summary>
 internal static class PlatformShell
 {
     /// <summary>Name of the file manager, for menu items such as "Show in Explorer".</summary>
-    public static string FileManagerName => OperatingSystem.IsWindows() ? "Explorer" : "File Manager";
+    public static string FileManagerName => HostPlatform.FileManagerName;
 
     /// <summary>Opens a web page in the default browser.</summary>
     public static void OpenUrl(string url)
@@ -24,7 +24,7 @@ internal static class PlatformShell
     /// <summary>Name of the place deleted files go to.</summary>
     public static string TrashName => OperatingSystem.IsWindows() ? "Recycle Bin" : "Trash";
 
-    /// <summary>Moves a file or folder to the Recycle Bin (Windows) or the desktop Trash (Linux).</summary>
+    /// <summary>Moves a file or folder to the Recycle Bin (Windows) or the Trash (macOS, Linux).</summary>
     /// <exception cref="IOException">The item could not be moved.</exception>
     public static void MoveToTrash(string path, bool isFolder)
     {
@@ -44,7 +44,60 @@ internal static class PlatformShell
             return;
         }
 
+        if (OperatingSystem.IsMacOS())
+        {
+            MoveToMacTrash(Path.GetFullPath(path), isFolder);
+            return;
+        }
+
         MoveToFreedesktopTrash(Path.GetFullPath(path), isFolder);
+    }
+
+    /// <summary>
+    /// Asks Finder to move the item to the Trash, so "Put Back" works (macOS asks once whether Lapis may control
+    /// Finder). When that is refused, the item is moved into <c>~/.Trash</c> directly.
+    /// </summary>
+    private static void MoveToMacTrash(string path, bool isFolder)
+    {
+        var start = new ProcessStartInfo("osascript") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
+        foreach (var argument in new[]
+        {
+            "-e", "on run argv", "-e", "tell application \"Finder\" to delete (POSIX file (item 1 of argv) as alias)", "-e", "end run", path,
+        })
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = Process.Start(start);
+            process?.StandardError.ReadToEnd();
+            process?.WaitForExit();
+            if (process is { ExitCode: 0 })
+            {
+                return;
+            }
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // osascript is part of macOS, but fall back to moving the item if it cannot run.
+        }
+
+        var trash = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".Trash");
+        var target = Path.Combine(trash, Path.GetFileName(path));
+        for (var i = 2; File.Exists(target) || Directory.Exists(target); i++)
+        {
+            target = Path.Combine(trash, $"{Path.GetFileNameWithoutExtension(path)} {i}{Path.GetExtension(path)}");
+        }
+
+        if (isFolder)
+        {
+            Directory.Move(path, target);
+        }
+        else
+        {
+            File.Move(path, target);
+        }
     }
 
     /// <summary>The freedesktop.org Trash used by GNOME, KDE and other Linux desktops: <c>~/.local/share/Trash</c>.</summary>
@@ -94,6 +147,17 @@ internal static class PlatformShell
             {
                 start = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
                 start.ArgumentList.Add(select ? $"/select,{path}" : path);
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                // "open -R" reveals the item in Finder; a plain "open" would launch an app bundle instead of showing it.
+                start = new ProcessStartInfo("open") { UseShellExecute = false };
+                if (select || File.Exists(path) || path.EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+                {
+                    start.ArgumentList.Add("-R");
+                }
+
+                start.ArgumentList.Add(path);
             }
             else
             {

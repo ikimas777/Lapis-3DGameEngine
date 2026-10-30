@@ -33,12 +33,15 @@ internal enum EditorAction
 /// <summary>A key with the modifiers that must be held with it, e.g. Ctrl+Shift+S.</summary>
 internal readonly record struct KeyChord(ImGuiKey Key, bool Ctrl = false, bool Shift = false, bool Alt = false)
 {
-    /// <summary>"Ctrl+Shift+S", as shown in menus and stored in the settings.</summary>
+    /// <summary>"Ctrl+Shift+S", as stored in the settings (also on macOS, where Cmd takes the place of Ctrl).</summary>
     public override string ToString()
     {
         var name = KeyName(Key);
         return $"{(Ctrl ? "Ctrl+" : string.Empty)}{(Shift ? "Shift+" : string.Empty)}{(Alt ? "Alt+" : string.Empty)}{name}";
     }
+
+    /// <summary>The shortcut as shown in menus: "Ctrl+Shift+S", or "Cmd+Shift+S" on macOS.</summary>
+    public string DisplayText => ImGuiIntegration.ImGuiController.SwapsCommand && Ctrl ? "Cmd+" + ToString()[5..] : ToString();
 
     /// <summary>Reads text written by <see cref="ToString"/>; null when it is not a valid shortcut.</summary>
     public static KeyChord? Parse(string? text)
@@ -59,7 +62,7 @@ internal readonly record struct KeyChord(ImGuiKey Key, bool Ctrl = false, bool S
         {
             switch (modifier.ToLowerInvariant())
             {
-                case "ctrl":
+                case "ctrl" or "cmd":
                     ctrl = true;
                     break;
                 case "shift":
@@ -189,7 +192,7 @@ internal sealed class Keybindings
     public void Set(EditorAction action, int slot, KeyChord? chord) => _bindings[action][slot] = chord;
 
     /// <summary>The first shortcut as text for menus ("Ctrl+Z"), or an empty string.</summary>
-    public string Shortcut(EditorAction action) => _bindings[action].FirstOrDefault(chord => chord is not null)?.ToString() ?? string.Empty;
+    public string Shortcut(EditorAction action) => _bindings[action].FirstOrDefault(chord => chord is not null)?.DisplayText ?? string.Empty;
 
     public bool IsDefault(EditorAction action) => Matches(_bindings[action], DefaultSlots(action));
 

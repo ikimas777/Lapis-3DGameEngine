@@ -4,6 +4,8 @@ Lapis - a small 3D game engine with a visual editor, written in C#
 What is in this folder
 ----------------------
   Lapis.Editor(.exe)      The editor. Start it to create or open a game project.
+  Lapis.app               (macOS) The editor as a Mac app. Runtime and Lapis.Monitor are inside
+                          it, in Lapis.app/Contents/MacOS.
   Runtime/                The game runtime: the engine without the editor. File > Export Game
                           copies it next to your game as MyGame(.exe) together with your compiled
                           scripts and assets. Keep this folder next to the editor, or exporting
@@ -17,11 +19,12 @@ What is in this folder
   LICENSE.txt             MIT licence.
 
 Nothing has to be installed: .NET and all libraries are built into the programs.
-A graphics card with OpenGL 4.5 is needed.
+A graphics card with OpenGL 4.5 is needed (on macOS: the system's OpenGL 4.1).
 
 Getting started
 ---------------
-  1. Start Lapis.Editor (on Linux: ./Lapis.Editor).
+  1. Start Lapis.Editor (on Linux: ./Lapis.Editor; on macOS: open Lapis.app - the first time,
+     right-click it and choose Open, because the app is not signed by an Apple developer).
   2. In the launcher, click New Project, choose a name and a folder, and click Create.
   3. Scripts go in Assets/Scripts. Project > Create Script... makes one and opens it in VS Code.
   4. Drag a script onto an object in the Hierarchy to attach it, then press Play (Ctrl+P).
@@ -36,6 +39,7 @@ Useful shortcuts
   Ctrl+S                  Save the scene       Ctrl+Z / Ctrl+Y    Undo / Redo
   Ctrl+P                  Play / Stop          Ctrl+D             Duplicate
   Ctrl+click / Shift+click  Select several objects (Hierarchy, Scene view, Assets)
+  On macOS, use Cmd instead of Ctrl.
   Options > Keybindings lists them all and lets you change them.
 
 Updates
@@ -46,6 +50,7 @@ documentation and this file in this folder; your projects and settings are not t
 Messages from the editor are also written to:
   Windows: %LOCALAPPDATA%\Lapis\editor.log
   Linux:   ~/.local/share/Lapis/editor.log
+  macOS:   ~/Library/Application Support/Lapis/editor.log
 Lapis Monitor records every run in the Monitor\Sessions folder next to that log
 (Debug > Open Monitor Sessions Folder).
 

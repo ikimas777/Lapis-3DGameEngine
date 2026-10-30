@@ -7,7 +7,7 @@ records every run, so you can look at it again later.
 ## Starting it
 
 - **From the editor:** **Debug > Lapis Monitor**. The monitor opens and attaches to this editor.
-- **On its own:** start `Lapis.Monitor.exe` (Linux: `./Lapis.Monitor`) from the folder with the editor, e.g. from
+- **On its own:** start `Lapis.Monitor.exe` (Linux: `./Lapis.Monitor`; macOS: `Lapis.app/Contents/MacOS/Lapis.Monitor`) from the folder with the editor, e.g. from
   a terminal. It waits until a Lapis editor (`Lapis.Editor`) or game runtime (`Lapis.Runtime`) is running and
   attaches by itself. When that program exits, the monitor saves the run and waits for the next one, so it can
   stay open while you restart the editor.
@@ -64,6 +64,7 @@ Every run is saved in its own folder (Debug > Open Monitor Sessions Folder, or *
 
 - Windows: `%LOCALAPPDATA%\Lapis\Monitor\Sessions`
 - Linux: `~/.local/share/Lapis/Monitor/Sessions`
+- macOS: `~/Library/Application Support/Lapis/Monitor/Sessions`
 
 Each folder holds `counters.csv` (every value, once per second), `alerts.log` and `summary.json` (average and
 maximum of every counter). The **Sessions** tab opens a recorded run with the same charts. The newest 40 runs are

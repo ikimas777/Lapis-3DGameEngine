@@ -12,17 +12,21 @@ public class UpdateCheckerTests
           "body": "- Hierarchy folders",
           "assets": [
             { "name": "Lapis-Windows-x64.zip", "size": 47000000, "browser_download_url": "https://example.test/win.zip" },
-            { "name": "Lapis-Linux-x64.tar.gz", "size": 51000000, "browser_download_url": "https://example.test/linux.tar.gz" }
+            { "name": "Lapis-Linux-x64.tar.gz", "size": 51000000, "browser_download_url": "https://example.test/linux.tar.gz" },
+            { "name": "Lapis-macOS-arm64.zip", "size": 52000000, "browser_download_url": "https://example.test/mac-arm64.zip" },
+            { "name": "Lapis-macOS-x64.zip", "size": 53000000, "browser_download_url": "https://example.test/mac-x64.zip" }
           ]
         }
         """;
 
     [Theory]
-    [InlineData(true, "Lapis-Windows-x64.zip", "https://example.test/win.zip", 47000000L)]
-    [InlineData(false, "Lapis-Linux-x64.tar.gz", "https://example.test/linux.tar.gz", 51000000L)]
-    public void ParseRelease_PicksThePackageForTheSystem(bool windows, string name, string url, long size)
+    [InlineData("Lapis-Windows-x64.zip", "https://example.test/win.zip", 47000000L)]
+    [InlineData("Lapis-Linux-x64.tar.gz", "https://example.test/linux.tar.gz", 51000000L)]
+    [InlineData("Lapis-macOS-arm64.zip", "https://example.test/mac-arm64.zip", 52000000L)]
+    [InlineData("Lapis-macOS-x64.zip", "https://example.test/mac-x64.zip", 53000000L)]
+    public void ParseRelease_PicksThePackageForTheSystem(string name, string url, long size)
     {
-        var release = UpdateChecker.ParseRelease(Release, windows)!;
+        var release = UpdateChecker.ParseRelease(Release, name)!;
 
         Assert.Equal(new ReleaseVersion(0, 3, 0), release.Version);
         Assert.Equal("Lapis v0.3.0", release.Title);
@@ -33,7 +37,7 @@ public class UpdateCheckerTests
     [Fact]
     public void ParseRelease_WithoutPackageForTheSystem_HasNoAsset()
     {
-        var release = UpdateChecker.ParseRelease("""{ "tag_name": "v1.0.0", "assets": [] }""", windows: false)!;
+        var release = UpdateChecker.ParseRelease("""{ "tag_name": "v1.0.0", "assets": [] }""", "Lapis-Linux-x64.tar.gz")!;
 
         Assert.Null(release.Asset);
         Assert.Equal("Lapis 1.0.0", release.Title);
@@ -41,7 +45,7 @@ public class UpdateCheckerTests
 
     [Fact]
     public void ParseRelease_TagWithoutVersion_ReturnsNull() =>
-        Assert.Null(UpdateChecker.ParseRelease("""{ "tag_name": "nightly" }""", windows: true));
+        Assert.Null(UpdateChecker.ParseRelease("""{ "tag_name": "nightly" }""", "Lapis-Windows-x64.zip"));
 
     [Theory]
     [InlineData("v0.2.0", "0.2.0")]
@@ -92,7 +96,7 @@ public class UpdateCheckerTests
             ]
             """;
 
-        var latest = UpdateChecker.PickLatest(UpdateChecker.ParseReleases(list, windows: true), Enum.Parse<ReleaseStage>(channel));
+        var latest = UpdateChecker.PickLatest(UpdateChecker.ParseReleases(list, "Lapis-Windows-x64.zip"), Enum.Parse<ReleaseStage>(channel));
 
         Assert.Equal(expected, latest!.Version.ToString());
     }
