@@ -36,7 +36,8 @@ version_args=()
 if [ -n "${LAPIS_VERSION:-}" ]; then version_args=("-p:Version=$LAPIS_VERSION"); fi
 
 publish() {
-    dotnet publish "$1" "${version_args[@]}" \
+    # The +"..." form keeps an empty array working with set -u in macOS's bash 3.2.
+    dotnet publish "$1" ${version_args[@]+"${version_args[@]}"} \
         --configuration Release \
         --runtime "$rid" \
         --self-contained true \
