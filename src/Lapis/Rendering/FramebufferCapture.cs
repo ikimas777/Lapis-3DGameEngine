@@ -38,9 +38,13 @@ public static unsafe class FramebufferCapture
 
         var pixels = new byte[width * 4 * height];
         gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
-        fixed (byte* data = pixels)
+        using (GLBindings.Preserve(gl))
         {
-            gl.GetTextureImage(texture, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (uint)pixels.Length, data);
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+            fixed (byte* data = pixels)
+            {
+                gl.GetTexImage(TextureTarget.Texture2D, 0, PixelFormat.Rgba, PixelType.UnsignedByte, data);
+            }
         }
 
         using var stream = new MemoryStream();

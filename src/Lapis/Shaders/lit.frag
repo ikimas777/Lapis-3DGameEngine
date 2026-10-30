@@ -1,4 +1,4 @@
-#version 450 core
+#version 410 core
 
 #define MAX_POINT_LIGHTS 8
 #define PI 3.14159265

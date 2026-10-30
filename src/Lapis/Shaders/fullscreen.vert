@@ -1,4 +1,4 @@
-#version 450 core
+#version 410 core
 
 // One triangle that covers the whole screen; no vertex buffer needed.
 // Outputs the world-space view ray for each pixel.

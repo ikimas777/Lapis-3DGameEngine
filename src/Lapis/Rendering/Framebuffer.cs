@@ -54,39 +54,57 @@ public sealed class Framebuffer : IDisposable
         Width = width;
         Height = height;
 
-        _colorTexture = _gl.CreateTexture(TextureTarget.Texture2D);
-        _gl.TextureStorage2D(_colorTexture, 1, SizedInternalFormat.Rgba8, (uint)width, (uint)height);
-        _gl.TextureParameter(_colorTexture, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        _gl.TextureParameter(_colorTexture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        _gl.TextureParameter(_colorTexture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        _gl.TextureParameter(_colorTexture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        using var bindings = GLBindings.Preserve(_gl);
 
-        _depthStencil = _gl.CreateRenderbuffer();
-        _drawFramebuffer = _gl.CreateFramebuffer();
+        _colorTexture = CreateTexture(_gl, InternalFormat.Rgba8, PixelFormat.Rgba, PixelType.UnsignedByte, width, height);
+        _depthStencil = _gl.GenRenderbuffer();
+        _drawFramebuffer = _gl.GenFramebuffer();
 
         if (Samples > 1)
         {
-            _drawColor = _gl.CreateRenderbuffer();
-            _gl.NamedRenderbufferStorageMultisample(_drawColor, (uint)Samples, InternalFormat.Rgba8, (uint)width, (uint)height);
-            _gl.NamedRenderbufferStorageMultisample(_depthStencil, (uint)Samples, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
-            _gl.NamedFramebufferRenderbuffer(_drawFramebuffer, FramebufferAttachment.ColorAttachment0, RenderbufferTarget.Renderbuffer, _drawColor);
+            _drawColor = _gl.GenRenderbuffer();
+            _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _drawColor);
+            _gl.RenderbufferStorageMultisample(RenderbufferTarget.Renderbuffer, (uint)Samples, InternalFormat.Rgba8, (uint)width, (uint)height);
+            _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _depthStencil);
+            _gl.RenderbufferStorageMultisample(RenderbufferTarget.Renderbuffer, (uint)Samples, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
 
-            _resolveFramebuffer = _gl.CreateFramebuffer();
-            _gl.NamedFramebufferTexture(_resolveFramebuffer, FramebufferAttachment.ColorAttachment0, _colorTexture, 0);
+            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _drawFramebuffer);
+            _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, RenderbufferTarget.Renderbuffer, _drawColor);
+
+            _resolveFramebuffer = _gl.GenFramebuffer();
+            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _resolveFramebuffer);
+            _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _colorTexture, 0);
         }
         else
         {
-            _gl.NamedRenderbufferStorage(_depthStencil, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
-            _gl.NamedFramebufferTexture(_drawFramebuffer, FramebufferAttachment.ColorAttachment0, _colorTexture, 0);
+            _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _depthStencil);
+            _gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
+            _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _drawFramebuffer);
+            _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _colorTexture, 0);
         }
 
-        _gl.NamedFramebufferRenderbuffer(_drawFramebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, _depthStencil);
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _drawFramebuffer);
+        _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, _depthStencil);
 
-        var status = _gl.CheckNamedFramebufferStatus(_drawFramebuffer, FramebufferTarget.Framebuffer);
+        var status = _gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
         if (status != GLEnum.FramebufferComplete)
         {
             throw new InvalidOperationException($"Framebuffer is incomplete: {status}.");
         }
+    }
+
+    /// <summary>
+    /// Creates a single-level 2D texture with linear filtering and clamped edges, for use as a render target.
+    /// Leaves it bound to the active texture unit.
+    /// </summary>
+    internal static unsafe uint CreateTexture(GL gl, InternalFormat format, PixelFormat pixelFormat, PixelType pixelType, int width, int height)
+    {
+        var texture = gl.GenTexture();
+        gl.BindTexture(TextureTarget.Texture2D, texture);
+        gl.TexImage2D(TextureTarget.Texture2D, 0, format, (uint)width, (uint)height, 0, pixelFormat, pixelType, null);
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, 0);
+        Texture2D.SetParameters(gl, TextureMinFilter.Linear, TextureWrapMode.ClampToEdge);
+        return texture;
     }
 
     /// <summary>Makes this framebuffer the render target and sets the viewport to its size.</summary>
@@ -101,8 +119,10 @@ public sealed class Framebuffer : IDisposable
     {
         if (Samples > 1 && _resolveFramebuffer != 0)
         {
-            _gl.BlitNamedFramebuffer(_drawFramebuffer, _resolveFramebuffer, 0, 0, Width, Height, 0, 0, Width, Height,
-                ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
+            using var bindings = GLBindings.Preserve(_gl);
+            _gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _drawFramebuffer);
+            _gl.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _resolveFramebuffer);
+            _gl.BlitFramebuffer(0, 0, Width, Height, 0, 0, Width, Height, ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
         }
     }
 

@@ -54,8 +54,8 @@ public sealed unsafe class EntityPicker : IDisposable
 
         var zero = 0u;
         var farDepth = 1f;
-        _gl.ClearNamedFramebuffer(_framebuffer, BufferKind.Color, 0, &zero);
-        _gl.ClearNamedFramebuffer(_framebuffer, BufferKind.Depth, 0, &farDepth);
+        _gl.ClearBuffer(BufferKind.Color, 0, &zero);
+        _gl.ClearBuffer(BufferKind.Depth, 0, &farDepth);
 
         _shader.Use();
         _shader.Set("u_View", view.View);
@@ -75,7 +75,7 @@ public sealed unsafe class EntityPicker : IDisposable
         }
 
         uint id = 0;
-        _gl.NamedFramebufferReadBuffer(_framebuffer, GLEnum.ColorAttachment0);
+        _gl.ReadBuffer(ReadBufferMode.ColorAttachment0);
         _gl.ReadPixels(x, height - 1 - y, 1, 1, PixelFormat.RedInteger, PixelType.UnsignedInt, &id);
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
@@ -130,15 +130,20 @@ public sealed unsafe class EntityPicker : IDisposable
         _width = width;
         _height = height;
 
-        _idTexture = _gl.CreateTexture(TextureTarget.Texture2D);
-        _gl.TextureStorage2D(_idTexture, 1, SizedInternalFormat.R32ui, (uint)width, (uint)height);
+        using var bindings = GLBindings.Preserve(_gl);
 
-        _depthBuffer = _gl.CreateRenderbuffer();
-        _gl.NamedRenderbufferStorage(_depthBuffer, InternalFormat.DepthComponent24, (uint)width, (uint)height);
+        // Integer textures cannot be filtered: use nearest sampling or the texture is incomplete.
+        _idTexture = Framebuffer.CreateTexture(_gl, InternalFormat.R32ui, PixelFormat.RedInteger, PixelType.UnsignedInt, width, height);
+        Texture2D.SetParameters(_gl, TextureMinFilter.Nearest, TextureWrapMode.ClampToEdge);
 
-        _framebuffer = _gl.CreateFramebuffer();
-        _gl.NamedFramebufferTexture(_framebuffer, FramebufferAttachment.ColorAttachment0, _idTexture, 0);
-        _gl.NamedFramebufferRenderbuffer(_framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _depthBuffer);
+        _depthBuffer = _gl.GenRenderbuffer();
+        _gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, _depthBuffer);
+        _gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.DepthComponent24, (uint)width, (uint)height);
+
+        _framebuffer = _gl.GenFramebuffer();
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+        _gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, _idTexture, 0);
+        _gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, _depthBuffer);
     }
 
     private void DeleteTargets()

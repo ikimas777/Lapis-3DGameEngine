@@ -15,7 +15,7 @@ public sealed unsafe class Mesh : IDisposable
     private readonly long _gpuBytes;
     private bool _disposed;
 
-    /// <summary>Uploads <paramref name="data"/> to immutable GPU buffers.</summary>
+    /// <summary>Uploads <paramref name="data"/> to static GPU buffers.</summary>
     public Mesh(GL gl, MeshData data)
     {
         ArgumentNullException.ThrowIfNull(gl);
@@ -24,25 +24,30 @@ public sealed unsafe class Mesh : IDisposable
         _gl = gl;
         IndexCount = data.Indices.Length;
 
-        _vertexBuffer = gl.CreateBuffer();
-        fixed (Vertex* vertices = data.Vertices)
+        using (GLBindings.Preserve(gl))
         {
-            gl.NamedBufferStorage(_vertexBuffer, (nuint)(data.Vertices.Length * Vertex.SizeInBytes), vertices, BufferStorageMask.None);
+            _vertexArray = gl.GenVertexArray();
+            gl.BindVertexArray(_vertexArray);
+
+            _vertexBuffer = gl.GenBuffer();
+            gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
+            fixed (Vertex* vertices = data.Vertices)
+            {
+                gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(data.Vertices.Length * Vertex.SizeInBytes), vertices, BufferUsageARB.StaticDraw);
+            }
+
+            // The element buffer binding is part of the vertex array.
+            _indexBuffer = gl.GenBuffer();
+            gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _indexBuffer);
+            fixed (uint* indices = data.Indices)
+            {
+                gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(data.Indices.Length * sizeof(uint)), indices, BufferUsageARB.StaticDraw);
+            }
+
+            SetAttribute(0, 3, Vertex.PositionOffset);
+            SetAttribute(1, 3, Vertex.NormalOffset);
+            SetAttribute(2, 2, Vertex.TexCoordOffset);
         }
-
-        _indexBuffer = gl.CreateBuffer();
-        fixed (uint* indices = data.Indices)
-        {
-            gl.NamedBufferStorage(_indexBuffer, (nuint)(data.Indices.Length * sizeof(uint)), indices, BufferStorageMask.None);
-        }
-
-        _vertexArray = gl.CreateVertexArray();
-        gl.VertexArrayVertexBuffer(_vertexArray, 0, _vertexBuffer, 0, Vertex.SizeInBytes);
-        gl.VertexArrayElementBuffer(_vertexArray, _indexBuffer);
-
-        SetAttribute(0, 3, Vertex.PositionOffset);
-        SetAttribute(1, 3, Vertex.NormalOffset);
-        SetAttribute(2, 2, Vertex.TexCoordOffset);
 
         _gpuBytes = ((long)data.Vertices.Length * Vertex.SizeInBytes) + ((long)data.Indices.Length * sizeof(uint));
         EngineMetrics.MeshCreated(_gpuBytes);
@@ -73,10 +78,10 @@ public sealed unsafe class Mesh : IDisposable
         _disposed = true;
     }
 
+    // Describes one attribute of the bound vertex buffer for the bound vertex array.
     private void SetAttribute(uint location, int components, uint offset)
     {
-        _gl.EnableVertexArrayAttrib(_vertexArray, location);
-        _gl.VertexArrayAttribFormat(_vertexArray, location, components, VertexAttribType.Float, false, offset);
-        _gl.VertexArrayAttribBinding(_vertexArray, location, 0);
+        _gl.EnableVertexAttribArray(location);
+        _gl.VertexAttribPointer(location, components, VertexAttribPointerType.Float, false, Vertex.SizeInBytes, (void*)offset);
     }
 }
