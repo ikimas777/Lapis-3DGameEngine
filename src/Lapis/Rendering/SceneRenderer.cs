@@ -50,7 +50,7 @@ public sealed class SceneRenderer : IDisposable
         _shadowShader = Shader.LoadBuiltIn(gl, "shadow");
         _skyShader = Shader.LoadBuiltIn(gl, "fullscreen", "sky");
         _shadowMap = new ShadowMap(gl, 2048);
-        _emptyVertexArray = gl.CreateVertexArray(); // the sky triangle is generated in the shader
+        _emptyVertexArray = gl.GenVertexArray(); // the sky triangle is generated in the shader
     }
 
     /// <summary>Number of meshes drawn by the last <see cref="Render"/> call.</summary>
@@ -101,7 +101,7 @@ public sealed class SceneRenderer : IDisposable
         shader.Set("u_ShadowsEnabled", shadows ? 1 : 0);
         if (shadows)
         {
-            _gl.BindTextureUnit(1, _shadowMap.DepthTexture);
+            Texture2D.BindToUnit(_gl, 1, _shadowMap.DepthTexture);
             shader.Set("u_LightViewProjection", _shadowMap.LightViewProjection);
             shader.Set("u_ShadowTexelSize", _shadowMap.TexelSize);
             shader.Set("u_ShadowCenter", _shadowMap.Center);

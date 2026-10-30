@@ -17,21 +17,19 @@ internal sealed class ShadowMap : IDisposable
         _gl = gl;
         Size = size;
 
-        DepthTexture = gl.CreateTexture(TextureTarget.Texture2D);
-        gl.TextureStorage2D(DepthTexture, 1, SizedInternalFormat.DepthComponent24, (uint)size, (uint)size);
-        gl.TextureParameter(DepthTexture, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        gl.TextureParameter(DepthTexture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        gl.TextureParameter(DepthTexture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        gl.TextureParameter(DepthTexture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        using var bindings = GLBindings.Preserve(gl);
+
+        DepthTexture = Framebuffer.CreateTexture(gl, InternalFormat.DepthComponent24, PixelFormat.DepthComponent, PixelType.UnsignedInt, size, size);
 
         // Hardware depth comparison: sampling returns how much of the 2 x 2 neighbourhood is lit.
-        gl.TextureParameter(DepthTexture, TextureParameterName.TextureCompareMode, (int)TextureCompareMode.CompareRefToTexture);
-        gl.TextureParameter(DepthTexture, TextureParameterName.TextureCompareFunc, (int)DepthFunction.Lequal);
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureCompareMode, (int)TextureCompareMode.CompareRefToTexture);
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureCompareFunc, (int)DepthFunction.Lequal);
 
-        _framebuffer = gl.CreateFramebuffer();
-        gl.NamedFramebufferTexture(_framebuffer, FramebufferAttachment.DepthAttachment, DepthTexture, 0);
-        gl.NamedFramebufferDrawBuffer(_framebuffer, ColorBuffer.None);
-        gl.NamedFramebufferReadBuffer(_framebuffer, ColorBuffer.None);
+        _framebuffer = gl.GenFramebuffer();
+        gl.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+        gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, DepthTexture, 0);
+        gl.DrawBuffer(DrawBufferMode.None);
+        gl.ReadBuffer(ReadBufferMode.None);
     }
 
     public int Size { get; }

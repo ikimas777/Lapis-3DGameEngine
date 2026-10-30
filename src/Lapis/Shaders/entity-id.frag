@@ -1,4 +1,4 @@
-#version 450 core
+#version 410 core
 
 // Writes which object covers each pixel; used for picking objects with the mouse.
 uniform uint u_ObjectId;

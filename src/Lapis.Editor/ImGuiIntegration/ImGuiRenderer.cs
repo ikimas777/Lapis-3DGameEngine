@@ -6,12 +6,12 @@ using Shader = Lapis.Rendering.Shader;
 namespace Lapis.Editor.ImGuiIntegration;
 
 /// <summary>
-/// Draws Dear ImGui output with OpenGL 4.5 and manages the textures ImGui asks for (font atlas).
+/// Draws Dear ImGui output with OpenGL 4.1 and manages the textures ImGui asks for (font atlas).
 /// </summary>
 internal sealed unsafe class ImGuiRenderer : IDisposable
 {
     private const string VertexSource = """
-        #version 450 core
+        #version 410 core
         layout(location = 0) in vec2 a_Position;
         layout(location = 1) in vec2 a_TexCoord;
         layout(location = 2) in vec4 a_Color;
@@ -27,7 +27,7 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
         """;
 
     private const string FragmentSource = """
-        #version 450 core
+        #version 410 core
         in vec2 v_TexCoord;
         in vec4 v_Color;
         uniform sampler2D u_Texture;
@@ -51,15 +51,18 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
         _gl = gl;
         _shader = Shader.FromSource(gl, "imgui", VertexSource, FragmentSource);
 
-        _vertexBuffer = gl.CreateBuffer();
-        _indexBuffer = gl.CreateBuffer();
-        _vertexArray = gl.CreateVertexArray();
-        gl.VertexArrayVertexBuffer(_vertexArray, 0, _vertexBuffer, 0, (uint)sizeof(ImDrawVert));
-        gl.VertexArrayElementBuffer(_vertexArray, _indexBuffer);
+        // The buffers stay bound to the vertex array; Render binds the array before uploading.
+        _vertexArray = gl.GenVertexArray();
+        gl.BindVertexArray(_vertexArray);
+        _vertexBuffer = gl.GenBuffer();
+        gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
+        _indexBuffer = gl.GenBuffer();
+        gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _indexBuffer);
 
-        SetAttribute(0, 2, VertexAttribType.Float, false, 0);
-        SetAttribute(1, 2, VertexAttribType.Float, false, 8);
-        SetAttribute(2, 4, VertexAttribType.UnsignedByte, true, 16);
+        SetAttribute(0, 2, VertexAttribPointerType.Float, false, 0);
+        SetAttribute(1, 2, VertexAttribPointerType.Float, false, 8);
+        SetAttribute(2, 4, VertexAttribPointerType.UnsignedByte, true, 16);
+        gl.BindVertexArray(0);
 
         var io = ImGui.GetIO();
         io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset | ImGuiBackendFlags.RendererHasTextures;
@@ -132,7 +135,7 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
                 }
 
                 gl.Scissor((int)clipMin.X, (int)(framebufferHeight - clipMax.Y), (uint)(clipMax.X - clipMin.X), (uint)(clipMax.Y - clipMin.Y));
-                gl.BindTextureUnit(0, (uint)command.GetTexID().Handle);
+                BindTexture((uint)command.GetTexID().Handle);
                 gl.DrawElementsBaseVertex(
                     PrimitiveType.Triangles,
                     command.ElemCount,
@@ -179,8 +182,10 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
         // Re-specify (orphan) the storage every frame so the driver never waits for the previous frame.
         _vertexBufferSize = Math.Max(vertexBytes, _vertexBufferSize);
         _indexBufferSize = Math.Max(indexBytes, _indexBufferSize);
-        _gl.NamedBufferData(_vertexBuffer, _vertexBufferSize, null, BufferUsageARB.StreamDraw);
-        _gl.NamedBufferData(_indexBuffer, _indexBufferSize, null, BufferUsageARB.StreamDraw);
+        // The vertex array is bound, so its element buffer is too.
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
+        _gl.BufferData(BufferTargetARB.ArrayBuffer, _vertexBufferSize, null, BufferUsageARB.StreamDraw);
+        _gl.BufferData(BufferTargetARB.ElementArrayBuffer, _indexBufferSize, null, BufferUsageARB.StreamDraw);
 
         nint vertexOffset = 0;
         nint indexOffset = 0;
@@ -190,8 +195,8 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
             var listVertexBytes = (nuint)(drawList.VtxBuffer.Size * sizeof(ImDrawVert));
             var listIndexBytes = (nuint)(drawList.IdxBuffer.Size * sizeof(ushort));
 
-            _gl.NamedBufferSubData(_vertexBuffer, vertexOffset, listVertexBytes, drawList.VtxBuffer.Data);
-            _gl.NamedBufferSubData(_indexBuffer, indexOffset, listIndexBytes, drawList.IdxBuffer.Data);
+            _gl.BufferSubData(BufferTargetARB.ArrayBuffer, vertexOffset, listVertexBytes, drawList.VtxBuffer.Data);
+            _gl.BufferSubData(BufferTargetARB.ElementArrayBuffer, indexOffset, listIndexBytes, drawList.IdxBuffer.Data);
 
             vertexOffset += (nint)listVertexBytes;
             indexOffset += (nint)listIndexBytes;
@@ -226,14 +231,14 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
             throw new NotSupportedException($"ImGui texture format {texture.Format} is not supported.");
         }
 
-        var id = _gl.CreateTexture(TextureTarget.Texture2D);
-        _gl.TextureStorage2D(id, 1, SizedInternalFormat.Rgba8, (uint)texture.Width, (uint)texture.Height);
-        _gl.TextureParameter(id, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        _gl.TextureParameter(id, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        _gl.TextureParameter(id, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        _gl.TextureParameter(id, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        var id = _gl.GenTexture();
+        BindTexture(id);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        _gl.TextureSubImage2D(id, 0, 0, 0, (uint)texture.Width, (uint)texture.Height, PixelFormat.Rgba, PixelType.UnsignedByte, texture.GetPixels());
+        _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)texture.Width, (uint)texture.Height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, texture.GetPixels());
 
         texture.SetTexID(new ImTextureID((ulong)id));
         texture.SetStatus(ImTextureStatus.Ok);
@@ -241,7 +246,7 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
 
     private void UpdateTexture(ImTextureDataPtr texture)
     {
-        var id = (uint)texture.TexID.Handle;
+        BindTexture((uint)texture.TexID.Handle);
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
         _gl.PixelStore(PixelStoreParameter.UnpackRowLength, texture.Width);
 
@@ -249,7 +254,7 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
         for (var i = 0; i < updates.Size; i++)
         {
             var rect = updates.Data[i];
-            _gl.TextureSubImage2D(id, 0, rect.X, rect.Y, rect.W, rect.H, PixelFormat.Rgba, PixelType.UnsignedByte, texture.GetPixelsAt(rect.X, rect.Y));
+            _gl.TexSubImage2D(TextureTarget.Texture2D, 0, rect.X, rect.Y, rect.W, rect.H, PixelFormat.Rgba, PixelType.UnsignedByte, texture.GetPixelsAt(rect.X, rect.Y));
         }
 
         _gl.PixelStore(PixelStoreParameter.UnpackRowLength, 0);
@@ -268,10 +273,15 @@ internal sealed unsafe class ImGuiRenderer : IDisposable
         texture.SetStatus(ImTextureStatus.Destroyed);
     }
 
-    private void SetAttribute(uint location, int components, VertexAttribType type, bool normalized, uint offset)
+    private void SetAttribute(uint location, int components, VertexAttribPointerType type, bool normalized, uint offset)
     {
-        _gl.EnableVertexArrayAttrib(_vertexArray, location);
-        _gl.VertexArrayAttribFormat(_vertexArray, location, components, type, normalized, offset);
-        _gl.VertexArrayAttribBinding(_vertexArray, location, 0);
+        _gl.EnableVertexAttribArray(location);
+        _gl.VertexAttribPointer(location, components, type, normalized, (uint)sizeof(ImDrawVert), (void*)offset);
+    }
+
+    private void BindTexture(uint id)
+    {
+        _gl.ActiveTexture(TextureUnit.Texture0);
+        _gl.BindTexture(TextureTarget.Texture2D, id);
     }
 }

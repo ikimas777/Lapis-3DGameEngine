@@ -25,15 +25,17 @@ public sealed unsafe class LineRenderer : IDisposable
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
         _shader = Shader.LoadBuiltIn(gl, "lines");
 
-        _vertexBuffer = gl.CreateBuffer();
-        _vertexArray = gl.CreateVertexArray();
-        gl.VertexArrayVertexBuffer(_vertexArray, 0, _vertexBuffer, 0, (uint)sizeof(LineVertex));
-        gl.EnableVertexArrayAttrib(_vertexArray, 0);
-        gl.VertexArrayAttribFormat(_vertexArray, 0, 3, VertexAttribType.Float, false, 0);
-        gl.VertexArrayAttribBinding(_vertexArray, 0, 0);
-        gl.EnableVertexArrayAttrib(_vertexArray, 1);
-        gl.VertexArrayAttribFormat(_vertexArray, 1, 4, VertexAttribType.Float, false, 12);
-        gl.VertexArrayAttribBinding(_vertexArray, 1, 0);
+        using (GLBindings.Preserve(gl))
+        {
+            _vertexArray = gl.GenVertexArray();
+            gl.BindVertexArray(_vertexArray);
+            _vertexBuffer = gl.GenBuffer();
+            gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
+            gl.EnableVertexAttribArray(0);
+            gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, (uint)sizeof(LineVertex), (void*)0);
+            gl.EnableVertexAttribArray(1);
+            gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, (uint)sizeof(LineVertex), (void*)12);
+        }
     }
 
     /// <summary>Number of lines waiting to be drawn.</summary>
@@ -122,11 +124,12 @@ public sealed unsafe class LineRenderer : IDisposable
             _bufferSize = Math.Max(bytes, _bufferSize * 2);
         }
 
-        _gl.NamedBufferData(_vertexBuffer, _bufferSize, null, BufferUsageARB.StreamDraw);
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
+        _gl.BufferData(BufferTargetARB.ArrayBuffer, _bufferSize, null, BufferUsageARB.StreamDraw);
         var data = CollectionsMarshal.AsSpan(_vertices);
         fixed (LineVertex* pointer = data)
         {
-            _gl.NamedBufferSubData(_vertexBuffer, 0, bytes, pointer);
+            _gl.BufferSubData(BufferTargetARB.ArrayBuffer, 0, bytes, pointer);
         }
 
         _gl.Enable(EnableCap.DepthTest);

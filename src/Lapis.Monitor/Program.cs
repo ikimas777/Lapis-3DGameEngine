@@ -84,7 +84,7 @@ internal static class Program
             VSync = true,
             FramesPerSecond = 30,
             UpdatesPerSecond = 30,
-            API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, ContextFlags.ForwardCompatible, new APIVersion(4, 5)),
+            API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, ContextFlags.ForwardCompatible, Lapis.Application.GLVersion),
         });
 
         GL? gl = null;
