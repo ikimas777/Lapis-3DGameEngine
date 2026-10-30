@@ -33,7 +33,8 @@ jobs:
         run: |
           set -o pipefail
           if ! dotnet test --solution Lapis.slnx --configuration Release --no-build 2>&1 | tee test.log; then
-            report=$( (grep -E -A6 "failed |crashed|Unhandled" test.log | head -60; echo "----- end of output -----"; tail -25 test.log) | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            sed -i.bak 's/\x1b\[[0-9;]*m//g' test.log # drop colour codes
+            report=$( (grep -E -A12 "^ *failed [A-Z]|crashed|Unhandled" test.log | grep -v "Info  " | head -60) | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
             echo "::error title=Tests failed on ${{ matrix.os }}::$report"
             exit 1
           fi
