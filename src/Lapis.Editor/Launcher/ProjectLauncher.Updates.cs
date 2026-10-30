@@ -356,8 +356,10 @@ internal sealed unsafe partial class ProjectLauncher
             ImGui.TextColored(EditorTheme.Accent, $"Downloaded to {path}");
             ImGui.TextDisabled(OperatingSystem.IsWindows()
                 ? "Close Lapis, unzip the file and start Lapis\\Lapis.Editor.exe from it. Your projects are not affected."
-                : $"Close Lapis, then unpack it with:  tar -xzf \"{Path.GetFileName(path)}\"  and start Lapis/Lapis.Editor. Your projects are not affected.");
-            if (ImGui.Button(OperatingSystem.IsWindows() ? "Show in Explorer" : "Show in File Manager"))
+                : OperatingSystem.IsMacOS()
+                    ? "Close Lapis, open the zip file and start Lapis/Lapis.app from it (or move it to Applications first). Your projects are not affected."
+                    : $"Close Lapis, then unpack it with:  tar -xzf \"{Path.GetFileName(path)}\"  and start Lapis/Lapis.Editor. Your projects are not affected.");
+            if (ImGui.Button($"Show in {HostPlatform.FileManagerName}"))
             {
                 PlatformShell.ShowInFileManager(path, select: true);
             }

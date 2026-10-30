@@ -1,0 +1,33 @@
+name: Add macOS to a release
+
+# Pushing a tag such as macos-v0.10.0 builds the macOS packages from the tagged commit and attaches them to the
+# existing release v0.10.0, leaving its other files alone. Used to add macOS to v0.10.0, which was released for
+# Windows and Linux before the macOS port; later releases get macOS packages from release.yml.
+on:
+  push:
+    tags: ["macos-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    uses: ./.github/workflows/macos-packages.yml
+    with:
+      version: ${{ github.ref_name }}
+
+  upload:
+    needs: [macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          merge-multiple: true
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        # macos-v0.10.0 -> v0.10.0. --clobber replaces macOS packages attached by an earlier run.
+        run: gh release upload "${TAG#macos-}" Lapis-macOS-arm64.zip Lapis-macOS-x64.zip --clobber --repo "${{ github.repository }}"

@@ -104,10 +104,12 @@ internal static unsafe class EditorTheme
     private static void LoadFont()
     {
         var io = ImGui.GetIO();
-        // Segoe UI on Windows; on Linux the first common sans-serif font that is installed.
+        // Segoe UI on Windows, Arial on macOS; on Linux the first common sans-serif font that is installed.
         string[] candidates =
         [
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "segoeui.ttf"),
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/Library/Fonts/Arial.ttf",
             "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
             "/usr/share/fonts/noto/NotoSans-Regular.ttf",
             "/usr/share/fonts/google-noto/NotoSans-Regular.ttf",

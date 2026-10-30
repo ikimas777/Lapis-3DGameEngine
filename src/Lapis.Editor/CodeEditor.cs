@@ -50,7 +50,22 @@ internal static class CodeEditor
         }
     }
 
-    private static string? FindVsCode() => OperatingSystem.IsWindows() ? FindVsCodeWindows() : FindVsCodeLinux();
+    private static string? FindVsCode() =>
+        OperatingSystem.IsWindows() ? FindVsCodeWindows() : OperatingSystem.IsMacOS() ? FindVsCodeMac() : FindVsCodeLinux();
+
+    private static string? FindVsCodeMac()
+    {
+        // Apps started from Finder get a short PATH, so look where VS Code and its "code" command are installed.
+        const string launcher = "Visual Studio Code.app/Contents/Resources/app/bin/code";
+        string[] candidates =
+        [
+            Path.Combine("/Applications", launcher),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications", launcher),
+            "/usr/local/bin/code",
+            "/opt/homebrew/bin/code",
+        ];
+        return candidates.FirstOrDefault(File.Exists) ?? FindVsCodeLinux();
+    }
 
     private static string? FindVsCodeLinux()
     {

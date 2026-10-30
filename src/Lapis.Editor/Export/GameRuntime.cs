@@ -12,11 +12,11 @@ namespace Lapis.Editor.Export;
 /// </remarks>
 internal static class GameRuntime
 {
-    /// <summary>The runtime's file name on this system: <c>Lapis.Runtime.exe</c> on Windows, <c>Lapis.Runtime</c> on Linux.</summary>
-    public static string ExecutableName => OperatingSystem.IsWindows() ? "Lapis.Runtime.exe" : "Lapis.Runtime";
+    /// <summary>The runtime's file name on this system: <c>Lapis.Runtime.exe</c> on Windows, <c>Lapis.Runtime</c> elsewhere.</summary>
+    public static string ExecutableName => HostPlatform.Executable("Lapis.Runtime");
 
     /// <summary>.NET runtime identifier the runtime is published for (the system the editor runs on).</summary>
-    public static string RuntimeIdentifier => OperatingSystem.IsWindows() ? "win-x64" : "linux-x64";
+    public static string RuntimeIdentifier => HostPlatform.RuntimeIdentifier;
 
     /// <summary>Returns the runtime executable, building it first when running from source.</summary>
     /// <exception cref="ExportException">No runtime was found and it could not be built.</exception>

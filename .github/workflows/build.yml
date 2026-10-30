@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -28,3 +28,8 @@ jobs:
 
       - name: Test
         run: dotnet test --solution Lapis.slnx --configuration Release --no-build
+
+  # On milestone branches, also build the macOS packages so they can be downloaded from the run and tried on a Mac.
+  macos-packages:
+    if: startsWith(github.ref, 'refs/heads/milestone/')
+    uses: ./.github/workflows/macos-packages.yml

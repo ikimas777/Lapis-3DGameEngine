@@ -9,7 +9,7 @@ namespace Lapis.Editor;
 /// </summary>
 internal static class MonitorLauncher
 {
-    public static string ExecutableName { get; } = OperatingSystem.IsWindows() ? "Lapis.Monitor.exe" : "Lapis.Monitor";
+    public static string ExecutableName { get; } = HostPlatform.Executable("Lapis.Monitor");
 
     /// <summary>Where the monitor records its sessions.</summary>
     public static string SessionsFolder { get; } =
