@@ -35,8 +35,11 @@ jobs:
 
       - name: Check the signatures
         run: |
-          codesign --verify --verbose publish/Lapis/Lapis.app
           file publish/Lapis/Lapis.app/Contents/MacOS/Lapis.Editor publish/Lapis/Lapis.app/Contents/MacOS/Runtime/Lapis.Runtime
+          if ! codesign --verify --verbose=4 publish/Lapis/Lapis.app > verify.log 2>&1; then
+            echo "::error title=Signature check failed::$(sed 's/%/%25/g' verify.log | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
 
       - name: Package
         # ditto keeps the executable permissions and the signatures; the zip holds one top folder, Lapis/.
