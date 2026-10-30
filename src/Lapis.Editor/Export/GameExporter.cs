@@ -64,16 +64,21 @@ internal static class GameExporter
         try
         {
             progress?.Report("Preparing the output folder...");
-            Directory.CreateDirectory(output);
-            var data = Path.Combine(output, GameManifest.DataFolderName);
+
+            // On macOS the game is an app bundle: the program in Contents/MacOS, scripts and assets in Contents/Resources.
+            var bundle = OperatingSystem.IsMacOS() ? Path.Combine(output, settings.ExecutableName + ".app") : null;
+            var programFolder = bundle is null ? output : Path.Combine(bundle, "Contents", "MacOS");
+            var gameFolder = bundle is null ? output : Path.Combine(bundle, "Contents", "Resources");
+            Directory.CreateDirectory(programFolder);
+            Directory.CreateDirectory(gameFolder);
+            var data = Path.Combine(gameFolder, GameManifest.DataFolderName);
             if (Directory.Exists(data))
             {
                 Directory.Delete(data, recursive: true); // only our own data; anything else in the folder is left alone
             }
 
             progress?.Report("Copying the runtime...");
-            // Same extension as the runtime: ".exe" on Windows, none on Linux.
-            var executable = Path.Combine(output, settings.ExecutableName + Path.GetExtension(runtimeExecutable));
+            var executable = Path.Combine(programFolder, HostPlatform.Executable(settings.ExecutableName));
             File.Copy(runtimeExecutable, executable, overwrite: true);
             if (!OperatingSystem.IsWindows())
             {
@@ -81,17 +86,25 @@ internal static class GameExporter
                     | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
             }
 
-            File.WriteAllBytes(Path.Combine(output, GameManifest.ScriptsFileName), compilation.AssemblyBytes!);
-            File.WriteAllBytes(Path.Combine(output, Path.ChangeExtension(GameManifest.ScriptsFileName, ".pdb")), compilation.SymbolBytes!);
+            File.WriteAllBytes(Path.Combine(gameFolder, GameManifest.ScriptsFileName), compilation.AssemblyBytes!);
+            File.WriteAllBytes(Path.Combine(gameFolder, Path.ChangeExtension(GameManifest.ScriptsFileName, ".pdb")), compilation.SymbolBytes!);
 
             progress?.Report("Copying assets...");
             var assetCount = CopyAssets(project.AssetsDirectory, Path.Combine(data, "Assets"));
 
             new GameManifest(project.Name, settings.StartScene.Replace('\\', '/')).Save(data);
 
+            if (bundle is not null)
+            {
+                File.WriteAllText(Path.Combine(bundle, "Contents", "Info.plist"), MacApp.InfoPlist(
+                    project.Name, MacApp.IdentifierFor(settings.ExecutableName), Path.GetFileName(executable), "1.0"));
+                progress?.Report("Signing the app...");
+                MacApp.SignAdHoc(bundle);
+            }
+
             var totalBytes = Directory.EnumerateFiles(output, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length);
             progress?.Report("Done.");
-            return new ExportResult(executable, assetCount, totalBytes);
+            return new ExportResult(bundle ?? executable, assetCount, totalBytes);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

@@ -4,8 +4,8 @@ using System.Runtime.InteropServices;
 namespace Lapis.Editor;
 
 /// <summary>
-/// Shows the system's folder chooser: the "Browse for folder" dialog on Windows, and zenity or kdialog
-/// (whichever is installed) on Linux.
+/// Shows the system's folder chooser: the "Browse for folder" dialog on Windows, "Choose a Folder" on macOS,
+/// and zenity or kdialog (whichever is installed) on Linux.
 /// </summary>
 internal static partial class FolderPicker
 {
@@ -20,7 +20,38 @@ internal static partial class FolderPicker
     /// <param name="owner">Window handle the dialog belongs to (0 for none; Windows only).</param>
     /// <param name="title">Text shown above the folder tree.</param>
     public static string? Pick(nint owner, string title) =>
-        OperatingSystem.IsWindows() ? PickWindows(owner, title) : PickLinux(title);
+        OperatingSystem.IsWindows() ? PickWindows(owner, title) : OperatingSystem.IsMacOS() ? PickMac(title) : PickLinux(title);
+
+    private static string? PickMac(string title)
+    {
+        var start = new ProcessStartInfo("osascript") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[]
+        {
+            "-e", "on run argv", "-e", "POSIX path of (choose folder with prompt (item 1 of argv))", "-e", "end run", title,
+        })
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = Process.Start(start);
+            if (process is null)
+            {
+                return null;
+            }
+
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode == 0 && output.Length > 1 ? output.TrimEnd('/') : null; // non-zero: cancelled
+        }
+        catch (System.ComponentModel.Win32Exception exception)
+        {
+            Log.Warning($"Could not show the folder chooser: {exception.Message}. Type the folder path instead.");
+            return null;
+        }
+    }
 
     private static string? PickLinux(string title)
     {

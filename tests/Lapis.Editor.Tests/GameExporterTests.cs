@@ -33,11 +33,16 @@ public sealed class GameExporterTests : IDisposable
 
         var result = GameExporter.Export(new ExportSettings(_project, output, _project.StartScene!, "My Game"), _runtime);
 
-        Assert.Equal(Path.Combine(output, "My Game.exe"), result.ExecutablePath);
-        Assert.Equal("player", File.ReadAllText(result.ExecutablePath));
-        Assert.True(new FileInfo(Path.Combine(output, "Game.dll")).Length > 0);
+        // Windows: "My Game.exe"; Linux: "My Game"; macOS: the app "My Game.app".
+        var program = OperatingSystem.IsMacOS()
+            ? Path.Combine(output, "My Game.app", "Contents", "MacOS", "My Game")
+            : Path.Combine(output, OperatingSystem.IsWindows() ? "My Game.exe" : "My Game");
+        Assert.Equal(OperatingSystem.IsMacOS() ? Path.Combine(output, "My Game.app") : program, result.ExecutablePath);
+        Assert.Equal("player", File.ReadAllText(program));
+        var gameFolder = GameFolder(output, "My Game");
+        Assert.True(new FileInfo(Path.Combine(gameFolder, "Game.dll")).Length > 0);
 
-        var data = Path.Combine(output, "Data");
+        var data = Path.Combine(gameFolder, "Data");
         var manifest = GameManifest.Load(data);
         Assert.Equal("MyGame", manifest.Name);
         Assert.Equal("Assets/Scenes/Main.lscene", manifest.StartScene);
@@ -59,8 +64,12 @@ public sealed class GameExporterTests : IDisposable
 
         GameExporter.Export(settings, _runtime);
 
-        Assert.False(File.Exists(Path.Combine(output, "Data", "Assets", "Textures", "a.png")));
+        Assert.False(File.Exists(Path.Combine(GameFolder(output, "Game"), "Data", "Assets", "Textures", "a.png")));
     }
+
+    // The folder with Game.dll and Data: the output folder, or Contents/Resources of the app on macOS.
+    private static string GameFolder(string output, string name) =>
+        OperatingSystem.IsMacOS() ? Path.Combine(output, name + ".app", "Contents", "Resources") : output;
 
     [Fact]
     public void Export_WithScriptErrors_Fails()

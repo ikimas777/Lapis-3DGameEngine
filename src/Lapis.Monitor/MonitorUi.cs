@@ -492,7 +492,7 @@ internal sealed class MonitorUi(CounterClient client, MetricStore live, AlertEng
 
     private static void OpenFolder(string path)
     {
-        var opener = OperatingSystem.IsWindows() ? "explorer.exe" : "xdg-open";
+        var opener = OperatingSystem.IsWindows() ? "explorer.exe" : OperatingSystem.IsMacOS() ? "open" : "xdg-open";
         Process.Start(new ProcessStartInfo(opener, $"\"{path}\"") { UseShellExecute = false })?.Dispose();
     }
 }

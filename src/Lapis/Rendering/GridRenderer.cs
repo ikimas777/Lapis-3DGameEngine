@@ -15,7 +15,7 @@ public sealed class GridRenderer : IDisposable
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
         _shader = Shader.LoadBuiltIn(gl, "fullscreen", "grid");
-        _emptyVertexArray = gl.CreateVertexArray();
+        _emptyVertexArray = gl.GenVertexArray();
     }
 
     /// <summary>Draws the grid over the current framebuffer, hidden behind objects already drawn.</summary>

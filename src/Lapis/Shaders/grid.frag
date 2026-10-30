@@ -1,4 +1,4 @@
-#version 450 core
+#version 410 core
 
 // Infinite editor grid on the ground plane (Y = 0): 1 m cells, a brighter line every 10 m, and the
 // X (red) and Z (blue) axes. It fades with distance and is hidden behind objects via its depth.

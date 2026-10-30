@@ -7,9 +7,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <PlatformTarget>x64</PlatformTarget>
-    <RuntimeIdentifier Condition="'$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe'">win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
+
+    <!-- Any CPU, so builds run on x64 and on Apple Silicon (arm64); dotnet publish -r picks the processor. -->
+    <PlatformTarget Condition="$(RuntimeIdentifier.EndsWith('-x64'))">x64</PlatformTarget>
+    <PlatformTarget Condition="$(RuntimeIdentifier.EndsWith('-arm64'))">arm64</PlatformTarget>
+    <PlatformTarget Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier.Substring($([MSBuild]::Add($(RuntimeIdentifier.LastIndexOf('-')), 1))))</PlatformTarget>
 
     <Version>0.10.0</Version>
     <Authors>Lapis contributors</Authors>

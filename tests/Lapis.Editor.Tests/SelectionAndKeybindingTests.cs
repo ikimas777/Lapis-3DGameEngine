@@ -125,7 +125,8 @@ public class SelectionAndKeybindingTests
     {
         var keys = new Keybindings();
         Assert.Empty(keys.ToSettings());
-        Assert.Equal("Ctrl+Z", keys.Shortcut(EditorAction.Undo));
+        var command = OperatingSystem.IsMacOS() ? "Cmd" : "Ctrl"; // menus show Cmd on macOS; the settings always say Ctrl
+        Assert.Equal($"{command}+Z", keys.Shortcut(EditorAction.Undo));
 
         keys.Set(EditorAction.Undo, 0, new KeyChord(ImGuiKey.U, Ctrl: true));
         keys.Set(EditorAction.Redo, 1, null);
@@ -135,7 +136,7 @@ public class SelectionAndKeybindingTests
 
         var loaded = new Keybindings();
         loaded.Load(saved);
-        Assert.Equal("Ctrl+U", loaded.Shortcut(EditorAction.Undo));
+        Assert.Equal($"{command}+U", loaded.Shortcut(EditorAction.Undo));
         Assert.Null(loaded.Get(EditorAction.Redo, 1));
         Assert.True(loaded.IsDefault(EditorAction.Delete));
 

@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -27,4 +27,19 @@ jobs:
         run: dotnet build Lapis.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --solution Lapis.slnx --configuration Release --no-build
+        shell: bash
+        # On failure, the failed tests and the end of the output also become an annotation, which can be read
+        # on the run's summary page (and through the API) without opening the log.
+        run: |
+          set -o pipefail
+          if ! dotnet test --solution Lapis.slnx --configuration Release --no-build 2>&1 | tee test.log; then
+            sed -i.bak 's/\x1b\[[0-9;]*m//g' test.log # drop colour codes
+            report=$( (grep -E -A12 "^ *failed [A-Z]|crashed|Unhandled" test.log | grep -v "Info  " | head -60) | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Tests failed on ${{ matrix.os }}::$report"
+            exit 1
+          fi
+
+  # On milestone branches, also build the macOS packages so they can be downloaded from the run and tried on a Mac.
+  macos-packages:
+    if: startsWith(github.ref, 'refs/heads/milestone/')
+    uses: ./.github/workflows/macos-packages.yml

@@ -53,25 +53,42 @@ public sealed unsafe class Texture2D : IDisposable
     {
         ArgumentNullException.ThrowIfNull(gl);
 
-        var levels = (uint)Math.Max(1, (int)Math.Floor(Math.Log2(Math.Max(width, height))) + 1);
-        var handle = gl.CreateTexture(TextureTarget.Texture2D);
-        gl.TextureStorage2D(handle, levels, SizedInternalFormat.Srgb8Alpha8, (uint)width, (uint)height);
-        gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-        fixed (byte* data = rgba)
+        var handle = gl.GenTexture();
+        using (GLBindings.Preserve(gl))
         {
-            gl.TextureSubImage2D(handle, 0, 0, 0, (uint)width, (uint)height, PixelFormat.Rgba, PixelType.UnsignedByte, data);
+            gl.BindTexture(TextureTarget.Texture2D, handle);
+            gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+            fixed (byte* data = rgba)
+            {
+                gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Srgb8Alpha8, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, data);
+            }
+
+            gl.GenerateMipmap(TextureTarget.Texture2D);
+            SetParameters(gl, TextureMinFilter.LinearMipmapLinear, TextureWrapMode.Repeat);
         }
 
-        gl.GenerateTextureMipmap(handle);
-        gl.TextureParameter(handle, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-        gl.TextureParameter(handle, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        gl.TextureParameter(handle, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-        gl.TextureParameter(handle, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
         return new Texture2D(gl, handle, width, height);
     }
 
     /// <summary>Binds the texture to a texture unit.</summary>
-    public void Bind(uint unit) => _gl.BindTextureUnit(unit, Handle);
+    public void Bind(uint unit) => BindToUnit(_gl, unit, Handle);
+
+    /// <summary>Binds any 2D texture to a texture unit (0 = the first).</summary>
+    internal static void BindToUnit(GL gl, uint unit, uint texture)
+    {
+        gl.ActiveTexture(TextureUnit.Texture0 + (int)unit);
+        gl.BindTexture(TextureTarget.Texture2D, texture);
+    }
+
+    /// <summary>Sets filtering and wrapping of the 2D texture bound to the active unit.</summary>
+    internal static void SetParameters(GL gl, TextureMinFilter minFilter, TextureWrapMode wrap)
+    {
+        var magFilter = minFilter == TextureMinFilter.Nearest ? TextureMagFilter.Nearest : TextureMagFilter.Linear;
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)minFilter);
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)magFilter);
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)wrap);
+        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)wrap);
+    }
 
     /// <inheritdoc />
     public void Dispose()

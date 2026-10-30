@@ -11,6 +11,13 @@ internal static class GLDebug
 
     public static unsafe void Enable(GL gl)
     {
+        // Debug output is OpenGL 4.3; macOS stops at 4.1.
+        if (!gl.IsExtensionPresent("GL_KHR_debug") && gl.GetInteger(GetPName.MajorVersion) * 10 + gl.GetInteger(GetPName.MinorVersion) < 43)
+        {
+            Log.Info("OpenGL debug output is not available on this system.");
+            return;
+        }
+
         _callback = OnDebugMessage;
         gl.Enable(EnableCap.DebugOutput);
         gl.Enable(EnableCap.DebugOutputSynchronous);

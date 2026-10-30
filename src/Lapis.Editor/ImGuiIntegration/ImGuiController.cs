@@ -34,6 +34,7 @@ internal sealed unsafe class ImGuiController : IDisposable
 
         var io = ImGui.GetIO();
         io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard | ImGuiConfigFlags.DockingEnable;
+        io.ConfigMacOSXBehaviors = false; // Cmd and Ctrl are swapped in SendKey instead
         io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
 
         _iniPath = iniPath is null ? 0 : Marshal.StringToCoTaskMemUTF8(iniPath);
@@ -118,6 +119,9 @@ internal sealed unsafe class ImGuiController : IDisposable
         }
     }
 
+    /// <summary>True on macOS, where Cmd is reported to ImGui as Ctrl and Ctrl as Cmd.</summary>
+    public static bool SwapsCommand => OperatingSystem.IsMacOS();
+
     private void OnKeyDown(IKeyboard keyboard, Key key, int scancode) => SendKey(keyboard, key, true);
 
     private void OnKeyUp(IKeyboard keyboard, Key key, int scancode) => SendKey(keyboard, key, false);
@@ -125,12 +129,29 @@ internal sealed unsafe class ImGuiController : IDisposable
     private static void SendKey(IKeyboard keyboard, Key key, bool down)
     {
         var io = ImGui.GetIO();
-        io.AddKeyEvent(ImGuiKey.ModCtrl, keyboard.IsKeyPressed(Key.ControlLeft) || keyboard.IsKeyPressed(Key.ControlRight));
+        var control = keyboard.IsKeyPressed(Key.ControlLeft) || keyboard.IsKeyPressed(Key.ControlRight);
+        var command = keyboard.IsKeyPressed(Key.SuperLeft) || keyboard.IsKeyPressed(Key.SuperRight);
+
+        // On macOS Cmd does what Ctrl does elsewhere (Cmd+S, Cmd+Z, Cmd+click), so ImGui gets the two swapped and
+        // every shortcut and multi-select works with Cmd. ImGui's own Mac swap is turned off in the constructor.
+        io.AddKeyEvent(ImGuiKey.ModCtrl, SwapsCommand ? command : control);
         io.AddKeyEvent(ImGuiKey.ModShift, keyboard.IsKeyPressed(Key.ShiftLeft) || keyboard.IsKeyPressed(Key.ShiftRight));
         io.AddKeyEvent(ImGuiKey.ModAlt, keyboard.IsKeyPressed(Key.AltLeft) || keyboard.IsKeyPressed(Key.AltRight));
-        io.AddKeyEvent(ImGuiKey.ModSuper, keyboard.IsKeyPressed(Key.SuperLeft) || keyboard.IsKeyPressed(Key.SuperRight));
+        io.AddKeyEvent(ImGuiKey.ModSuper, SwapsCommand ? control : command);
 
         var imguiKey = ImGuiKeyMap.ToImGui(key);
+        if (SwapsCommand)
+        {
+            imguiKey = imguiKey switch
+            {
+                ImGuiKey.LeftCtrl => ImGuiKey.LeftSuper,
+                ImGuiKey.RightCtrl => ImGuiKey.RightSuper,
+                ImGuiKey.LeftSuper => ImGuiKey.LeftCtrl,
+                ImGuiKey.RightSuper => ImGuiKey.RightCtrl,
+                _ => imguiKey,
+            };
+        }
+
         if (imguiKey != ImGuiKey.None)
         {
             io.AddKeyEvent(imguiKey, down);

@@ -65,7 +65,7 @@ public abstract class Application : IDisposable
             Title = options.Title,
             Size = new Vector2D<int>(options.Width, options.Height),
             VSync = options.VSync,
-            API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, flags, new APIVersion(4, 5)),
+            API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Core, flags, GLVersion),
             PreferredDepthBufferBits = 24,
             PreferredStencilBufferBits = 8,
             Samples = options.Samples,
@@ -79,6 +79,14 @@ public abstract class Application : IDisposable
         _window.FramebufferResize += HandleFramebufferResize;
         _window.Closing += HandleClosing;
     }
+
+    /// <summary>
+    /// The OpenGL version asked for: 4.5 on Windows and Linux, 4.1 on macOS (the newest Apple provides).
+    /// The renderer only uses OpenGL 4.1 features, so it draws the same image on every system.
+    /// Setting the environment variable <c>LAPIS_GL=4.1</c> asks for 4.1 anywhere, to test what macOS gets.
+    /// </summary>
+    public static APIVersion GLVersion =>
+        OperatingSystem.IsMacOS() || Environment.GetEnvironmentVariable("LAPIS_GL") == "4.1" ? new APIVersion(4, 1) : new APIVersion(4, 5);
 
     /// <summary>The OpenGL API. Available from <see cref="OnLoad"/> onwards.</summary>
     protected internal GL GL => _gl ?? throw new InvalidOperationException("OpenGL is not available before OnLoad.");
@@ -134,8 +142,8 @@ public abstract class Application : IDisposable
             GLDebug.Enable(_gl);
         }
 
-        // Pair OpenGL with the [0, 1] depth range produced by System.Numerics projection matrices.
-        _gl.ClipControl(ClipControlOrigin.LowerLeft, ClipControlDepth.ZeroToOne);
+        // System.Numerics projection matrices produce depth in [0, 1] while OpenGL expects [-1, 1]; every
+        // vertex shader converts it (see the end of lit.vert), so window depth stays in [0, 1] as before.
 
         Log.Info($"{EngineInfo.Name} {EngineInfo.InformationalVersion}");
         Log.Info($"OpenGL {_gl.GetStringS(StringName.Version)} on {_gl.GetStringS(StringName.Renderer)}");
