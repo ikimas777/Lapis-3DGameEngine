@@ -283,6 +283,10 @@ Colliders and rigid bodies are simulated with [Jolt](https://github.com/jrouwe/J
 runs. In the sample, the blue ball (a kinematic body you steer) pushes the crates, and the red ball bounces.
 See the [physics section of the scripting guide](docs/scripting.md#physics).
 
+A **Character Controller** moves players and creatures without passing through walls. It walks up stairs and
+slopes, falls, jumps and pushes loose objects, and triggers and raycasts notice it. The scripting guide has a
+ready [first-person player script](docs/scripting.md#character-controller).
+
 ![Physics](docs/images/physics.png)
 
 ### Scene view controls

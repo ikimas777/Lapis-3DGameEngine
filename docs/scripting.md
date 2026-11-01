@@ -204,6 +204,85 @@ Notes and current limits:
 | `public float Double => speed * 2;` | no (read-only) |
 
 Supported types: `float`, `double`, `int`, `bool`, `string`, enums, `Vector2`, `Vector3`, `Vector4`,
+### Character Controller
+
+A **Character Controller** (Add Component > Character Controller) moves a player or a creature without letting it
+pass through walls:
+- it slides along walls;
+- it walks up stairs and slopes, and stays on the floor when walking down them;
+- it falls with gravity;
+- it pushes loose objects (dynamic bodies).
+
+Its capsule stands on the entity's origin (the feet), drawn in green in the Scene view. Put the camera on a
+child at eye height. It needs no Rigid Body and no other collider.
+
+| Setting | Meaning |
+|---|---|
+| **Height**, **Radius** | Size of the capsule, in metres. **Center** is its middle; keep it at half the height so it stands on the origin. |
+| **Step Height** | The highest step or kerb it walks up without jumping. |
+| **Max Slope** | The steepest slope it walks up, in degrees; it slides down steeper ground. |
+| **Use Gravity** | Falls on its own. Off: the vertical part of `Move` moves it up and down (flying, ladders). |
+| **Mass** | How hard it pushes loose objects. |
+
+Scripts call `Move` every frame with how far to go. Gravity, steps and walls are handled for them:
+
+```csharp
+using System;
+using System.Numerics;
+using Lapis;
+
+public class FirstPersonPlayer : Behaviour
+{
+    public float speed = 4f;
+    public float runSpeed = 7f;
+    public float mouseSensitivity = 0.15f;
+    public float jumpHeight = 1f;
+
+    private CharacterController _controller = null!;
+    private Transform _camera = null!;
+    private float _yaw;
+    private float _pitch;
+
+    public override void Start()
+    {
+        _controller = entity.GetComponent<CharacterController>()!;
+        _camera = transform.Children[0]; // the camera, a child at eye height (e.g. 1.6)
+    }
+
+    public override void Update()
+    {
+        // Look around: turn the body left and right, tilt the camera up and down.
+        _yaw -= Input.GetAxis("Mouse X") * mouseSensitivity;
+        _pitch = Math.Clamp(_pitch - Input.GetAxis("Mouse Y") * mouseSensitivity, -85f, 85f);
+        transform.Rotation = MathUtil.FromEulerDegrees(new Vector3(0, _yaw, 0));
+        _camera.LocalRotation = MathUtil.FromEulerDegrees(new Vector3(_pitch, 0, 0));
+
+        // Walk where the body faces; Shift runs.
+        var input = new Vector3(Input.GetAxis("Horizontal"), 0, -Input.GetAxis("Vertical"));
+        var direction = Vector3.Transform(Vector3.ClampLength(input, 1f), transform.Rotation);
+        var currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : speed;
+        _controller.Move(direction * currentSpeed * Time.DeltaTime);
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            _controller.Jump(jumpHeight);
+        }
+    }
+}
+```
+
+| API | What it does |
+|---|---|
+| `controller.Move(motion)` | Moves by `motion` metres this frame (`direction * speed * Time.DeltaTime`), stopping at walls |
+| `controller.Jump(height)` | Jumps that many metres high when on the ground; returns whether it jumped |
+| `controller.IsGrounded` | Whether it stands on walkable ground |
+| `controller.Velocity` | How fast it actually moved (after walls and steps), in metres per second |
+| `controller.Teleport(position)` | Puts it somewhere at once (its feet), e.g. a respawn point |
+
+Triggers notice the character (`OnTriggerBegin` on the trigger's scripts), so a trigger box can start an event
+when the player walks in. `Physics.Raycast` hits it, so a creature can check whether it sees the player. The
+character itself passes through triggers. The entity's scale does not change the capsule.
+
 `Quaternion` (edited as angles), `Color`, `Entity` and any component type. Drag an entity from the
 Hierarchy onto an `Entity` or component field to assign it.
 

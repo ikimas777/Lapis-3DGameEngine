@@ -53,7 +53,8 @@ public sealed class SerializedMember
     /// </summary>
     public bool IsShownIn(object target)
     {
-        if (GetAttribute<HideInEditorAttribute>() is not null)
+        if (GetAttribute<HideInEditorAttribute>() is not null ||
+            target.GetType().GetCustomAttribute<HideInheritedInEditorAttribute>() is { } hidden && hidden.Members.Contains(Name))
         {
             return false;
         }

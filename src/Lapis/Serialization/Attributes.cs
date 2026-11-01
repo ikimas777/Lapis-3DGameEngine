@@ -32,6 +32,18 @@ public sealed class ShowWhenAttribute(string member, params object[] values) : A
     public IReadOnlyList<object> Values { get; } = values;
 }
 
+/// <summary>
+/// Hides members inherited from a base class in the editor, when they do not apply to this class (e.g. a
+/// character controller is a collider but has no friction). They are still saved.
+/// </summary>
+/// <param name="members">Names of the inherited fields or properties.</param>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class HideInheritedInEditorAttribute(params string[] members) : Attribute
+{
+    /// <summary>Names of the hidden members.</summary>
+    public IReadOnlyList<string> Members { get; } = members;
+}
+
 /// <summary>Shows a numeric member as a slider between <see cref="Min"/> and <see cref="Max"/> in the editor.</summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public sealed class RangeAttribute(float min, float max) : Attribute
