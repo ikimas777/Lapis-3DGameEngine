@@ -1,8 +1,8 @@
 name: macOS packages
 
 # Builds Lapis-macOS-arm64.zip (Apple Silicon) and Lapis-macOS-x64.zip (Intel) as workflow artifacts.
-# Used by release.yml for every release, by release-macos.yml to add macOS to an existing release, and by
-# build.yml on milestone branches so the packages can be tried before a release.
+# Only used by release-macos.yml, to add macOS to an existing release when that is asked for; regular builds and
+# releases are Windows and Linux only.
 on:
   workflow_call:
     inputs:

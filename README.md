@@ -21,10 +21,11 @@ curl -L https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download
 irm https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download/Lapis-Windows-x64.zip -OutFile Lapis.zip; Expand-Archive Lapis.zip .; .\Lapis\Lapis.Editor.exe
 ```
 
-**macOS** (Terminal; use `Lapis-macOS-x64.zip` on an Intel Mac):
+**macOS** (Terminal; use `Lapis-macOS-x64.zip` on an Intel Mac). Mac builds are published for some versions only;
+the newest one is v0.10.0:
 
 ```bash
-curl -LO https://github.com/ikimas777/Lapis-3DGameEngine/releases/latest/download/Lapis-macOS-arm64.zip && ditto -x -k Lapis-macOS-arm64.zip . && open Lapis/Lapis.app
+curl -LO https://github.com/ikimas777/Lapis-3DGameEngine/releases/download/v0.10.0/Lapis-macOS-arm64.zip && ditto -x -k Lapis-macOS-arm64.zip . && open Lapis/Lapis.app
 ```
 
 While the repository is private, these links need a signed-in account: use the [GitHub CLI](https://cli.github.com)
@@ -81,7 +82,7 @@ nothing else needs to be installed:
 - **Windows:** `Lapis-Windows-x64.zip` — unzip and run `Lapis.Editor.exe`.
 - **Linux:** `Lapis-Linux-x64.tar.gz` — extract (`tar -xzf Lapis-Linux-x64.tar.gz`) and run `Lapis/Lapis.Editor`.
   Optional: install `zenity` (or `kdialog`) for the folder chooser and `code` (VS Code) for editing scripts.
-- **macOS:** `Lapis-macOS-arm64.zip` (Apple Silicon: M1 and newer) or `Lapis-macOS-x64.zip` (Intel) — unzip and
+- **macOS** (only some versions, currently v0.10.0): `Lapis-macOS-arm64.zip` (Apple Silicon: M1 and newer) or `Lapis-macOS-x64.zip` (Intel) — unzip and
   open `Lapis/Lapis.app` (you can move it to Applications). The app is not signed with an Apple developer
   certificate, so a downloaded copy is stopped the first time: right-click `Lapis.app` > **Open** > **Open**, or
   allow it under System Settings > Privacy & Security > **Open Anyway**. Updates from the launcher are not

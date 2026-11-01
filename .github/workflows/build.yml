@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +38,3 @@ jobs:
             echo "::error title=Tests failed on ${{ matrix.os }}::$report"
             exit 1
           fi
-
-  # On milestone branches, also build the macOS packages so they can be downloaded from the run and tried on a Mac.
-  macos-packages:
-    if: startsWith(github.ref, 'refs/heads/milestone/')
-    uses: ./.github/workflows/macos-packages.yml
