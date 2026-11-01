@@ -21,6 +21,9 @@
     <PackageReference Include="JoltPhysicsSharp" />
     <PackageReference Include="SharpGLTF.Core" />
     <PackageReference Include="StbImageSharp" />
+    <PackageReference Include="Silk.NET.OpenAL" />
+    <PackageReference Include="Silk.NET.OpenAL.Soft.Native" />
+    <PackageReference Include="NVorbis" />
   </ItemGroup>
 
   <ItemGroup>

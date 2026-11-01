@@ -28,6 +28,7 @@ internal static class AssetIcons
             AssetType.Model => ("3D", Pack(0.30f, 0.75f, 0.55f)),
             AssetType.Texture => ("IMG", Pack(0.90f, 0.55f, 0.30f)),
             AssetType.Material => ("MAT", Pack(0.85f, 0.35f, 0.50f)),
+            AssetType.Audio => ("SND", Pack(0.95f, 0.78f, 0.25f)),
             _ => ("?", Pack(0.50f, 0.50f, 0.52f)),
         };
 

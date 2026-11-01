@@ -618,6 +618,10 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
             case AssetType.Script:
                 CodeEditor.Open(path, 1, Path.GetDirectoryName(context.Assets!.RootDirectory));
                 break;
+            case AssetType.Audio:
+                context.SelectedAsset = asset;
+                AssetInspector.PreviewSound(asset);
+                break;
             default:
                 if (asset is not null)
                 {

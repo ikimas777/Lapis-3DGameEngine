@@ -789,6 +789,10 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
                 {
                     EditorActions.AddScript(context, entity, asset);
                 }
+                else if (asset.Type == Lapis.Assets.AssetType.Audio)
+                {
+                    EditorActions.AssignSound(context, entity, asset);
+                }
                 else if (!EditorActions.AssignToRenderer(context, entity, asset))
                 {
                     Log.Warning($"'{asset.Name}' cannot be applied to '{entity.Name}' (it needs a Mesh Renderer).");

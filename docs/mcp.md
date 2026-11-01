@@ -178,7 +178,7 @@ The server offers 32 tools. Assistants read this list (with the same description
 | `read_file` | `path` | The text of a `.cs`, `.lmat`, `.lscene`, `.json`, `.txt` or `.md` file (up to 256 KB) | — |
 | `write_script` | `path`, `code` | Creates or replaces a C# script, waits for the scripts to compile (up to 90 s) and returns the result with every error and warning (file, line, message) | Change files |
 | `create_material` | `path`, *`color`*, *`metallic`*, *`roughness`*, *`texture`* | Creates a material (`.lmat`) and returns its reference | Change files |
-| `assign_asset` | `entity`, `asset` | Applies a material, texture or model to the entity's Mesh Renderer, or adds the behaviour of a script asset to the entity | Edit the scene |
+| `assign_asset` | `entity`, `asset` | Applies a material, texture or model to the entity's Mesh Renderer, adds the behaviour of a script asset to the entity, or makes a sound the clip of its Audio Source (adding one when needed) | Edit the scene |
 | `instantiate_model` | `asset`, *`parent`*, *`position`* | Adds a model (`.gltf`, `.glb`, `.obj`, `.stl`) to the scene as a new entity | Edit the scene |
 
 ### Editor

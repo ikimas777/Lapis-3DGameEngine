@@ -115,6 +115,32 @@ internal static class EditorActions
         return true;
     }
 
+    /// <summary>
+    /// A sound dropped on an entity: becomes the clip of its Audio Source, or of a new one when it has none.
+    /// One undo step. Always succeeds (returns true, like the other assign actions).
+    /// </summary>
+    public static bool AssignSound(EditorContext context, Entity entity, Lapis.Assets.AssetInfo asset)
+    {
+        context.History.BeginGesture();
+        if (entity.GetComponent<AudioSource>() is { } source)
+        {
+            var member = Serialization.SerializedMember.For(typeof(AudioSource)).First(m => m.Name == nameof(AudioSource.Clip));
+            var before = source.Clip;
+            source.Clip = asset.Reference;
+            context.Record(new SetMemberCommand(source, member, before, asset.Reference));
+        }
+        else
+        {
+            var added = entity.AddComponent<AudioSource>();
+            added.Clip = asset.Reference;
+            context.Record(ComponentLifetimeCommand.Added(added));
+            Log.Info($"Added an Audio Source playing '{asset.Name}' to '{entity.Name}'.");
+        }
+
+        context.Selection = entity;
+        return true;
+    }
+
     public static bool AssignToRenderer(EditorContext context, Entity entity, Lapis.Assets.AssetInfo asset)
     {
         var key = asset.Type switch

@@ -57,12 +57,18 @@ publish "$root/src/Lapis.Monitor/Lapis.Monitor.csproj" "$programs"
 
 chmod +x "$programs/Lapis.Editor" "$programs/Runtime/Lapis.Runtime" "$programs/Lapis.Monitor"
 
+# Licences of the separate libraries (OpenAL Soft): next to the editor, and in Runtime so exported games carry them.
+for folder in "$output" "$programs/Runtime"; do
+    mkdir -p "$folder/licenses"
+    cp "$root/scripts/package/licenses/"* "$folder/licenses/"
+done
+
 if [ "$macos" = true ]; then
     version="${LAPIS_VERSION:-$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$root/Directory.Build.props")}"
     sed -e "s/@VERSION@/$version/g" "$root/scripts/package/Info.plist" > "$output/Lapis.app/Contents/Info.plist"
 
     # Sign each program, then the bundle (ad hoc: no Apple developer certificate).
-    for program in "$programs/Lapis.Editor" "$programs/Lapis.Monitor" "$programs/Runtime/Lapis.Runtime"; do
+    for program in "$programs/Lapis.Editor" "$programs/Lapis.Monitor" "$programs/Runtime/Lapis.Runtime" "$programs/"*.dylib "$programs/Runtime/"*.dylib; do
         codesign --force --sign - "$program"
     done
     codesign --force --sign - "$output/Lapis.app"

@@ -230,6 +230,7 @@ Attributes for the Inspector:
 | `Log.Info("...")`, `Log.Warning`, `Log.Error` | Messages in the Console |
 | `MathUtil.FromEulerDegrees`, `Vector3.ClampLength`, `MathUtil.Lerp` | Math helpers |
 | `Screen.FadeTo(Color.Black, 0.1f)`, `Screen.FadeIn(0.2f)`, `Screen.IsFading` | Fading the picture (see below) |
+| `GetComponent<AudioSource>().Play()`, `AudioSource.PlayClipAtPoint(clip, position)` | Sound (see below) |
 | `entity.Scene.Environment.FogDensity = 0.2f` | Fog and other scene settings (see below) |
 
 ## Lights, fog and fading
@@ -311,6 +312,61 @@ public class Blink : Behaviour
     }
 }
 ```
+
+## Sound
+
+Put `.wav` or `.ogg` files in `Assets` (for example `Assets/Sounds`). To play one from an object, drag the
+sound from the Assets panel onto the object in the Scene view or the Hierarchy. This adds an **Audio Source**
+with that clip, or changes the clip of the one it has. Its settings:
+
+| Setting | Meaning |
+|---|---|
+| **Clip** | The sound. |
+| **Volume**, **Pitch** | Loudness (1 = as recorded) and speed (2 = an octave higher). |
+| **Loop** | Start over at the end: ambient noise, music, a humming machine. |
+| **Play On Start** | Start as soon as the game starts (or the object becomes active). |
+| **Spatial** | 3D sound: it comes from the object, louder on the side it is on. It is full volume within **Min Distance** and silent from **Max Distance** (metres). Turn it off for music and interface sounds, which are heard the same everywhere. |
+
+You hear the game from the **Audio Listener** (Add Component > Audio Listener, usually on the player's camera)
+or, without one, from the main camera. Sounds pause with the game and stop when it stops.
+
+Scripts control sources and play one-off sounds. A sound in a script is a `string` field marked with
+`[AssetReference(AssetType.Audio)]`; the Inspector then shows a slot to drop the sound into:
+
+```csharp
+using Lapis;
+using Lapis.Assets;
+
+public class Footsteps : Behaviour
+{
+    [AssetReference(AssetType.Audio)]
+    public string step = "";
+
+    public float interval = 0.5f;
+    private float _timer;
+
+    public override void Update()
+    {
+        var moving = Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0;
+        _timer -= Time.DeltaTime;
+        if (moving && _timer <= 0f)
+        {
+            AudioSource.PlayClipAtPoint(step, transform.Position, 0.7f);
+            _timer = interval;
+        }
+    }
+}
+```
+
+| API | What it does |
+|---|---|
+| `source.Play()`, `source.Play(otherClip)`, `source.Stop()`, `source.Pause()`, `source.UnPause()`, `source.IsPlaying` | Control an Audio Source; `Volume`, `Pitch` and `Loop` can change while it plays |
+| `AudioSource.PlayClipAtPoint(clip, position, volume)` | A one-off 3D sound at a point (full within 1 m, silent from 30 m) |
+| `AudioSource.PlayClip(clip, volume)` | A one-off sound heard the same everywhere |
+| `AudioListener.Volume = 0.5f` | Overall volume of the game, e.g. for a setting in the menu |
+
+A computer without a sound device runs the game silently. A sound file that is missing or cannot be read is
+reported once in the Console.
 
 ## Tags
 

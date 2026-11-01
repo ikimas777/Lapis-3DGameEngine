@@ -24,6 +24,9 @@ public enum AssetType
 
     /// <summary>A <c>.lmat</c> material.</summary>
     Material,
+
+    /// <summary>A sound: <c>.wav</c> or <c>.ogg</c>.</summary>
+    Audio,
 }
 
 /// <summary>A file in the <c>Assets</c> folder and its stable id.</summary>
@@ -112,6 +115,7 @@ public sealed class AssetDatabase
         ".gltf" or ".glb" or ".obj" or ".stl" => AssetType.Model,
         ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => AssetType.Texture,
         ".lmat" => AssetType.Material,
+        ".wav" or ".ogg" => AssetType.Audio,
         _ => AssetType.Other,
     };
 

@@ -15,10 +15,15 @@ What is in this folder
                           or on its own; it attaches to the running editor by itself.
   Docs/                   Guides: scripting.md, assets.md, export.md, mcp.md (AI assistants),
                           monitor.md, scene-format.md.
+  soft_oal.dll            The sound library, OpenAL Soft (libopenal.so on Linux), a separate
+                          file because of its licence (LGPL). Also next to Runtime and copied
+                          into every exported game.
+  licenses/               Licences of the separate libraries and where their source is.
   README.txt              This file.
   LICENSE.txt             MIT licence.
 
-Nothing has to be installed: .NET and all libraries are built into the programs.
+Nothing has to be installed: .NET and the libraries are built into the programs (only the
+sound library is a separate file).
 A graphics card with OpenGL 4.5 is needed (on macOS: the system's OpenGL 4.1).
 
 Getting started

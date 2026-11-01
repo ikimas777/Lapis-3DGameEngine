@@ -13,14 +13,20 @@ editor and without installing .NET.
 MyGame/
 ├─ MyGame.exe        the game (the Lapis game runtime, renamed)
 ├─ Game.dll          your compiled scripts (+ Game.pdb for readable error messages)
+├─ soft_oal.dll      the sound library, OpenAL Soft (libopenal.so on Linux)
+├─ licenses/         its licence and where its source code is
 ├─ Data/
 │  ├─ game.json      game name and start scene
-│  └─ Assets/        scenes, models, textures, materials and their .lmeta files
+│  └─ Assets/        scenes, models, textures, materials, sounds and their .lmeta files
 └─ log.txt           written while the game runs; look here if something goes wrong
 ```
 
 Script sources (`.cs`) are not copied. Exporting again replaces `Data`, `Game.dll` and the `.exe`;
 other files you put in the folder are left alone.
+
+OpenAL Soft is under the LGPL, which allows it in any game, also a paid one, as long as players can replace it:
+that is why it is a separate file next to the game instead of inside it, and why `licenses/` must stay with the
+game. Without the file the game still runs, without sound.
 
 ## Running the game
 

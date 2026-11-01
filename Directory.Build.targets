@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    OpenAL Soft (sound) is licensed under the LGPL, which lets people replace it with their own build. So it is
+    never packed inside a single-file program: it is published as a separate file next to the executable
+    (soft_oal.dll, libopenal.so or libopenal.dylib), where the program loads it from and where it can be swapped.
+  -->
+  <Target Name="LapisKeepOpenALOutsideSingleFile" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="'%(Filename)%(Extension)' == 'soft_oal.dll' or '%(Filename)%(Extension)' == 'libopenal.so' or '%(Filename)%(Extension)' == 'libopenal.dylib'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

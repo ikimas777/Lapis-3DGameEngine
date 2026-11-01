@@ -86,6 +86,8 @@ internal static class GameExporter
                     | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
             }
 
+            CopyRuntimeLibraries(Path.GetDirectoryName(runtimeExecutable)!, programFolder, gameFolder);
+
             File.WriteAllBytes(Path.Combine(gameFolder, GameManifest.ScriptsFileName), compilation.AssemblyBytes!);
             File.WriteAllBytes(Path.Combine(gameFolder, Path.ChangeExtension(GameManifest.ScriptsFileName, ".pdb")), compilation.SymbolBytes!);
 
@@ -109,6 +111,36 @@ internal static class GameExporter
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             throw new ExportException($"Could not write the game to '{output}': {exception.Message}", exception);
+        }
+    }
+
+    /// <summary>Native libraries kept next to the runtime instead of inside it (OpenAL Soft, see Directory.Build.targets).</summary>
+    internal static IReadOnlyList<string> SeparateLibraries { get; } = ["soft_oal.dll", "libopenal.so", "libopenal.dylib"];
+
+    /// <summary>
+    /// Copies the libraries that live next to the runtime (sound) next to the game's executable, and their licences
+    /// (the <c>licenses</c> folder) into the game, so the game may be passed on with them.
+    /// </summary>
+    private static void CopyRuntimeLibraries(string runtimeFolder, string programFolder, string gameFolder)
+    {
+        foreach (var library in SeparateLibraries)
+        {
+            var source = Path.Combine(runtimeFolder, library);
+            if (File.Exists(source))
+            {
+                File.Copy(source, Path.Combine(programFolder, library), overwrite: true);
+            }
+        }
+
+        var licenses = Path.Combine(runtimeFolder, "licenses");
+        if (Directory.Exists(licenses))
+        {
+            var target = Path.Combine(gameFolder, "licenses");
+            Directory.CreateDirectory(target);
+            foreach (var file in Directory.EnumerateFiles(licenses))
+            {
+                File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: true);
+            }
         }
     }
 

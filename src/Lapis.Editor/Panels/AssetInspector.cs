@@ -35,6 +35,9 @@ internal sealed unsafe class AssetInspector(EditorContext context, TextureLibrar
             case AssetType.Material:
                 DrawMaterial(asset);
                 break;
+            case AssetType.Audio:
+                DrawSound(asset);
+                break;
             case AssetType.Scene:
                 if (ImGui.Button("Open Scene", new Vector2(-1, 0)))
                 {
@@ -54,6 +57,65 @@ internal sealed unsafe class AssetInspector(EditorContext context, TextureLibrar
                 ImGui.TextDisabled("Lapis does not use this type of file.");
                 break;
         }
+    }
+
+    /// <summary>Plays a sound asset in the editor (double-click in the Assets panel, or Play here).</summary>
+    public static void PreviewSound(AssetInfo asset)
+    {
+        try
+        {
+            Audio.AudioSystem.Preview(Audio.AudioClipData.Load(asset.FullPath));
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            Log.Warning($"Cannot play '{asset.Name}': {exception.Message}");
+        }
+    }
+
+    private static readonly Dictionary<string, (DateTime Written, string Text)> SoundDetails = [];
+
+    private static void DrawSound(AssetInfo asset)
+    {
+        ImGui.TextUnformatted(SoundSummary(asset));
+        ImGui.Spacing();
+        if (Audio.AudioSystem.IsPreviewing)
+        {
+            if (ImGui.Button("Stop", new Vector2(-1, 0)))
+            {
+                Audio.AudioSystem.StopPreview();
+            }
+        }
+        else if (ImGui.Button("Play", new Vector2(-1, 0)))
+        {
+            PreviewSound(asset);
+        }
+
+        ImGui.TextDisabled("Drag it onto an object to play it from there (an Audio Source is added).");
+    }
+
+    /// <summary>"12.5 s · stereo · 44100 Hz", read once per file version.</summary>
+    private static string SoundSummary(AssetInfo asset)
+    {
+        var written = File.Exists(asset.FullPath) ? File.GetLastWriteTimeUtc(asset.FullPath) : default;
+        if (SoundDetails.TryGetValue(asset.FullPath, out var cached) && cached.Written == written)
+        {
+            return cached.Text;
+        }
+
+        string text;
+        try
+        {
+            var clip = Audio.AudioClipData.Load(asset.FullPath);
+            text = string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"{clip.Duration:0.0} s · {(clip.Channels == 2 ? "stereo" : "mono")} · {clip.SampleRate} Hz");
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            text = $"Cannot be read: {exception.Message}";
+        }
+
+        SoundDetails[asset.FullPath] = (written, text);
+        return text;
     }
 
     private void DrawTexture(AssetInfo asset)

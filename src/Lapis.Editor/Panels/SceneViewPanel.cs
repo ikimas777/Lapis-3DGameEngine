@@ -177,6 +177,17 @@ internal sealed unsafe class SceneViewPanel(
                 }
 
                 break;
+            case Lapis.Assets.AssetType.Audio:
+                if (PickAt(ImGui.GetMousePos(), view, origin, size) is { } soundTarget)
+                {
+                    EditorActions.AssignSound(context, soundTarget, asset);
+                }
+                else
+                {
+                    Log.Warning($"Drop '{asset.Name}' onto an object in the scene (or onto it in the Hierarchy).");
+                }
+
+                break;
             case Lapis.Assets.AssetType.Scene:
                 Log.Info("Double-click a scene in the Assets panel to open it.");
                 break;

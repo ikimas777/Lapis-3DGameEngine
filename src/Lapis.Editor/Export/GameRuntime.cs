@@ -42,6 +42,15 @@ internal static class GameRuntime
 
         progress?.Report("Building the runtime (first export only, may take a minute)...");
         Publish(Path.Combine(repository, "src", "Lapis.Runtime", "Lapis.Runtime.csproj"), Path.GetDirectoryName(cached)!);
+
+        // Licences of the libraries published next to the runtime (sound), which exports copy into every game.
+        var licenses = Path.Combine(Path.GetDirectoryName(cached)!, "licenses");
+        Directory.CreateDirectory(licenses);
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(repository, "scripts", "package", "licenses")))
+        {
+            File.Copy(file, Path.Combine(licenses, Path.GetFileName(file)), overwrite: true);
+        }
+
         return File.Exists(cached) ? cached : throw new ExportException($"Building the runtime did not produce {ExecutableName}.");
     }
 

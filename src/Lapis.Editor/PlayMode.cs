@@ -120,6 +120,7 @@ internal sealed class PlayMode(EditorContext context) : IDisposable
     /// <summary>Advances the game by one frame when it is playing. Call once per editor frame.</summary>
     public void Update(float deltaTime)
     {
+        Audio.AudioSystem.Paused = State == PlayState.Paused; // the game's sounds pause with it
         if (State == PlayState.Playing)
         {
             _game?.Tick(deltaTime);

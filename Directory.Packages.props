@@ -11,6 +11,9 @@
     <PackageVersion Include="SharpGLTF.Core" Version="1.0.7" />
     <PackageVersion Include="StbImageSharp" Version="2.30.16" />
     <PackageVersion Include="StbImageWriteSharp" Version="1.16.7" />
+    <PackageVersion Include="Silk.NET.OpenAL" Version="2.23.0" />
+    <PackageVersion Include="Silk.NET.OpenAL.Soft.Native" Version="1.23.1" />
+    <PackageVersion Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
 
   <ItemGroup Label="Editor">

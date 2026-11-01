@@ -55,6 +55,22 @@ public sealed class GameExporterTests : IDisposable
     }
 
     [Fact]
+    public void Export_CopiesTheSoundLibraryAndItsLicences()
+    {
+        // The runtime keeps OpenAL Soft (LGPL) as a separate file with its licences next to it.
+        File.WriteAllText(Path.Combine(_root, "soft_oal.dll"), "openal");
+        Directory.CreateDirectory(Path.Combine(_root, "licenses"));
+        File.WriteAllText(Path.Combine(_root, "licenses", "THIRD-PARTY-NOTICES.txt"), "notices");
+        var output = Path.Combine(_root, "Out");
+
+        GameExporter.Export(new ExportSettings(_project, output, _project.StartScene!, "Game"), _runtime);
+
+        var programFolder = OperatingSystem.IsMacOS() ? Path.Combine(output, "Game.app", "Contents", "MacOS") : output;
+        Assert.Equal("openal", File.ReadAllText(Path.Combine(programFolder, "soft_oal.dll")));
+        Assert.Equal("notices", File.ReadAllText(Path.Combine(GameFolder(output, "Game"), "licenses", "THIRD-PARTY-NOTICES.txt")));
+    }
+
+    [Fact]
     public void Export_Again_ReplacesOldData()
     {
         var output = Path.Combine(_root, "Out");

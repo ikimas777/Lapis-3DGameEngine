@@ -89,7 +89,7 @@ nothing else needs to be installed:
   stopped. On a Mac, Cmd takes the place of Ctrl in every shortcut (Cmd+S, Cmd+Z, Cmd+click).
   The renderer uses OpenGL 4.1, the newest version Apple provides; the picture is the same as on Windows and Linux.
 
-Keep the `Runtime` folder next to the editor (inside `Lapis.app/Contents/MacOS` on a Mac): it is the game runtime (the engine without the editor) that exported games are built from. The package also has `Docs/` (these guides), `README.txt` and `LICENSE.txt`.
+Keep the `Runtime` folder next to the editor (inside `Lapis.app/Contents/MacOS` on a Mac): it is the game runtime (the engine without the editor) that exported games are built from. The package also has `Docs/` (these guides), `README.txt` and `LICENSE.txt`, and the sound library OpenAL Soft as a separate file (`soft_oal.dll` / `libopenal.so`, next to the editor and in `Runtime`) with its licence in `licenses/`, because its LGPL licence lets people replace it.
 
 ### Updates
 
@@ -127,7 +127,7 @@ development; `1.0.0` will be the first stable version.
 
 A ready-to-run editor is committed in the repository root: double-click **`Lapis.Editor.exe`**
 (it includes .NET and runs on any 64-bit Windows 10/11 PC). Keep the `Runtime` folder next to it: exported games
-are built from `Runtime\Lapis.Runtime.exe`.
+are built from `Runtime\Lapis.Runtime.exe`. Keep `soft_oal.dll` next to both programs too: it is the sound library.
 
 To rebuild it after changing the code:
 
@@ -268,6 +268,14 @@ Lights are directional (the sun), point (a bulb) or spot (a flashlight: **Create
 and a soft edge). **Fog** (exponential or linear, any colour, optionally only up to a height) is set in the **Scene Settings** tab, and scripts
 can fade the game picture to a colour with `Screen.FadeTo(Color.Black, 0.1f)`, e.g. for a blink. See
 [Lights, fog and fading](docs/scripting.md#lights-fog-and-fading).
+
+### Sound
+
+`.wav` and `.ogg` files in `Assets` are sounds: select one and press **Play** to listen, or drop it on an object
+to give it an **Audio Source** (volume, pitch, loop, play on start, 3D with min / max distance). Scripts play,
+stop and pause sources or play one-off sounds with `AudioSource.PlayClipAtPoint(clip, position)`; the game is
+heard from the **Audio Listener** or the main camera. Sound goes through [OpenAL Soft](https://openal-soft.org/).
+See [Sound](docs/scripting.md#sound).
 
 ### Physics
 

@@ -576,15 +576,18 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         return new JsonObject { ["path"] = AssetsRelative(assets, fullPath), ["reference"] = created.Reference }.ToJsonString();
     }
 
-    /// <summary>Applies a material, texture or model to an entity's Mesh Renderer, or adds a script's behaviour.</summary>
+    /// <summary>Applies a material, texture or model to an entity's Mesh Renderer, adds a script's behaviour, or plays a sound from it.</summary>
     public string AssignAsset(string entityReference, string asset)
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
         var info = ResolveAsset(asset, null);
-        var done = info.Type == AssetType.Script
-            ? EditorActions.AddScript(context, entity, info)
-            : EditorActions.AssignToRenderer(context, entity, info);
+        var done = info.Type switch
+        {
+            AssetType.Script => EditorActions.AddScript(context, entity, info),
+            AssetType.Audio => EditorActions.AssignSound(context, entity, info),
+            _ => EditorActions.AssignToRenderer(context, entity, info),
+        };
         if (!done)
         {
             throw new McpException(info.Type == AssetType.Script

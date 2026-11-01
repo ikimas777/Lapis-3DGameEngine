@@ -180,6 +180,7 @@ public abstract class Application : IDisposable
     private void HandleClosing()
     {
         OnUnload();
+        Audio.AudioSystem.Shutdown();
         _inputContext?.Dispose();
         _gl?.Dispose();
     }

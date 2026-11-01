@@ -103,14 +103,25 @@ Copy-Item (Join-Path $repository "docs\*") (Join-Path $Output "Docs") -Recurse -
 Copy-Item (Join-Path $repository "scripts\package\README.txt") (Join-Path $Output "README.txt") -Force
 Copy-Item (Join-Path $repository "LICENSE") (Join-Path $Output "LICENSE.txt") -Force
 
+# Licences of the separate libraries (OpenAL Soft): next to the editor, and in Runtime so exported games carry them.
+$licenses = Join-Path $repository "scripts\package\licenses"
+foreach ($folder in @($Output, (Join-Path $Output "Runtime"))) {
+    New-Item -ItemType Directory -Force (Join-Path $folder "licenses") | Out-Null
+    Copy-Item (Join-Path $licenses "*") (Join-Path $folder "licenses") -Force
+}
+
 $exe = Resolve-Path (Join-Path $Output "Lapis.Editor.exe")
 Write-Host "Editor published to $exe"
 
 if ($RepoRoot) {
-    New-Item -ItemType Directory -Force (Join-Path $repository "Runtime") | Out-Null
+    # The sound library (soft_oal.dll) is a separate file next to each program (see Directory.Build.targets).
+    New-Item -ItemType Directory -Force (Join-Path $repository "Runtime\licenses") | Out-Null
     Copy-Item $exe (Join-Path $repository "Lapis.Editor.exe") -Force
+    Copy-Item (Join-Path $Output "soft_oal.dll") (Join-Path $repository "soft_oal.dll") -Force
     Copy-Item (Join-Path $Output "Runtime\Lapis.Runtime.exe") (Join-Path $repository "Runtime\Lapis.Runtime.exe") -Force
-    Write-Host "Copied Lapis.Editor.exe and Runtime\Lapis.Runtime.exe to $repository"
+    Copy-Item (Join-Path $Output "Runtime\soft_oal.dll") (Join-Path $repository "Runtime\soft_oal.dll") -Force
+    Copy-Item (Join-Path $licenses "*") (Join-Path $repository "Runtime\licenses") -Force
+    Write-Host "Copied Lapis.Editor.exe, Runtime\Lapis.Runtime.exe and their soft_oal.dll to $repository"
 }
 
 if ($Shortcut) {

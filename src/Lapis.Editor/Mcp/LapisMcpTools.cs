@@ -193,7 +193,7 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
         [Description("Optional texture asset path.")] string? texture = null) =>
         Run("create_material", t => t.CreateMaterial(path, color, metallic, roughness, texture));
 
-    [McpServerTool(Name = "assign_asset"), Description("Applies a material, texture or model to an entity's Mesh Renderer, or adds the behaviour of a script asset to the entity.")]
+    [McpServerTool(Name = "assign_asset"), Description("Applies a material, texture or model to an entity's Mesh Renderer, adds the behaviour of a script asset to the entity, or makes a sound (.wav/.ogg) the clip of its Audio Source (adding one when needed).")]
     public Task<string> AssignAsset(
         [Description("Entity id, path or unique name.")] string entity,
         [Description("Asset path relative to the Assets folder, or its reference.")] string asset) =>
