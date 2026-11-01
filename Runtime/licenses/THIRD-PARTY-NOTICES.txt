@@ -1,0 +1,20 @@
+Third-party software in Lapis and in games made with it
+=======================================================
+
+OpenAL Soft 1.23.1 (sound)
+--------------------------
+  Files:   soft_oal.dll (Windows), libopenal.so (Linux), libopenal.dylib (macOS),
+           next to the program that uses them
+  Licence: GNU Library General Public License, version 2 or later
+           (OpenAL-Soft-COPYING.txt in this folder)
+  Source:  https://github.com/kcat/openal-soft/tree/1.23.1
+  Build:   from the Silk.NET.OpenAL.Soft.Native package, https://github.com/dotnet/Silk.NET
+
+  The library is a separate file that the program loads when it starts. You may replace it
+  with your own build of OpenAL Soft (same file name, same processor type); the program
+  then uses that one.
+
+Everything else in Lapis is under the MIT licence (LICENSE.txt next to the editor). The
+other libraries built into the programs (.NET, Silk.NET, GLFW, Dear ImGui, Jolt Physics,
+SharpGLTF, StbImageSharp, NVorbis, Roslyn) are under the MIT, BSD, zlib or Apache 2.0
+licences, or in the public domain.
