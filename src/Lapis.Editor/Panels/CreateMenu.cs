@@ -64,6 +64,11 @@ internal static class CreateMenu
             created = EntityFactory.CreateLight(scene, LightType.Directional, parent);
         }
 
+        if (ImGui.MenuItem("Spot Light"))
+        {
+            created = EntityFactory.CreateLight(scene, LightType.Spot, parent);
+        }
+
         if (ImGui.MenuItem("Point Light"))
         {
             created = EntityFactory.CreateLight(scene, LightType.Point, parent);

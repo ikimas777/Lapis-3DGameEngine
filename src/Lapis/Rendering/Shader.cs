@@ -109,6 +109,15 @@ public sealed unsafe class Shader : IDisposable
         }
     }
 
+    /// <summary>Sets a <c>vec2</c> uniform.</summary>
+    public void Set(string name, Vector2 value)
+    {
+        if (TryGetLocation(name, out var location))
+        {
+            _gl.ProgramUniform2(_program, location, value.X, value.Y);
+        }
+    }
+
     /// <summary>Sets a <c>vec3</c> uniform.</summary>
     public void Set(string name, Vector3 value)
     {

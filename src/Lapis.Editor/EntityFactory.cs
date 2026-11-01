@@ -76,13 +76,20 @@ internal static class EntityFactory
 
     public static Entity CreateLight(Scene scene, LightType type, Entity? parent = null)
     {
-        var entity = Create(scene, type == LightType.Directional ? "Directional Light" : "Point Light", parent);
+        var name = type switch { LightType.Directional => "Directional Light", LightType.Spot => "Spot Light", _ => "Point Light" };
+        var entity = Create(scene, name, parent);
         var light = entity.AddComponent<Light>();
         light.Type = type;
 
         if (type == LightType.Directional)
         {
             entity.Transform.LocalEulerAngles = new Vector3(-50f, 30f, 0f);
+        }
+        else if (type == LightType.Spot)
+        {
+            entity.Transform.LocalEulerAngles = new Vector3(-90f, 0f, 0f); // pointing down
+            light.Intensity = 6f;
+            light.Range = 15f;
         }
         else
         {

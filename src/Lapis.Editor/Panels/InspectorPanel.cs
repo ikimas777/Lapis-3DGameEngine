@@ -414,7 +414,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
         foreach (var member in SerializedMember.For(component.GetType()))
         {
-            if (member.GetAttribute<HideInEditorAttribute>() is not null)
+            if (!member.IsShownIn(component))
             {
                 continue;
             }

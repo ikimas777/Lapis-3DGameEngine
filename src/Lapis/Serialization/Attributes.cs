@@ -15,6 +15,23 @@ public sealed class DoNotSerializeAttribute : Attribute;
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public sealed class HideInEditorAttribute : Attribute;
 
+/// <summary>
+/// Shows the member in the editor only while another member of the same object has one of the given values,
+/// e.g. <c>[ShowWhen(nameof(Mode), FogMode.Linear)]</c>. Several of these must all be true. The member is still
+/// saved and can be changed from scripts either way.
+/// </summary>
+/// <param name="member">Name of the other field or property.</param>
+/// <param name="values">Values of that member for which this one is shown.</param>
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
+public sealed class ShowWhenAttribute(string member, params object[] values) : Attribute
+{
+    /// <summary>Name of the member that decides.</summary>
+    public string Member { get; } = member;
+
+    /// <summary>Values for which the member is shown.</summary>
+    public IReadOnlyList<object> Values { get; } = values;
+}
+
 /// <summary>Shows a numeric member as a slider between <see cref="Min"/> and <see cref="Max"/> in the editor.</summary>
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
 public sealed class RangeAttribute(float min, float max) : Attribute

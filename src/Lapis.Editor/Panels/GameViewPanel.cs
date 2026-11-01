@@ -83,6 +83,7 @@ internal sealed unsafe class GameViewPanel(EditorContext context, SceneRenderer 
 
         framebuffer.Bind();
         renderer.Render(context.Scene, RenderView.FromCamera(camera, framebuffer.AspectRatio));
+        renderer.RenderScreenFade();
         framebuffer.Unbind();
 
         var origin = ImGui.GetCursorScreenPos();

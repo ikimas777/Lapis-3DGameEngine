@@ -108,6 +108,7 @@ internal sealed unsafe class SceneViewPanel(
         }
 
         CameraGizmos.Add(lines, context.Scene, context.IsSelected);
+        LightGizmos.Add(lines, context.Scene, context.IsSelected);
         lines.Render(view);
         framebuffer.Unbind();
 

@@ -63,6 +63,11 @@ internal sealed class SceneSettingsPanel(EditorContext context, Func<uint> inspe
         ImGui.PushID(target.GetType().Name);
         foreach (var member in SerializedMember.For(target.GetType()))
         {
+            if (!member.IsShownIn(target))
+            {
+                continue;
+            }
+
             var before = member.GetValue(target);
             if (PropertyGrid.Member(target, member, scene))
             {

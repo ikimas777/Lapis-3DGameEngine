@@ -20,21 +20,24 @@ public readonly record struct RenderView(Matrix4x4 View, Matrix4x4 Projection, V
 /// </summary>
 public sealed class SceneRenderer : IDisposable
 {
-    /// <summary>Maximum number of point lights affecting the scene; extra lights are ignored.</summary>
-    public const int MaxPointLights = 8;
+    /// <summary>Maximum number of point and spot lights affecting the scene (together); extra lights are ignored.</summary>
+    public const int MaxLocalLights = 8;
 
-    private static readonly string[] PointLightPositionNames = UniformArrayNames("u_PointLightPositions");
-    private static readonly string[] PointLightColorNames = UniformArrayNames("u_PointLightColors");
-    private static readonly string[] PointLightRangeNames = UniformArrayNames("u_PointLightRanges");
+    private static readonly string[] LocalLightPositionNames = UniformArrayNames("u_LocalLightPositions");
+    private static readonly string[] LocalLightColorNames = UniformArrayNames("u_LocalLightColors");
+    private static readonly string[] LocalLightRangeNames = UniformArrayNames("u_LocalLightRanges");
+    private static readonly string[] LocalLightDirectionNames = UniformArrayNames("u_LocalLightDirections");
+    private static readonly string[] LocalLightConeNames = UniformArrayNames("u_LocalLightCones");
 
     private readonly GL _gl;
     private readonly Shader _litShader;
     private readonly MeshLibrary _meshes;
     private readonly TextureLibrary _textures;
     private readonly List<MeshRenderer> _renderers = [];
-    private readonly List<Light> _pointLights = [];
+    private readonly List<Light> _localLights = [];
     private readonly Shader _shadowShader;
     private readonly Shader _skyShader;
+    private readonly Shader _fadeShader;
     private readonly ShadowMap _shadowMap;
     private readonly uint _emptyVertexArray;
     private Light? _directionalLight;
@@ -49,6 +52,7 @@ public sealed class SceneRenderer : IDisposable
         _textures = new TextureLibrary(gl);
         _shadowShader = Shader.LoadBuiltIn(gl, "shadow");
         _skyShader = Shader.LoadBuiltIn(gl, "fullscreen", "sky");
+        _fadeShader = Shader.LoadBuiltIn(gl, "fullscreen", "fade");
         _shadowMap = new ShadowMap(gl, 2048);
         _emptyVertexArray = gl.GenVertexArray(); // the sky triangle is generated in the shader
     }
@@ -87,7 +91,9 @@ public sealed class SceneRenderer : IDisposable
         _shadowDrawCount = 0;
         var shadows = _directionalLight is { CastShadows: true } && RenderShadowMap(view, _directionalLight, environment.ShadowDistance);
 
-        var background = view.BackgroundColor.ToLinear();
+        // Without a sky, fog also covers the empty background (seen from inside the fog), so far objects fade into it.
+        var foggyBackground = environment.Fog && !environment.Skybox && view.Position.Y <= environment.FogHeight;
+        var background = (foggyBackground ? environment.FogColor : view.BackgroundColor).ToLinear();
         _gl.ClearColor(MathF.Pow(background.R, 1f / 2.2f), MathF.Pow(background.G, 1f / 2.2f), MathF.Pow(background.B, 1f / 2.2f), 1f);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -137,6 +143,33 @@ public sealed class SceneRenderer : IDisposable
         EngineMetrics.EndRender(metricsStart);
     }
 
+    /// <summary>
+    /// Draws <see cref="Screen.FadeColor"/> over the whole current framebuffer (nothing when it is clear).
+    /// Call after <see cref="Render"/> for views that show the game, not for the editor's Scene view.
+    /// </summary>
+    public void RenderScreenFade()
+    {
+        var color = Screen.FadeColor;
+        if (color.A <= 0f)
+        {
+            return;
+        }
+
+        _gl.Disable(EnableCap.DepthTest);
+        _gl.Disable(EnableCap.CullFace);
+        _gl.Enable(EnableCap.Blend);
+        _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+        _fadeShader.Use();
+        _fadeShader.Set("u_Color", color.ToVector4());
+        _gl.BindVertexArray(_emptyVertexArray);
+        _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+
+        _gl.Disable(EnableCap.Blend);
+        _gl.Enable(EnableCap.CullFace);
+        _gl.Enable(EnableCap.DepthTest);
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
@@ -144,6 +177,7 @@ public sealed class SceneRenderer : IDisposable
         _textures.Dispose();
         _shadowMap.Dispose();
         _gl.DeleteVertexArray(_emptyVertexArray);
+        _fadeShader.Dispose();
         _skyShader.Dispose();
         _shadowShader.Dispose();
         _litShader.Dispose();
@@ -212,6 +246,9 @@ public sealed class SceneRenderer : IDisposable
             _skyShader.Set("u_SunColor", Vector3.Zero);
         }
 
+        SetFog(_skyShader, environment);
+        _skyShader.Set("u_CameraHeight", view.Position.Y);
+
         _gl.BindVertexArray(_emptyVertexArray);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
 
@@ -223,7 +260,7 @@ public sealed class SceneRenderer : IDisposable
     private void Collect(Scene scene)
     {
         _renderers.Clear();
-        _pointLights.Clear();
+        _localLights.Clear();
         _directionalLight = null;
 
         foreach (var root in scene.Roots)
@@ -250,8 +287,8 @@ public sealed class SceneRenderer : IDisposable
                 case Light { Type: LightType.Directional } light:
                     _directionalLight ??= light;
                     break;
-                case Light { Type: LightType.Point } light when _pointLights.Count < MaxPointLights:
-                    _pointLights.Add(light);
+                case Light { Type: LightType.Point or LightType.Spot } light when _localLights.Count < MaxLocalLights:
+                    _localLights.Add(light);
                     break;
             }
         }
@@ -279,16 +316,48 @@ public sealed class SceneRenderer : IDisposable
             shader.Set("u_LightColor", Vector3.Zero);
         }
 
-        shader.Set("u_PointLightCount", _pointLights.Count);
-        for (var i = 0; i < _pointLights.Count; i++)
+        shader.Set("u_LocalLightCount", _localLights.Count);
+        for (var i = 0; i < _localLights.Count; i++)
         {
-            var light = _pointLights[i];
-            shader.Set(PointLightPositionNames[i], light.transform.Position);
-            shader.Set(PointLightColorNames[i], light.Color.ToLinear().WithIntensity(light.Intensity).ToVector3());
-            shader.Set(PointLightRangeNames[i], MathF.Max(light.Range, 0.01f));
+            var light = _localLights[i];
+            shader.Set(LocalLightPositionNames[i], light.transform.Position);
+            shader.Set(LocalLightColorNames[i], light.Color.ToLinear().WithIntensity(light.Intensity).ToVector3());
+            shader.Set(LocalLightRangeNames[i], MathF.Max(light.Range, 0.01f));
+            shader.Set(LocalLightDirectionNames[i], light.transform.Forward);
+            shader.Set(LocalLightConeNames[i], SpotCone(light));
         }
+
+        SetFog(shader, environment);
+    }
+
+    /// <summary>Sets the fog uniforms shared by the lit and the sky shaders.</summary>
+    private static void SetFog(Shader shader, SceneEnvironment environment)
+    {
+        shader.Set("u_FogMode", !environment.Fog ? 0 : environment.FogMode == FogMode.Linear ? 1 : 2);
+        shader.Set("u_FogColor", environment.FogColor.ToVector3());
+        shader.Set("u_FogDensity", MathF.Max(environment.FogDensity, 0f));
+        shader.Set("u_FogStart", environment.FogStart);
+        shader.Set("u_FogEnd", MathF.Max(environment.FogEnd, environment.FogStart + 0.01f));
+        shader.Set("u_FogHeight", environment.FogHeight);
+    }
+
+    /// <summary>
+    /// Cosines of the cone's outer and inner half angles: full light inside the inner one, none outside the outer.
+    /// Point lights get a cone wider than all directions.
+    /// </summary>
+    internal static Vector2 SpotCone(Light light)
+    {
+        if (light.Type != LightType.Spot)
+        {
+            return new Vector2(-2f, -1f);
+        }
+
+        var outer = Math.Clamp(light.SpotAngle, 1f, 179f) * 0.5f * MathUtil.Deg2Rad;
+        var inner = outer * (1f - Math.Clamp(light.SpotSoftness, 0f, 1f));
+        var cosOuter = MathF.Cos(outer);
+        return new Vector2(cosOuter, MathF.Max(MathF.Cos(inner), cosOuter + 1e-4f));
     }
 
     private static string[] UniformArrayNames(string name) =>
-        [.. Enumerable.Range(0, MaxPointLights).Select(i => $"{name}[{i}]")];
+        [.. Enumerable.Range(0, MaxLocalLights).Select(i => $"{name}[{i}]")];
 }

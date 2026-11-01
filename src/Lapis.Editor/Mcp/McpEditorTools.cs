@@ -233,7 +233,8 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
             "camera" => EntityFactory.CreateCamera(scene, parentEntity),
             "directional_light" => EntityFactory.CreateLight(scene, LightType.Directional, parentEntity),
             "point_light" => EntityFactory.CreateLight(scene, LightType.Point, parentEntity),
-            _ => throw new McpException($"Unknown shape '{shape}'. Use empty, cube, sphere, plane, camera, directional_light or point_light."),
+            "spot_light" => EntityFactory.CreateLight(scene, LightType.Spot, parentEntity),
+            _ => throw new McpException($"Unknown shape '{shape}'. Use empty, cube, sphere, plane, camera, directional_light, point_light or spot_light."),
         };
 
         if (!string.IsNullOrWhiteSpace(name))

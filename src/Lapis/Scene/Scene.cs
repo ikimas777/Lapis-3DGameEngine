@@ -272,4 +272,51 @@ public sealed class SceneEnvironment
     /// <summary>How far from the camera shadows are drawn; smaller values give sharper shadows.</summary>
     [Range(5, 200)]
     public float ShadowDistance { get; set; } = 40f;
+
+    /// <summary>Fade distant objects, and the sky near the horizon, into <see cref="FogColor"/>.</summary>
+    public bool Fog { get; set; }
+
+    /// <summary>How fog grows with distance.</summary>
+    [ShowWhen(nameof(Fog), true)]
+    public FogMode FogMode { get; set; } = FogMode.Exponential;
+
+    /// <summary>Colour of the fog (sRGB), seen as is where the fog is thickest.</summary>
+    [ShowWhen(nameof(Fog), true)]
+    public Color FogColor { get; set; } = new(0.5f, 0.53f, 0.56f);
+
+    /// <summary>Exponential fog: how thick it is. At 1 / density metres about two thirds of the view is fog.</summary>
+    [Range(0, 1)]
+    [ShowWhen(nameof(Fog), true)]
+    [ShowWhen(nameof(FogMode), FogMode.Exponential)]
+    public float FogDensity { get; set; } = 0.05f;
+
+    /// <summary>Linear fog: distance in metres where the fog begins.</summary>
+    [Range(0, 500)]
+    [ShowWhen(nameof(Fog), true)]
+    [ShowWhen(nameof(FogMode), FogMode.Linear)]
+    public float FogStart { get; set; } = 5f;
+
+    /// <summary>Linear fog: distance in metres where only fog is seen.</summary>
+    [Range(0, 500)]
+    [ShowWhen(nameof(Fog), true)]
+    [ShowWhen(nameof(FogMode), FogMode.Linear)]
+    public float FogEnd { get; set; } = 40f;
+
+    /// <summary>
+    /// Height (world Y, in metres) of the top of the fog: below it the air is foggy, above it clear, like mist
+    /// lying on the ground or filling a basement. The highest value (50) covers practically everything.
+    /// </summary>
+    [Range(0, 50)]
+    [ShowWhen(nameof(Fog), true)]
+    public float FogHeight { get; set; } = 50f;
+}
+
+/// <summary>How <see cref="SceneEnvironment.Fog"/> grows with distance.</summary>
+public enum FogMode
+{
+    /// <summary>Thickens smoothly with distance and never quite ends; the most natural look.</summary>
+    Exponential,
+
+    /// <summary>Clear up to <see cref="SceneEnvironment.FogStart"/>, only fog from <see cref="SceneEnvironment.FogEnd"/> on.</summary>
+    Linear,
 }

@@ -229,6 +229,88 @@ Attributes for the Inspector:
 | `Input.GetMouseButton(MouseButton.Left)`, `Input.MousePosition` | Mouse |
 | `Log.Info("...")`, `Log.Warning`, `Log.Error` | Messages in the Console |
 | `MathUtil.FromEulerDegrees`, `Vector3.ClampLength`, `MathUtil.Lerp` | Math helpers |
+| `Screen.FadeTo(Color.Black, 0.1f)`, `Screen.FadeIn(0.2f)`, `Screen.IsFading` | Fading the picture (see below) |
+| `entity.Scene.Environment.FogDensity = 0.2f` | Fog and other scene settings (see below) |
+
+## Lights, fog and fading
+
+**Lights.** A `Light` is `Directional` (the sun), `Point` (a bulb shining everywhere) or `Spot` (a flashlight).
+**Create > Spot Light** adds one pointing down. A spot light shines along the object's forward direction (−Z):
+- `SpotAngle` is the width of its cone in degrees;
+- `SpotSoftness` sets the edge, from 0 (sharp) to 1 (fading from the centre);
+- `Range` is how far it reaches.
+
+The Scene view draws the cone of a selected spot light. Up to 8 point and spot lights light the scene together.
+Only the directional light casts shadows for now.
+
+A flashlight is a spot light on a child of the camera; turning it off is one line:
+
+```csharp
+public class Flashlight : Behaviour
+{
+    public override void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            var light = entity.GetComponent<Light>()!;
+            light.Intensity = light.Intensity > 0f ? 0f : 6f;
+        }
+    }
+}
+```
+
+**Fog** is a scene setting: tick **Fog** in the **Scene Settings** tab and its options appear:
+- **Mode:** *Exponential* thickens smoothly with distance; *Linear* is clear up to a distance and then thickens
+  evenly.
+- **Color:** what the thickest fog looks like.
+- **Density** (Exponential only): at 1 / density metres about two thirds of the view is fog.
+- **Fog Start** and **Fog End** (Linear only): clear up to Start, only fog from End, in metres.
+- **Fog Height:** the top of the fog, as a world height in metres. Objects below it are fogged and above it clear,
+  like mist lying on the ground (e.g. 0.5). It also sets how far up the sky the fog reaches: from a camera inside
+  the fog, a higher top covers more of the sky, and the highest value (50) hides it with the default density. A camera above
+  the fog sees a clear sky.
+
+The editor only shows the options that apply to the chosen mode, and the same goes for lights: **Range** only
+for point and spot lights, the cone only for spot lights, **Cast Shadows** only for the directional light.
+
+When the sky is off, fog seen from inside it also covers the empty background. Scripts can change the fog
+while the game runs, for example to thicken it near a monster:
+
+```csharp
+var environment = entity.Scene.Environment;
+environment.Fog = true;
+environment.FogDensity = MathUtil.Lerp(0.05f, 0.3f, closeness);
+```
+
+**Fading** covers the game picture (the Game view and exported games, not the Scene view) with a colour:
+- `Screen.FadeTo(color, seconds)` blends towards `color`, whose alpha says how much it covers;
+- `Screen.FadeOut(seconds)` goes to black;
+- `Screen.FadeIn(seconds)` clears the picture again;
+- `Screen.IsFading` is true while a fade runs, and `Screen.FadeColor` is the colour shown now.
+
+Fades follow game time, so they stop while the game is paused, and every Play starts with a clear picture.
+A blink:
+
+```csharp
+public class Blink : Behaviour
+{
+    private bool _closing;
+
+    public override void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space) && !Screen.IsFading)
+        {
+            Screen.FadeTo(Color.Black, 0.08f); // eyes close
+            _closing = true;
+        }
+        else if (_closing && !Screen.IsFading)
+        {
+            Screen.FadeIn(0.12f); // and open again
+            _closing = false;
+        }
+    }
+}
+```
 
 ## Tags
 

@@ -46,6 +46,30 @@ public sealed class SerializedMember
     public T? GetAttribute<T>()
         where T : Attribute => Member.GetCustomAttribute<T>();
 
+    /// <summary>
+    /// Whether the editor shows the member for <paramref name="target"/> now: not when it has
+    /// <see cref="HideInEditorAttribute"/>, and with <see cref="ShowWhenAttribute"/> only while the other member
+    /// has one of the listed values (e.g. fog start only for linear fog).
+    /// </summary>
+    public bool IsShownIn(object target)
+    {
+        if (GetAttribute<HideInEditorAttribute>() is not null)
+        {
+            return false;
+        }
+
+        foreach (var condition in Member.GetCustomAttributes<ShowWhenAttribute>())
+        {
+            var other = For(target.GetType()).FirstOrDefault(member => member.Name == condition.Member);
+            if (other is not null && !condition.Values.Contains(other.GetValue(target)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>Reads the value from <paramref name="target"/>.</summary>
     public object? GetValue(object target) => _field is not null ? _field.GetValue(target) : _property!.GetValue(target);
 

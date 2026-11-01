@@ -261,6 +261,13 @@ See the [assets guide](docs/assets.md).
 (a Windows `.exe`, or a Linux executable)
 without the editor or .NET. See the [export guide](docs/export.md).
 
+### Lights, fog and fading
+
+Lights are directional (the sun), point (a bulb) or spot (a flashlight: **Create > Spot Light**, with a cone angle
+and a soft edge). **Fog** (exponential or linear, any colour, optionally only up to a height) is set in the **Scene Settings** tab, and scripts
+can fade the game picture to a colour with `Screen.FadeTo(Color.Black, 0.1f)`, e.g. for a blink. See
+[Lights, fog and fading](docs/scripting.md#lights-fog-and-fading).
+
 ### Physics
 
 Colliders and rigid bodies are simulated with [Jolt](https://github.com/jrouwe/JoltPhysics) while the game

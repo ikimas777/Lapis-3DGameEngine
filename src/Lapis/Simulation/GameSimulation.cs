@@ -25,6 +25,7 @@ public sealed class GameSimulation : IDisposable
         };
         _scripts.PhysicsStep += _physics.Step;
         Lapis.Physics.ActiveWorld = _physics;
+        Screen.Reset(); // every run starts with a clear picture
     }
 
     /// <summary>The scene being simulated.</summary>
@@ -41,6 +42,7 @@ public sealed class GameSimulation : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _scripts.Tick(deltaTime);
+        Screen.Advance(deltaTime);
     }
 
     /// <summary>Calls <c>OnDestroy</c> on the scripts and releases the physics engine.</summary>
@@ -52,6 +54,7 @@ public sealed class GameSimulation : IDisposable
         }
 
         _scripts.Shutdown();
+        Screen.Reset();
         if (Lapis.Physics.ActiveWorld == _physics)
         {
             Lapis.Physics.ActiveWorld = null;

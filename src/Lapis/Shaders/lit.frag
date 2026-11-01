@@ -1,6 +1,6 @@
 #version 410 core
 
-#define MAX_POINT_LIGHTS 8
+#define MAX_LOCAL_LIGHTS 8
 #define PI 3.14159265
 
 in vec3 v_WorldPosition;
@@ -27,15 +27,26 @@ uniform float u_ShadowTexelSize;      // world units per shadow texel
 uniform vec3 u_ShadowCenter;
 uniform float u_ShadowDistance;
 
-// Point lights; colours are premultiplied by intensity.
-uniform int u_PointLightCount;
-uniform vec3 u_PointLightPositions[MAX_POINT_LIGHTS];
-uniform vec3 u_PointLightColors[MAX_POINT_LIGHTS];
-uniform float u_PointLightRanges[MAX_POINT_LIGHTS];
+// Point and spot lights; colours are premultiplied by intensity. A spot light lights the cone around its
+// direction: full light inside cos(inner), none outside cos(outer). Point lights use a cone that covers everything.
+uniform int u_LocalLightCount;
+uniform vec3 u_LocalLightPositions[MAX_LOCAL_LIGHTS];
+uniform vec3 u_LocalLightColors[MAX_LOCAL_LIGHTS];
+uniform float u_LocalLightRanges[MAX_LOCAL_LIGHTS];
+uniform vec3 u_LocalLightDirections[MAX_LOCAL_LIGHTS];
+uniform vec2 u_LocalLightCones[MAX_LOCAL_LIGHTS]; // (cos outer, cos inner)
 
 // Hemisphere ambient: sky colour from above, ground colour from below.
 uniform vec3 u_SkyColor;
 uniform vec3 u_GroundColor;
+
+// Fog: 0 = off, 1 = linear from start to end, 2 = exponential with the density. The colour is sRGB.
+uniform int u_FogMode;
+uniform vec3 u_FogColor;
+uniform float u_FogDensity;
+uniform float u_FogStart;
+uniform float u_FogEnd;
+uniform float u_FogHeight;  // world Y of the top of the fog
 
 out vec4 o_Color;
 
@@ -119,6 +130,30 @@ float shadowFactor(vec3 normal, vec3 toLight)
     return mix(lit, 1.0, fade);
 }
 
+// How much fog covers a point this far from the camera (0 = clear, 1 = only fog).
+float fogAmount(float dist)
+{
+    if (u_FogMode == 1)
+    {
+        return clamp((dist - u_FogStart) / max(u_FogEnd - u_FogStart, 1e-4), 0.0, 1.0);
+    }
+
+    if (u_FogMode == 2)
+    {
+        float d = u_FogDensity * dist;
+        return 1.0 - exp(-d * d);
+    }
+
+    return 0.0;
+}
+
+// Fog lies below u_FogHeight: surfaces below it get the full fog for their distance, surfaces above it none,
+// with a soft metre-high edge in between (like mist on the floor seen from above).
+float fogBelowHeight(float y)
+{
+    return 1.0 - smoothstep(u_FogHeight - 0.5, u_FogHeight + 0.5, y);
+}
+
 // ACES filmic tone mapping (Narkowicz's fit): keeps bright highlights from clipping harshly.
 vec3 toneMap(vec3 color)
 {
@@ -146,14 +181,19 @@ void main()
     vec3 toSun = normalize(-u_LightDirection);
     color += shade(albedo, f0, n, v, toSun, u_LightColor) * shadowFactor(n, toSun);
 
-    for (int i = 0; i < u_PointLightCount; i++)
+    for (int i = 0; i < u_LocalLightCount; i++)
     {
-        vec3 offset = u_PointLightPositions[i] - v_WorldPosition;
+        vec3 offset = u_LocalLightPositions[i] - v_WorldPosition;
         float dist = length(offset);
-        float ratio = clamp(dist / u_PointLightRanges[i], 0.0, 1.0);
+        vec3 l = offset / max(dist, 1e-4);
+        float ratio = clamp(dist / u_LocalLightRanges[i], 0.0, 1.0);
         float falloff = (1.0 - ratio * ratio) * (1.0 - ratio * ratio) / (1.0 + dist * dist);
-        color += shade(albedo, f0, n, v, offset / max(dist, 1e-4), u_PointLightColors[i] * falloff);
+        float cone = smoothstep(u_LocalLightCones[i].x, u_LocalLightCones[i].y, dot(-l, u_LocalLightDirections[i]));
+        color += shade(albedo, f0, n, v, l, u_LocalLightColors[i] * falloff * cone);
     }
 
-    o_Color = vec4(pow(toneMap(color), vec3(1.0 / 2.2)), 1.0);
+    vec3 display = pow(toneMap(color), vec3(1.0 / 2.2));
+    float fog = fogAmount(distance(u_CameraPosition, v_WorldPosition)) * fogBelowHeight(v_WorldPosition.y);
+    display = mix(display, u_FogColor, fog);
+    o_Color = vec4(display, 1.0);
 }

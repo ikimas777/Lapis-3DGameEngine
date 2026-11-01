@@ -78,6 +78,7 @@ internal sealed class RuntimeApplication(RuntimeOptions options, GameManifest ma
         else
         {
             _renderer!.Render(_scene, RenderView.FromCamera(camera, _aspectRatio));
+            _renderer.RenderScreenFade();
         }
 
         if (options.CapturePath is { } capture && Time.FrameCount >= options.CaptureAfterFrames)
