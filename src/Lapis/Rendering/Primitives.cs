@@ -80,6 +80,131 @@ public static class Primitives
         return new MeshData(vertices, indices);
     }
 
+    /// <summary>
+    /// Capsule standing along Y: a cylinder with half-sphere ends, smooth normals. The default matches a
+    /// <see cref="CapsuleCollider"/>: 2 units tall with a radius of 0.5.
+    /// </summary>
+    /// <param name="radius">Radius of the cylinder and the rounded ends.</param>
+    /// <param name="height">Total height including both ends (at least twice the radius).</param>
+    /// <param name="segments">Divisions around the vertical axis (at least 3).</param>
+    /// <param name="capRings">Divisions of each rounded end from the pole to the cylinder (at least 1).</param>
+    public static MeshData CreateCapsule(float radius = 0.5f, float height = 2f, int segments = 32, int capRings = 8)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(segments, 3);
+        ArgumentOutOfRangeException.ThrowIfLessThan(capRings, 1);
+
+        var halfCylinder = MathF.Max(height * 0.5f - radius, 0f);
+        var totalHeight = (halfCylinder + radius) * 2f;
+
+        // Rows from the top pole to the bottom one; the two rows at the equator (one per end) form the cylinder.
+        var rows = new List<(float Theta, float Offset)>();
+        for (var ring = 0; ring <= capRings; ring++)
+        {
+            rows.Add((MathF.PI * 0.5f * ring / capRings, halfCylinder));
+        }
+
+        for (var ring = 0; ring <= capRings; ring++)
+        {
+            rows.Add((MathF.PI * 0.5f + MathF.PI * 0.5f * ring / capRings, -halfCylinder));
+        }
+
+        var vertices = new Vertex[rows.Count * (segments + 1)];
+        for (var row = 0; row < rows.Count; row++)
+        {
+            var (theta, offset) = rows[row];
+            for (var segment = 0; segment <= segments; segment++)
+            {
+                var phi = 2f * MathF.PI * segment / segments;
+                var normal = new Vector3(MathF.Sin(theta) * MathF.Cos(phi), MathF.Cos(theta), -MathF.Sin(theta) * MathF.Sin(phi));
+                var position = normal * radius + new Vector3(0f, offset, 0f);
+                var uv = new Vector2((float)segment / segments, position.Y / totalHeight + 0.5f);
+                vertices[row * (segments + 1) + segment] = new Vertex(position, normal, uv);
+            }
+        }
+
+        var indices = new uint[(rows.Count - 1) * segments * 6];
+        var index = 0;
+        for (var row = 0; row < rows.Count - 1; row++)
+        {
+            for (var segment = 0; segment < segments; segment++)
+            {
+                var a = (uint)(row * (segments + 1) + segment);
+                var b = a + (uint)(segments + 1);
+                var c = b + 1;
+                var d = a + 1;
+                indices[index++] = a;
+                indices[index++] = b;
+                indices[index++] = c;
+                indices[index++] = a;
+                indices[index++] = c;
+                indices[index++] = d;
+            }
+        }
+
+        return new MeshData(vertices, indices);
+    }
+
+    /// <summary>
+    /// Cylinder standing along Y with flat ends: smooth normals around the side, flat ones on the ends. The
+    /// default matches a <see cref="CylinderCollider"/>: 2 units tall with a radius of 0.5.
+    /// </summary>
+    /// <param name="radius">Radius of the cylinder.</param>
+    /// <param name="height">Total height.</param>
+    /// <param name="segments">Divisions around the vertical axis (at least 3).</param>
+    public static MeshData CreateCylinder(float radius = 0.5f, float height = 2f, int segments = 32)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(segments, 3);
+
+        var half = height * 0.5f;
+        var vertices = new List<Vertex>((segments + 1) * 2 + (segments + 2) * 2);
+        var indices = new List<uint>(segments * 12);
+
+        // Side: a ring at the top and one at the bottom, sharing smooth outward normals.
+        for (var segment = 0; segment <= segments; segment++)
+        {
+            var phi = 2f * MathF.PI * segment / segments;
+            var normal = new Vector3(MathF.Cos(phi), 0f, -MathF.Sin(phi));
+            var u = (float)segment / segments;
+            vertices.Add(new Vertex(normal * radius + new Vector3(0f, half, 0f), normal, new Vector2(u, 1f)));
+            vertices.Add(new Vertex(normal * radius - new Vector3(0f, half, 0f), normal, new Vector2(u, 0f)));
+        }
+
+        for (var segment = 0; segment < segments; segment++)
+        {
+            var top = (uint)(segment * 2);
+            var bottom = top + 1;
+            var nextTop = top + 2;
+            var nextBottom = top + 3;
+            indices.AddRange([top, bottom, nextBottom, top, nextBottom, nextTop]);
+        }
+
+        AddDisc(vertices, indices, radius, half, Vector3.UnitY, segments);
+        AddDisc(vertices, indices, radius, -half, -Vector3.UnitY, segments);
+        return new MeshData([.. vertices], [.. indices]);
+    }
+
+    /// <summary>A flat round end of a cylinder at height <paramref name="y"/>, facing <paramref name="normal"/>.</summary>
+    private static void AddDisc(List<Vertex> vertices, List<uint> indices, float radius, float y, Vector3 normal, int segments)
+    {
+        var center = (uint)vertices.Count;
+        vertices.Add(new Vertex(new Vector3(0f, y, 0f), normal, new Vector2(0.5f, 0.5f)));
+        for (var segment = 0; segment <= segments; segment++)
+        {
+            var phi = 2f * MathF.PI * segment / segments;
+            var (sin, cos) = MathF.SinCos(phi);
+            vertices.Add(new Vertex(new Vector3(cos * radius, y, -sin * radius), normal, new Vector2(0.5f + cos * 0.5f, 0.5f + sin * 0.5f)));
+        }
+
+        for (var segment = 0; segment < segments; segment++)
+        {
+            var a = center + 1 + (uint)segment;
+            var b = a + 1;
+
+            // Counter-clockwise seen from outside: the ring runs counter-clockwise seen from above.
+            indices.AddRange(normal.Y > 0f ? [center, a, b] : [center, b, a]);
+        }
+    }
+
     private static void AddQuad(List<Vertex> vertices, List<uint> indices, Vector3 normal, Vector3 u, Vector3 v, float offset, float size)
     {
         var start = (uint)vertices.Count;

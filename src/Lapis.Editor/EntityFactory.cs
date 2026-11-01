@@ -31,6 +31,8 @@ internal static class EntityFactory
         {
             BuiltInMeshes.Cube => "Cube",
             BuiltInMeshes.Sphere => "Sphere",
+            BuiltInMeshes.Capsule => "Capsule",
+            BuiltInMeshes.Cylinder => "Cylinder",
             BuiltInMeshes.Plane => "Plane",
             _ => "Mesh",
         };
@@ -46,6 +48,12 @@ internal static class EntityFactory
                 break;
             case BuiltInMeshes.Sphere:
                 entity.AddComponent<SphereCollider>();
+                break;
+            case BuiltInMeshes.Capsule:
+                entity.AddComponent<CapsuleCollider>(); // 2 tall with a radius of 0.5, like the mesh
+                break;
+            case BuiltInMeshes.Cylinder:
+                entity.AddComponent<CylinderCollider>(); // 2 tall with a radius of 0.5, like the mesh
                 break;
             case BuiltInMeshes.Plane:
                 entity.Transform.LocalScale *= new Vector3(10f, 1f, 10f);

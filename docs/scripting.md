@@ -130,8 +130,9 @@ so one broken script does not stop the rest of the game.
 
 ## Physics
 
-Add a **collider** to give an entity a shape: `BoxCollider`, `SphereCollider`, `CapsuleCollider` or
-`MeshCollider` (static objects only). Cubes, spheres and planes from the Create menu already have one.
+Add a **collider** to give an entity a shape: `BoxCollider`, `SphereCollider`, `CapsuleCollider`,
+`CylinderCollider`, or `MeshCollider` (static objects only). Cubes, spheres, capsules, cylinders and planes
+from the Create menu already have one.
 
 | Setup | Behaves like |
 |---|---|
@@ -142,6 +143,17 @@ Add a **collider** to give an entity a shape: `BoxCollider`, `SphereCollider`, `
 
 Gravity and the physics rate are scene settings, edited in the **Scene Settings** tab next to the Inspector.
 The Scene view draws collider outlines in green (blue for triggers); Edit > Show Colliders toggles them.
+
+To fit a collider to an object by hand, select it and press **4** (or **Collider** in the Scene view toolbar,
+or **Edit Collider** in the Inspector). Dots appear on the sides of a box, sphere, capsule, cylinder or
+Character Controller; drag them:
+- **Box:** dragging one face moves only that face.
+- **Sphere:** the dots change the radius.
+- **Capsule, cylinder and Character Controller:** the dots around the middle change the radius, and the dots at
+  the ends change the height, with the other end staying put.
+
+Hold Ctrl (or turn on Snap) to snap to 0.1 steps. Each drag is one undo step. Press 4 again, or pick the
+Move, Rotate or Scale tool, to get the gizmo back.
 
 Moving a dynamic body:
 
@@ -192,18 +204,6 @@ Notes and current limits:
 - Physics runs at a fixed rate (50 steps per second by default); transforms of dynamic bodies are updated each step.
 - Changing a collider or rigid body in the Inspector while playing rebuilds that body.
 
-## Fields in the Inspector
-
-| Field | Shown in the Inspector and saved? |
-|---|---|
-| `public float speed;` | yes |
-| `[Serialize] private int _health;` | yes (shown as "Health") |
-| `[DoNotSerialize] public int cache;` | no |
-| `[HideInEditor] public int id;` | saved, but not shown |
-| `public float Speed { get; set; }` | yes (public get and set) |
-| `public float Double => speed * 2;` | no (read-only) |
-
-Supported types: `float`, `double`, `int`, `bool`, `string`, enums, `Vector2`, `Vector3`, `Vector4`,
 ### Character Controller
 
 A **Character Controller** (Add Component > Character Controller) moves a player or a creature without letting it
@@ -283,6 +283,18 @@ Triggers notice the character (`OnTriggerBegin` on the trigger's scripts), so a 
 when the player walks in. `Physics.Raycast` hits it, so a creature can check whether it sees the player. The
 character itself passes through triggers. The entity's scale does not change the capsule.
 
+## Fields in the Inspector
+
+| Field | Shown in the Inspector and saved? |
+|---|---|
+| `public float speed;` | yes |
+| `[Serialize] private int _health;` | yes (shown as "Health") |
+| `[DoNotSerialize] public int cache;` | no |
+| `[HideInEditor] public int id;` | saved, but not shown |
+| `public float Speed { get; set; }` | yes (public get and set) |
+| `public float Double => speed * 2;` | no (read-only) |
+
+Supported types: `float`, `double`, `int`, `bool`, `string`, enums, `Vector2`, `Vector3`, `Vector4`,
 `Quaternion` (edited as angles), `Color`, `Entity` and any component type. Drag an entity from the
 Hierarchy onto an `Entity` or component field to assign it.
 

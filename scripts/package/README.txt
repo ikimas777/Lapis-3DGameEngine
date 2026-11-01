@@ -41,6 +41,7 @@ Useful shortcuts
   Middle mouse + drag     Pan                  Mouse wheel        Zoom
   F                       Focus the selected object
   1 / 2 / 3               Move / Rotate / Scale tool
+  4                       Collider tool: drag the dots to resize the selected collider
   Ctrl+S                  Save the scene       Ctrl+Z / Ctrl+Y    Undo / Redo
   Ctrl+P                  Play / Stop          Ctrl+D             Duplicate
   Ctrl+click / Shift+click  Select several objects (Hierarchy, Scene view, Assets)

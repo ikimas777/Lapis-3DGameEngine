@@ -75,7 +75,7 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
     [McpServerTool(Name = "create_entity"), Description("Creates an entity: empty, a shape (with a collider) or a camera or light. Returns its id.")]
     public Task<string> CreateEntity(
         [Description("Name; the shape's name when empty.")] string? name = null,
-        [Description("empty, cube, sphere, plane, camera, directional_light, point_light or spot_light.")] string shape = "empty",
+        [Description("empty, cube, sphere, capsule, cylinder, plane, camera, directional_light, point_light or spot_light.")] string shape = "empty",
         [Description("Parent entity; empty for the top level.")] string? parent = null,
         [Description("Local position [x, y, z].")] float[]? position = null,
         [Description("Local rotation in degrees [x, y, z].")] float[]? rotation = null,

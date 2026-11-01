@@ -49,6 +49,13 @@ internal static class ColliderGizmos
                 case CapsuleCollider capsule:
                     lines.AddCapsule(center, rotation, capsule.Radius * MathF.Max(scale.X, scale.Z), capsule.Height * scale.Y, color);
                     break;
+                case CylinderCollider cylinder:
+                    lines.AddCylinder(center, rotation, cylinder.Radius * MathF.Max(scale.X, scale.Z), cylinder.Height * scale.Y, color);
+                    break;
+                case CharacterController character:
+                    // Always upright and unscaled, like the character itself.
+                    lines.AddCapsule(transform.Position + character.Center, Quaternion.Identity, character.Radius, character.Height, color);
+                    break;
                 case MeshCollider when entity.GetComponent<MeshRenderer>() is { } renderer && BuiltInMeshes.GetData(renderer.MeshId) is { } mesh:
                     AddMeshBounds(lines, renderer.ModelMatrix, mesh, color);
                     break;

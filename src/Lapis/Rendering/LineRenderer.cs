@@ -84,6 +84,23 @@ public sealed unsafe class LineRenderer : IDisposable
         AddCircle(center, right, forward, radius, color);
     }
 
+    /// <summary>A cylinder with flat ends standing along the Y axis of <paramref name="rotation"/>.</summary>
+    public void AddCylinder(Vector3 center, Quaternion rotation, float radius, float height, Color color)
+    {
+        var right = Vector3.Transform(Vector3.UnitX, rotation);
+        var up = Vector3.Transform(Vector3.UnitY, rotation);
+        var forward = Vector3.Transform(Vector3.UnitZ, rotation);
+        var top = center + up * (height * 0.5f);
+        var bottom = center - up * (height * 0.5f);
+
+        AddCircle(top, right, forward, radius, color);
+        AddCircle(bottom, right, forward, radius, color);
+        AddLine(top + right * radius, bottom + right * radius, color);
+        AddLine(top - right * radius, bottom - right * radius, color);
+        AddLine(top + forward * radius, bottom + forward * radius, color);
+        AddLine(top - forward * radius, bottom - forward * radius, color);
+    }
+
     /// <summary>A capsule standing along the Y axis of <paramref name="rotation"/>.</summary>
     public void AddCapsule(Vector3 center, Quaternion rotation, float radius, float height, Color color)
     {

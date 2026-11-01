@@ -559,6 +559,15 @@ public sealed class PhysicsWorld : IDisposable
                 break;
             }
 
+            case CylinderCollider cylinder:
+            {
+                var radius = MathF.Max(cylinder.Radius * MathF.Max(scale.X, scale.Z), 0.005f);
+                var halfHeight = MathF.Max(cylinder.Height * scale.Y * 0.5f, 0.005f);
+                var convexRadius = MathF.Min(Foundation.DefaultConvexRadius, MathF.Min(radius, halfHeight) * 0.5f);
+                settings = new CylinderShapeSettings(halfHeight, radius, convexRadius);
+                break;
+            }
+
             case MeshCollider meshCollider:
                 if (CreateMeshShapeSettings(meshCollider, scale, motion) is not { } meshSettings)
                 {
@@ -648,15 +657,6 @@ public sealed class PhysicsWorld : IDisposable
         }
     }
 
-    // ---------------------------------------------------------------- contacts
-
-    private void OnContactAdded(PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, ref ContactSettings settings)
-    {
-        var point = manifold.PointCount > 0 ? manifold.GetWorldSpaceContactPointOn1(0) : body1.Position;
-        _contactEvents.Enqueue(new ContactEvent(true, body1.ID.ID, body2.ID.ID, point, manifold.WorldSpaceNormal));
-    }
-
-    private void OnContactRemoved(PhysicsSystem system, ref SubShapeIDPair pair) =>
     // ---------------------------------------------------------------- characters
 
     /// <summary>Creates the character of a controller, rebuilds it after its shape changed, or follows a teleport.</summary>
@@ -861,6 +861,15 @@ public sealed class PhysicsWorld : IDisposable
         public Vector3 LastPosition { get; set; }
     }
 
+    // ---------------------------------------------------------------- contacts
+
+    private void OnContactAdded(PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, ref ContactSettings settings)
+    {
+        var point = manifold.PointCount > 0 ? manifold.GetWorldSpaceContactPointOn1(0) : body1.Position;
+        _contactEvents.Enqueue(new ContactEvent(true, body1.ID.ID, body2.ID.ID, point, manifold.WorldSpaceNormal));
+    }
+
+    private void OnContactRemoved(PhysicsSystem system, ref SubShapeIDPair pair) =>
         _contactEvents.Enqueue(new ContactEvent(false, pair.Body1ID.ID, pair.Body2ID.ID, Vector3.Zero, Vector3.Zero));
 
     private void DispatchContactEvents()
@@ -964,6 +973,7 @@ public sealed class PhysicsWorld : IDisposable
                 BoxCollider box => new Vector4(box.Size, 0f),
                 SphereCollider sphere => new Vector4(sphere.Radius, 0f, 0f, 0f),
                 CapsuleCollider capsule => new Vector4(capsule.Radius, capsule.Height, 0f, 0f),
+                CylinderCollider cylinder => new Vector4(cylinder.Radius, cylinder.Height, 0f, 0f),
                 _ => Vector4.Zero,
             };
 

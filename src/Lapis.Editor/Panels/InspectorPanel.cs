@@ -412,6 +412,31 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             }
         }
 
+        if (component is Collider collider && SceneView.ColliderHandles.CanEdit(collider))
+        {
+            // Same switch as the Scene view's Collider tool (key 4): dots on the collider's sides to drag.
+            var editing = context.EditingCollider;
+            if (editing)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, Theme.EditorTheme.Accent);
+            }
+
+            if (ImGui.Button(editing ? "Editing Collider (drag the dots in the Scene view)##editCollider" : "Edit Collider##editCollider", new Vector2(-1, 0)))
+            {
+                context.EditingCollider = !editing;
+            }
+
+            if (editing)
+            {
+                ImGui.PopStyleColor();
+            }
+
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip("Resize the collider by dragging the dots on its sides in the Scene view (4)");
+            }
+        }
+
         foreach (var member in SerializedMember.For(component.GetType()))
         {
             if (!member.IsShownIn(component))

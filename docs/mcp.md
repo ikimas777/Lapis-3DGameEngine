@@ -151,7 +151,7 @@ The server offers 32 tools. Assistants read this list (with the same description
 
 | Tool | Parameters | What it does | Permission |
 |---|---|---|---|
-| `create_entity` | *`name`*, *`shape`*, *`parent`*, *`position`*, *`rotation`*, *`scale`*, *`physics`* | Creates `empty` (default), `cube`, `sphere`, `plane` (shapes come with a collider; `physics: true` adds a RigidBody), `camera`, `directional_light`, `point_light` or `spot_light`. Returns its id | Edit the scene |
+| `create_entity` | *`name`*, *`shape`*, *`parent`*, *`position`*, *`rotation`*, *`scale`*, *`physics`* | Creates `empty` (default), `cube`, `sphere`, `capsule`, `cylinder`, `plane` (shapes come with a collider; `physics: true` adds a RigidBody), `camera`, `directional_light`, `point_light` or `spot_light`. Returns its id | Edit the scene |
 | `delete_entity` | `entity` | Deletes the entity and its children | Edit the scene |
 | `duplicate_entity` | `entity` | Copies the entity with its children and components next to the original | Edit the scene |
 | `rename_entity` | `entity`, `name` | Renames the entity | Edit the scene |

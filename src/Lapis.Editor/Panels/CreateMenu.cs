@@ -32,6 +32,16 @@ internal static class CreateMenu
             created = EntityFactory.CreateMesh(scene, BuiltInMeshes.Sphere, parent);
         }
 
+        if (ImGui.MenuItem("Capsule"))
+        {
+            created = EntityFactory.CreateMesh(scene, BuiltInMeshes.Capsule, parent);
+        }
+
+        if (ImGui.MenuItem("Cylinder"))
+        {
+            created = EntityFactory.CreateMesh(scene, BuiltInMeshes.Cylinder, parent);
+        }
+
         if (ImGui.MenuItem("Plane"))
         {
             created = EntityFactory.CreateMesh(scene, BuiltInMeshes.Plane, parent);
@@ -47,6 +57,16 @@ internal static class CreateMenu
             if (ImGui.MenuItem("Physics Sphere"))
             {
                 created = EntityFactory.CreatePhysicsMesh(scene, BuiltInMeshes.Sphere, parent);
+            }
+
+            if (ImGui.MenuItem("Physics Capsule"))
+            {
+                created = EntityFactory.CreatePhysicsMesh(scene, BuiltInMeshes.Capsule, parent);
+            }
+
+            if (ImGui.MenuItem("Physics Cylinder"))
+            {
+                created = EntityFactory.CreatePhysicsMesh(scene, BuiltInMeshes.Cylinder, parent);
             }
 
             ImGui.EndMenu();

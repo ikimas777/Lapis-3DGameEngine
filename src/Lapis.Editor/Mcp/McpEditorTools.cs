@@ -220,6 +220,8 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         {
             "cube" => BuiltInMeshes.Cube,
             "sphere" => BuiltInMeshes.Sphere,
+            "capsule" => BuiltInMeshes.Capsule,
+            "cylinder" => BuiltInMeshes.Cylinder,
             "plane" => BuiltInMeshes.Plane,
             _ => null,
         };
@@ -227,14 +229,14 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         var entity = (shape ?? "empty").Trim().ToLowerInvariant() switch
         {
             "empty" or "" => EntityFactory.CreateEmpty(scene, parentEntity),
-            "cube" or "sphere" or "plane" => physics
+            "cube" or "sphere" or "capsule" or "cylinder" or "plane" => physics
                 ? EntityFactory.CreatePhysicsMesh(scene, mesh!, parentEntity)
                 : EntityFactory.CreateMesh(scene, mesh!, parentEntity),
             "camera" => EntityFactory.CreateCamera(scene, parentEntity),
             "directional_light" => EntityFactory.CreateLight(scene, LightType.Directional, parentEntity),
             "point_light" => EntityFactory.CreateLight(scene, LightType.Point, parentEntity),
             "spot_light" => EntityFactory.CreateLight(scene, LightType.Spot, parentEntity),
-            _ => throw new McpException($"Unknown shape '{shape}'. Use empty, cube, sphere, plane, camera, directional_light, point_light or spot_light."),
+            _ => throw new McpException($"Unknown shape '{shape}'. Use empty, cube, sphere, capsule, cylinder, plane, camera, directional_light, point_light or spot_light."),
         };
 
         if (!string.IsNullOrWhiteSpace(name))

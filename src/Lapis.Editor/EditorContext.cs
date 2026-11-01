@@ -49,6 +49,12 @@ internal sealed class EditorContext
     public bool IsPlaying => _editState is not null;
 
     /// <summary>
+    /// True while the Scene view shows handles for resizing the selected entity's collider instead of the
+    /// transform gizmo (the Collider tool, key 4, or Edit Collider in the Inspector).
+    /// </summary>
+    public bool EditingCollider { get; set; }
+
+    /// <summary>
     /// The entity shown in the Inspector and moved by the gizmo: the one selected last, or null. Setting it selects
     /// only that entity. Entities are remembered by id, so one deleted and restored by undo (or reloaded with the
     /// scripts) is selected again.

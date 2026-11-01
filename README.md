@@ -317,6 +317,7 @@ while holding the right mouse button — then W / E / R also pick the Move / Rot
 | Ctrl+P / Ctrl+Shift+P / Ctrl+Alt+P | Play or stop / Pause / Step |
 | Delete | Delete the selection |
 | 1 / 2 / 3 (Scene view) | Move / Rotate / Scale tool |
+| 4 (Scene view) | Collider tool: drag the dots on the selected object's collider to resize it |
 | F2 (Hierarchy) | Rename the selected entity or folder |
 | Ctrl while dragging the gizmo | Toggle snapping |
 

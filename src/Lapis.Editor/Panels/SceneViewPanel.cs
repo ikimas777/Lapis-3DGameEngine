@@ -34,6 +34,7 @@ internal sealed unsafe class SceneViewPanel(
     private TransformState? _gizmoStart;
     private Entity? _gizmoEntity;
     private readonly List<(Entity Entity, TransformState Start)> _gizmoOthers = [];
+    private readonly ColliderHandles _colliderHandles = new(context);
 
     private enum NavigationMode
     {
@@ -44,6 +45,10 @@ internal sealed unsafe class SceneViewPanel(
     }
 
     public GizmoTool Tool { get; set; } = GizmoTool.Move;
+
+    /// <summary>True while the Collider tool is on and the selection has a collider it can resize.</summary>
+    private bool EditingCollider =>
+        context.EditingCollider && context.Selection is { } selection && selection.Components.OfType<Collider>().Any(ColliderHandles.CanEdit);
 
     /// <summary>Draw collider outlines.</summary>
     public bool ShowColliders { get; set; } = true;
@@ -116,11 +121,21 @@ internal sealed unsafe class SceneViewPanel(
         ImGui.Image(new ImTextureRef(null, new ImTextureID((ulong)framebuffer.ColorTexture)), size, new Vector2(0, 1), new Vector2(1, 0));
         var imageHovered = ImGui.IsItemHovered();
 
-        DrawGizmo(view, origin, size);
+        // The Collider tool replaces the transform gizmo with dots for resizing the selection's collider.
+        if (EditingCollider)
+        {
+            FinishGizmoDrag();
+            _colliderHandles.Draw(context.Selection!, view, origin, size, imageHovered, Snap ^ ImGui.GetIO().KeyCtrl ? ScaleSnap : 0f);
+        }
+        else
+        {
+            _colliderHandles.Finish();
+            DrawGizmo(view, origin, size);
+        }
 
         var toolbarHovered = DrawToolbar(origin);
         var sidebarHovered = Sidebar?.Draw(origin, size) ?? false;
-        var gizmoBusy = ImGuizmo.IsOver() || ImGuizmo.IsUsing();
+        var gizmoBusy = EditingCollider ? _colliderHandles.IsBusy : ImGuizmo.IsOver() || ImGuizmo.IsUsing();
         var hovered = imageHovered && !toolbarHovered && !sidebarHovered;
 
         HandleNavigation(hovered, size);
@@ -427,6 +442,11 @@ internal sealed unsafe class SceneViewPanel(
         ToolButton("Rotate", "2", GizmoTool.Rotate);
         ImGui.SameLine();
         ToolButton("Scale", "3", GizmoTool.Scale);
+        ImGui.SameLine();
+        if (ToggleButton("Collider", context.EditingCollider, "Resize the selected object's collider by dragging the dots on its sides (4)"))
+        {
+            context.EditingCollider = !context.EditingCollider;
+        }
 
         ImGui.SameLine(0, 10);
         if (ToggleButton(LocalSpace ? "Local" : "World", false, "Move and rotate along the entity's axes (Local) or the world axes (World)"))
@@ -446,9 +466,10 @@ internal sealed unsafe class SceneViewPanel(
 
     private void ToolButton(string label, string key, GizmoTool tool)
     {
-        if (ToggleButton(label, Tool == tool, $"{label} tool ({key})"))
+        if (ToggleButton(label, Tool == tool && !context.EditingCollider, $"{label} tool ({key})"))
         {
             Tool = tool;
+            context.EditingCollider = false;
         }
     }
 
@@ -481,14 +502,21 @@ internal sealed unsafe class SceneViewPanel(
         if (keys.Pressed(EditorAction.MoveTool) || (letters && ImGui.IsKeyPressed(ImGuiKey.W, false)))
         {
             Tool = GizmoTool.Move;
+            context.EditingCollider = false;
         }
         else if (keys.Pressed(EditorAction.RotateTool) || (letters && ImGui.IsKeyPressed(ImGuiKey.E, false)))
         {
             Tool = GizmoTool.Rotate;
+            context.EditingCollider = false;
         }
         else if (keys.Pressed(EditorAction.ScaleTool) || (letters && ImGui.IsKeyPressed(ImGuiKey.R, false)))
         {
             Tool = GizmoTool.Scale;
+            context.EditingCollider = false;
+        }
+        else if (keys.Pressed(EditorAction.ColliderTool))
+        {
+            context.EditingCollider = !context.EditingCollider;
         }
         else if (keys.Pressed(EditorAction.FocusSelection))
         {
@@ -597,6 +625,7 @@ internal sealed unsafe class SceneViewPanel(
             NavigationMode.Look => "Look  ·  WASD / Q / E to fly, Shift = faster",
             NavigationMode.Orbit => "Orbit",
             NavigationMode.Pan => "Pan",
+            _ when EditingCollider => "Drag the dots to resize the collider (Ctrl: snap)  ·  4 or Move / Rotate / Scale: back to the gizmo",
             _ when FlyOnlyWithRightMouse => "Click select (Ctrl/Shift: add)  ·  RMB look + WASD / Q / E fly  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
             _ => "Click select (Ctrl/Shift: add)  ·  WASD / Q / E fly  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
         };

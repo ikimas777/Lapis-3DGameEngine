@@ -51,6 +51,16 @@ public sealed class CapsuleCollider : Collider
     public float Height { get; set; } = 2f;
 }
 
+/// <summary>A cylinder with flat ends standing along the local Y axis: pillars, barrels, pipes.</summary>
+public sealed class CylinderCollider : Collider
+{
+    /// <summary>Radius of the cylinder; non-uniform scale uses the larger of X and Z.</summary>
+    public float Radius { get; set; } = 0.5f;
+
+    /// <summary>Total height.</summary>
+    public float Height { get; set; } = 2f;
+}
+
 /// <summary>
 /// Uses the triangles of the entity's <see cref="MeshRenderer"/> as the shape. Exact, but only for
 /// static or kinematic objects (dynamic bodies need a box, sphere or capsule).

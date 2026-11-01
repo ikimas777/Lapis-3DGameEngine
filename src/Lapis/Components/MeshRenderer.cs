@@ -12,8 +12,14 @@ public static class BuiltInMeshes
     /// <summary>1 × 1 square in the XZ plane, facing up.</summary>
     public const string Plane = "builtin:plane";
 
+    /// <summary>Capsule 2 units tall with a radius of 0.5, standing along Y.</summary>
+    public const string Capsule = "builtin:capsule";
+
+    /// <summary>Cylinder 2 units tall with a radius of 0.5, standing along Y.</summary>
+    public const string Cylinder = "builtin:cylinder";
+
     /// <summary>All built-in mesh identifiers.</summary>
-    public static IReadOnlyList<string> All { get; } = [Cube, Sphere, Plane];
+    public static IReadOnlyList<string> All { get; } = [Cube, Sphere, Capsule, Cylinder, Plane];
 
     private static readonly Dictionary<string, Rendering.MeshData> DataCache = new(StringComparer.Ordinal);
 
@@ -42,6 +48,8 @@ public static class BuiltInMeshes
                 Cube => Rendering.Primitives.CreateCube(),
                 Sphere => Rendering.Primitives.CreateSphere(),
                 Plane => Rendering.Primitives.CreatePlane(1f),
+                Capsule => Rendering.Primitives.CreateCapsule(),
+                Cylinder => Rendering.Primitives.CreateCylinder(),
                 _ => null,
             };
 
