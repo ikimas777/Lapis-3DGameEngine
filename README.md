@@ -193,15 +193,11 @@ dotnet run --project src/Lapis.Editor
 The editor starts with the project launcher: pick a recent project, open a project folder, or create a new
 project from a starter template. **Project > Close Project** returns to it.
 
-![Project launcher](docs/images/launcher.png)
-
 To skip the launcher and open the sample project directly:
 
 ```bash
 dotnet run --project src/Lapis.Editor -- --project samples/Sandbox
 ```
-
-![Lapis editor](docs/images/editor.png)
 
 ### Scripting
 
@@ -218,8 +214,6 @@ made during play are thrown away on **Stop**, and the scene returns to exactly h
 While the game has the mouse, the cursor is hidden and held in the window (handy for a first-person camera).
 **Esc** releases it so you can use the editor while the game keeps running; click the game picture in the Game view to return to the
 game. Ctrl+P stops Play mode at any time.
-
-![Play mode](docs/images/play-mode.png)
 
 ### Console
 
@@ -250,8 +244,6 @@ without the editor or .NET. See the [export guide](docs/export.md).
 Colliders and rigid bodies are simulated with [Jolt](https://github.com/jrouwe/JoltPhysics) while the game
 runs. In the sample, the blue ball (a kinematic body you steer) pushes the crates, and the red ball bounces.
 See the [physics section of the scripting guide](docs/scripting.md#physics).
-
-![Physics](docs/images/physics.png)
 
 ### Scene view controls
 
