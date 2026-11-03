@@ -19,7 +19,11 @@ internal sealed partial class EditorApplication
             Play = _play,
             Scripts = _scripts,
             Camera = _camera,
-            Console = () => _logBuffer.Lines,
+            Console = () =>
+            {
+                _logBuffer.Drain(); // the Console panel may be hidden behind another tab and not draining
+                return _logBuffer.Lines;
+            },
             CaptureView = CaptureView,
         };
 

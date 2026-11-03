@@ -70,6 +70,7 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
     private bool _showWarnings = true;
     private bool _showErrors = true;
     private string _filter = string.Empty;
+    private long _newestShownId;
 
     /// <summary>Clear the Console whenever Play starts.</summary>
     public bool ClearOnPlay { get; set; }
@@ -99,7 +100,11 @@ internal sealed class ConsolePanel(LogBuffer buffer, Action<string, int> openFil
 
     protected override void DrawContent()
     {
-        var newMessages = buffer.Drain();
+        // Others (e.g. the MCP server) may drain the buffer too, so compare the newest id instead of trusting Drain().
+        buffer.Drain();
+        var newestId = buffer.Lines.Count > 0 ? buffer.Lines[^1].Id : 0;
+        var newMessages = newestId != _newestShownId;
+        _newestShownId = newestId;
         _selected.IntersectWith(buffer.Lines.Select(line => line.Id)); // drop lines that left the buffer
 
         DrawToolbar();
