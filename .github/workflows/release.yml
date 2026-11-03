@@ -56,6 +56,11 @@ jobs:
     needs: [windows, linux]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/release-notes
+          path: source
+
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -65,10 +70,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         # Tags such as v0.7.0-alpha.1 or v0.7.0-beta.2 become pre-releases, so only stable versions are "Latest".
+        # .github/release-notes/<tag>.md, when it exists, is the release text (the editor's update window shows it);
+        # otherwise GitHub writes the notes from the commits.
         run: |
           prerelease=""
           if [[ "$TAG" == *-* ]]; then prerelease="--prerelease"; fi
+          notes=(--generate-notes)
+          if [[ -f "source/.github/release-notes/$TAG.md" ]]; then notes=(--notes-file "source/.github/release-notes/$TAG.md"); fi
           gh release create "$TAG" Lapis-Windows-x64.zip Lapis-Linux-x64.tar.gz \
             --repo "${{ github.repository }}" \
             --title "Lapis $TAG" \
-            --generate-notes $prerelease
+            "${notes[@]}" $prerelease

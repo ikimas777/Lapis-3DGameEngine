@@ -89,8 +89,8 @@ Versions are `X.Y.Z`, optionally with a stage:
 | `-beta.N` | Beta: features are done, bugs are being fixed | `0.8.0-beta.2` |
 
 They are ordered `0.8.0-alpha.1 < 0.8.0-alpha.2 < 0.8.0-beta.1 < 0.8.0`. Alphas and betas are published as
-pre-releases, so the Releases page's "Latest" is always a stable version. While `X` is 0 the engine is in early
-development; `1.0.0` will be the first stable version.
+pre-releases, so the Releases page's "Latest" is always a stable version. `1.0.0` is the first stable version: from
+there on, a change that makes projects or scripts need updating comes only with a new `X`.
 
 ## The panels
 

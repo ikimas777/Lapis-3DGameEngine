@@ -14,7 +14,7 @@
     <PlatformTarget Condition="$(RuntimeIdentifier.EndsWith('-arm64'))">arm64</PlatformTarget>
     <PlatformTarget Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier.Substring($([MSBuild]::Add($(RuntimeIdentifier.LastIndexOf('-')), 1))))</PlatformTarget>
 
-    <Version>0.10.0</Version>
+    <Version>1.0.0</Version>
     <Authors>Lapis contributors</Authors>
     <Copyright>Copyright (c) 2026 Lapis contributors</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
