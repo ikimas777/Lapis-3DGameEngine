@@ -49,6 +49,12 @@ internal sealed class PlayMode(EditorContext context) : IDisposable
             return;
         }
 
+        if (context.EditingPrefab is { } prefab)
+        {
+            Log.Warning($"Go back to the scene before playing (you are editing the prefab '{prefab.Name}').");
+            return;
+        }
+
         Starting?.Invoke();
 
         // A deep copy through the scene format, so the game cannot change the edited scene.

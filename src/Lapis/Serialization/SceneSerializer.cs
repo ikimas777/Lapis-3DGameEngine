@@ -203,34 +203,39 @@ public static partial class SceneSerializer
         return component;
     }
 
-    private static JsonArray WriteEntities(IEnumerable<Entity> roots)
+    private static JsonArray WriteEntities(IEnumerable<Entity> roots, bool prefabLinks = true)
     {
         var entities = new JsonArray();
         foreach (var root in roots)
         {
-            WriteSubtree(root, isFragmentRoot: true, entities);
+            WriteSubtree(root, isFragmentRoot: true, entities, prefabLinks);
         }
 
         return entities;
     }
 
-    private static void WriteSubtree(Entity entity, bool isFragmentRoot, JsonArray output)
+    private static void WriteSubtree(Entity entity, bool isFragmentRoot, JsonArray output, bool prefabLinks)
     {
-        output.Add(WriteEntity(entity, writeParent: !isFragmentRoot));
+        output.Add(WriteEntity(entity, writeParent: !isFragmentRoot, prefabLinks));
         foreach (var child in entity.Transform.Children)
         {
-            WriteSubtree(child.entity, isFragmentRoot: false, output);
+            WriteSubtree(child.entity, isFragmentRoot: false, output, prefabLinks);
         }
     }
 
-    private static JsonObject WriteEntity(Entity entity, bool writeParent)
+    private static JsonObject WriteEntity(Entity entity, bool writeParent, bool prefabLinks)
     {
         var transform = entity.Transform;
         var data = new JsonObject
         {
-            ["id"] = entity.Id.ToString(),
+            ["id"] = WrittenId(entity.Id).ToString(),
             ["name"] = entity.Name,
         };
+
+        if (prefabLinks && entity.Prefab is { } prefab)
+        {
+            data["prefab"] = prefab;
+        }
 
         if (!entity.CompareTag(Entity.Untagged))
         {
@@ -244,7 +249,7 @@ public static partial class SceneSerializer
 
         if (writeParent && entity.Parent is { } parent)
         {
-            data["parent"] = parent.Id.ToString();
+            data["parent"] = WrittenId(parent.Id).ToString();
         }
         else if (entity.Parent is null && entity.FolderId is { } folderId)
         {
@@ -290,6 +295,7 @@ public static partial class SceneSerializer
         }
 
         var pendingComponents = new List<(Entity Entity, JsonArray Components)>();
+        var replaced = new HashSet<Guid>(); // stored ids of prefab instance contents rebuilt from their prefab
         foreach (var node in entities)
         {
             if (node is not JsonObject data)
@@ -297,10 +303,27 @@ public static partial class SceneSerializer
                 throw new SceneFormatException("Every item in 'entities' must be an object.");
             }
 
+            // The saved contents of a prefab instance are only a fallback for when the prefab cannot be read.
+            if (Guid.TryParse((string?)data["parent"], out var storedParent) && replaced.Contains(storedParent))
+            {
+                if (Guid.TryParse((string?)data["id"], out var skippedId))
+                {
+                    replaced.Add(skippedId);
+                }
+
+                continue;
+            }
+
             var entity = ReadEntity(data, context, out var isRoot);
             if (isRoot)
             {
                 roots.Add(entity);
+            }
+
+            if (entity.Prefab is { } prefab && context.ExpandPrefabs && TryExpandPrefab(entity, prefab, context))
+            {
+                replaced.Add(Guid.Parse((string)data["id"]!));
+                continue;
             }
 
             if (data["components"] is JsonArray components)
@@ -363,6 +386,7 @@ public static partial class SceneSerializer
 
         entity.IsActive = (bool?)data["active"] ?? true;
         entity.tag = (string?)data["tag"] ?? Entity.Untagged;
+        entity.Prefab = (string?)data["prefab"];
 
         // Folders only apply at the top level; entities placed under a parent leave their folder.
         if (parent is null && Guid.TryParse((string?)data["folder"], out var folderId))
@@ -430,13 +454,13 @@ public static partial class SceneSerializer
         if (type == typeof(Entity))
         {
             var entity = (Entity)value;
-            return entity.IsDestroyed ? null : JsonValue.Create(entity.Id.ToString());
+            return entity.IsDestroyed ? null : JsonValue.Create(WrittenId(entity.Id).ToString());
         }
 
         if (typeof(Component).IsAssignableFrom(type))
         {
             var component = (Component)value;
-            return component.IsAttached && !component.entity.IsDestroyed ? JsonValue.Create(component.entity.Id.ToString()) : null;
+            return component.IsAttached && !component.entity.IsDestroyed ? JsonValue.Create(WrittenId(component.entity.Id).ToString()) : null;
         }
 
         return JsonSerializer.SerializeToNode(value, type, JsonOptions);
@@ -542,6 +566,17 @@ public static partial class SceneSerializer
     /// <summary>State shared while reading one document.</summary>
     private sealed class ReadContext(Scene scene, Entity? rootParent, Dictionary<Guid, Guid>? idMap)
     {
+        /// <summary>A context for the contents of a prefab: ids are mapped by <paramref name="prefabIds"/>.</summary>
+        public ReadContext(Scene scene, Entity rootParent, Func<Guid, Guid?> prefabIds, List<Action> references)
+            : this(scene, rootParent, idMap: null)
+        {
+            _prefabIds = prefabIds;
+            References = references;
+            ExpandPrefabs = false; // prefab files hold no instances of other prefabs
+        }
+
+        private readonly Func<Guid, Guid?>? _prefabIds;
+
         public Scene Scene { get; } = scene;
 
         /// <summary>Parent for entities stored without one.</summary>
@@ -550,9 +585,17 @@ public static partial class SceneSerializer
         /// <summary>Reference assignments run after all entities exist.</summary>
         public List<Action> References { get; } = [];
 
+        /// <summary>Whether prefab instances are rebuilt from their prefab files.</summary>
+        public bool ExpandPrefabs { get; init; } = true;
+
         /// <summary>Returns the id to create an entity with, allocating a new one when ids are being replaced.</summary>
         public Guid MapNewId(Guid storedId)
         {
+            if (_prefabIds?.Invoke(storedId) is { } prefabId)
+            {
+                return prefabId;
+            }
+
             if (idMap is null)
             {
                 return storedId;
@@ -564,7 +607,8 @@ public static partial class SceneSerializer
         }
 
         /// <summary>Returns the id an entity from the document was created with.</summary>
-        public Guid MapId(Guid storedId) => idMap is not null && idMap.TryGetValue(storedId, out var mapped) ? mapped : storedId;
+        public Guid MapId(Guid storedId) =>
+            _prefabIds?.Invoke(storedId) ?? (idMap is not null && idMap.TryGetValue(storedId, out var mapped) ? mapped : storedId);
 
         public object? ResolveReference(JsonNode? node, Type type)
         {

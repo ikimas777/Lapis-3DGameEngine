@@ -30,6 +30,7 @@ internal static class AssetIcons
             AssetType.Material => ("MAT", Pack(0.85f, 0.35f, 0.50f)),
             AssetType.Audio => ("SND", Pack(0.95f, 0.78f, 0.25f)),
             AssetType.Font => ("Aa", Pack(0.35f, 0.75f, 0.85f)),
+            AssetType.Prefab => ("PRE", Pack(0.44f, 0.66f, 1.00f)),
             _ => ("?", Pack(0.50f, 0.50f, 0.52f)),
         };
 

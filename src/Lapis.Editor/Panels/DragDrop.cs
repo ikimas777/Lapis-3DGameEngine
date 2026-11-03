@@ -127,6 +127,19 @@ internal static unsafe class DragDrop
         return dropped;
     }
 
+    /// <summary>Returns every entity dropped anywhere inside a screen rectangle this frame (none when nothing was dropped).</summary>
+    public static IReadOnlyList<Entity> AcceptEntitiesInRect(Scene scene, System.Numerics.Vector2 min, System.Numerics.Vector2 max, string id)
+    {
+        if (!ImGuiP.BeginDragDropTargetCustom(new ImRect(min, max), ImGui.GetID(id)))
+        {
+            return [];
+        }
+
+        var dropped = ReadIds(ImGui.AcceptDragDropPayload(EntityPayload)).Select(scene.FindById).OfType<Entity>().ToList();
+        ImGui.EndDragDropTarget();
+        return dropped;
+    }
+
     private static void SetPayload(string type, IEnumerable<Guid> ids)
     {
         var array = ids.ToArray();

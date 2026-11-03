@@ -263,6 +263,12 @@ internal sealed class EditorContext
 
     public void NewScene()
     {
+        if (EditingPrefab is not null)
+        {
+            Log.Warning("Go back to the scene before creating a new one.");
+            return;
+        }
+
         var scene = new Scene { Name = "Untitled" };
         var camera = EntityFactory.CreateCamera(scene);
         camera.Transform.Position = new System.Numerics.Vector3(0f, 2f, 6f);
@@ -274,6 +280,12 @@ internal sealed class EditorContext
     /// <summary>Opens a scene file. Errors are logged and leave the current scene open.</summary>
     public bool OpenScene(string path)
     {
+        if (EditingPrefab is { } prefab)
+        {
+            Log.Warning($"Go back to the scene before opening another one (you are editing the prefab '{prefab.Name}').");
+            return false;
+        }
+
         try
         {
             var scene = SceneSerializer.Load(path);
@@ -291,6 +303,11 @@ internal sealed class EditorContext
     /// <summary>Saves the scene to <paramref name="path"/>, or to <see cref="ScenePath"/> when null.</summary>
     public bool SaveScene(string? path = null)
     {
+        if (EditingPrefab is not null)
+        {
+            return SavePrefab(); // Ctrl+S while a prefab is open saves the prefab
+        }
+
         if (IsPlaying)
         {
             Log.Warning("Stop Play mode before saving; changes made while playing are discarded when it stops.");
@@ -378,6 +395,110 @@ internal sealed class EditorContext
     private EditState? _editState;
 
     private sealed record EditState(Scene Scene, UndoStack History, bool WasDirty);
+
+    // ---------------------------------------------------------------- prefab editing (Open Prefab)
+
+    private PrefabState? _prefabState;
+
+    private sealed record PrefabState(Lapis.Assets.AssetInfo Asset, Scene Scene, string? ScenePath, UndoStack History, long SavedStateId, List<Guid> Selection);
+
+    /// <summary>The prefab open for editing instead of the scene, or null while the scene is edited.</summary>
+    public Lapis.Assets.AssetInfo? EditingPrefab => _prefabState?.Asset;
+
+    /// <summary>
+    /// Opens a prefab for editing: the Hierarchy and Scene view show only its entities, with their own undo history,
+    /// until <see cref="ExitPrefab"/>. The scene, its history, unsaved changes and selection are kept meanwhile.
+    /// </summary>
+    /// <returns>False (with a message) when the prefab cannot be read, or while playing.</returns>
+    public bool EnterPrefab(Lapis.Assets.AssetInfo asset)
+    {
+        if (IsPlaying)
+        {
+            Log.Warning("Stop Play mode before opening a prefab.");
+            return false;
+        }
+
+        if (EditingPrefab is not null)
+        {
+            ExitPrefab(save: false);
+        }
+
+        Scene prefabScene;
+        try
+        {
+            prefabScene = new Scene { Name = asset.Name };
+            SceneSerializer.EntitiesFromJson(prefabScene, File.ReadAllText(asset.FullPath));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SceneFormatException)
+        {
+            Log.Error($"Could not open the prefab '{asset.Name}': {exception.Message}");
+            return false;
+        }
+
+        _prefabState = new PrefabState(asset, Scene, ScenePath, History, _savedStateId, [.. _selectedIds]);
+        Scene = prefabScene;
+        ScenePath = null;
+        History = new UndoStack { MaxDepth = History.MaxDepth };
+        _savedStateId = History.StateId;
+        Selection = prefabScene.RootEntities.FirstOrDefault();
+        SceneChanged?.Invoke(prefabScene);
+        Log.Info($"Editing the prefab '{asset.Name}'. Save (Ctrl+S) updates every copy; Back to Scene returns.");
+        return true;
+    }
+
+    /// <summary>Writes the open prefab to its file. A prefab must have exactly one top-level entity.</summary>
+    public bool SavePrefab()
+    {
+        if (_prefabState is not { } state)
+        {
+            return false;
+        }
+
+        var roots = Scene.RootEntities.ToList();
+        if (roots.Count != 1)
+        {
+            Log.Warning($"A prefab has exactly one top-level entity; put the other {roots.Count - 1} under '{roots.FirstOrDefault()?.Name}' to save it.");
+            return false;
+        }
+
+        try
+        {
+            File.WriteAllText(state.Asset.FullPath, SceneSerializer.PrefabToJson(roots[0], fromScene: false));
+            Assets?.NotifyChanged(state.Asset.Id);
+            _savedStateId = History.StateId;
+            Log.Info($"Saved the prefab '{state.Asset.Name}'.");
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Log.Error($"Could not save the prefab '{state.Asset.Name}': {exception.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Returns to the scene (optionally saving the prefab first). The scene's copies of the prefab are rebuilt, so they
+    /// show what was saved.
+    /// </summary>
+    public void ExitPrefab(bool save)
+    {
+        if (_prefabState is not { } state || (save && IsDirty && !SavePrefab()))
+        {
+            return;
+        }
+
+        _prefabState = null;
+        ScenePath = state.ScenePath;
+        History = state.History;
+        _savedStateId = state.SavedStateId;
+
+        // Rebuilt through the scene format: instances are read from their (saved) prefab files.
+        Scene = SceneSerializer.FromJson(SceneSerializer.ToJson(state.Scene));
+        History.BeginGesture();
+        _selectedIds.Clear();
+        _selectedIds.AddRange(state.Selection);
+        SceneChanged?.Invoke(Scene);
+    }
 
     private void SetScene(Scene scene, string? path)
     {

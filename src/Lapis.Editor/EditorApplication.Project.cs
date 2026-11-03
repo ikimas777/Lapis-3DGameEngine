@@ -20,6 +20,7 @@ internal sealed unsafe partial class EditorApplication
     private bool OpenProject(string path, string? scenePath = null)
     {
         _play.Stop();
+        _context.ExitPrefab(save: true);
         LapisProject project;
         try
         {

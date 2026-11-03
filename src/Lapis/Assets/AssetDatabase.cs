@@ -30,6 +30,9 @@ public enum AssetType
 
     /// <summary>A font for UI text: <c>.ttf</c> or <c>.otf</c>.</summary>
     Font,
+
+    /// <summary>A <c>.lprefab</c> prefab: entities saved to be placed many times.</summary>
+    Prefab,
 }
 
 /// <summary>A file in the <c>Assets</c> folder and its stable id.</summary>
@@ -120,6 +123,7 @@ public sealed class AssetDatabase
         ".lmat" => AssetType.Material,
         ".wav" or ".ogg" => AssetType.Audio,
         ".ttf" or ".otf" => AssetType.Font,
+        ".lprefab" => AssetType.Prefab,
         _ => AssetType.Other,
     };
 
@@ -267,6 +271,10 @@ public sealed class AssetDatabase
             ? model.EmbeddedImages[index]
             : null;
     }
+
+    /// <summary>The text of a <c>.lprefab</c> asset, or null when the reference is not a prefab that exists.</summary>
+    public string? LoadPrefabText(string reference) =>
+        Find(reference) is { Type: AssetType.Prefab } asset && File.Exists(asset.FullPath) ? File.ReadAllText(asset.FullPath) : null;
 
     /// <summary>Tells caches that an asset's content changed (e.g. a material was edited in the Inspector).</summary>
     public void NotifyChanged(Guid id)

@@ -80,6 +80,33 @@ public sealed class Entity
     public bool IsInFolder(string nameOrPath) =>
         Folder is { } folder && Scene.FindFolders(nameOrPath).Any(match => Scene.IsFolderInside(folder.Id, match.Id));
 
+    /// <summary>
+    /// The prefab (<c>.lprefab</c> asset reference) this entity is a copy of, when it is the root of a prefab instance;
+    /// otherwise null. The instance's children and components come from the prefab; only the root's name, tag,
+    /// active flag, folder and transform are its own.
+    /// </summary>
+    public string? Prefab { get; internal set; }
+
+    /// <summary>The root of the prefab instance this entity belongs to (itself or a parent), or null.</summary>
+    public Entity? PrefabInstanceRoot
+    {
+        get
+        {
+            for (var entity = this; entity is not null; entity = entity.Parent)
+            {
+                if (entity.Prefab is not null)
+                {
+                    return entity;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>True when the entity is part of a prefab instance (its root or inside it).</summary>
+    public bool IsPartOfPrefab => PrefabInstanceRoot is not null;
+
     /// <summary>True after the entity has been destroyed; it must not be used any more.</summary>
     public bool IsDestroyed { get; internal set; }
 

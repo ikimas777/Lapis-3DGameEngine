@@ -49,7 +49,7 @@ internal sealed unsafe class SceneViewPanel(
 
     /// <summary>True while the Collider tool is on and the selection has a collider it can resize.</summary>
     private bool EditingCollider =>
-        context.EditingCollider && context.Selection is { } selection && selection.Components.OfType<Collider>().Any(ColliderHandles.CanEdit);
+        context.EditingCollider && context.Selection is { } selection && !PrefabActions.IsLocked(selection) && selection.Components.OfType<Collider>().Any(ColliderHandles.CanEdit);
 
     /// <summary>True while a canvas or UI element is selected: the view shows the game screen with the UI to edit.</summary>
     private bool EditingUI => UIHandles.IsUI(context.Selection);
@@ -186,6 +186,9 @@ internal sealed unsafe class SceneViewPanel(
             case Lapis.Assets.AssetType.Model:
                 EditorActions.InstantiateModel(context, asset, null, GroundPointAt(ImGui.GetMousePos()));
                 break;
+            case Lapis.Assets.AssetType.Prefab:
+                PrefabActions.Instantiate(context, asset, null, GroundPointAt(ImGui.GetMousePos()));
+                break;
             case Lapis.Assets.AssetType.Script:
                 if (PickAt(ImGui.GetMousePos(), view, origin, size) is { } scriptTarget)
                 {
@@ -288,7 +291,7 @@ internal sealed unsafe class SceneViewPanel(
         ImGuizmo.SetOrthographic(false);
 
         var selection = context.Selection;
-        if (selection is null)
+        if (selection is null || PrefabActions.IsInsideInstance(selection))
         {
             FinishGizmoDrag();
             return;
@@ -364,7 +367,7 @@ internal sealed unsafe class SceneViewPanel(
         _gizmoOthers.Clear();
         foreach (var root in context.SelectedRoots)
         {
-            if (root != primary && !primary.Transform.IsChildOf(root.Transform) && !root.Transform.IsChildOf(primary.Transform))
+            if (root != primary && !PrefabActions.IsInsideInstance(root) && !primary.Transform.IsChildOf(root.Transform) && !root.Transform.IsChildOf(primary.Transform))
             {
                 _gizmoOthers.Add((root, TransformState.Of(root.Transform)));
             }
@@ -427,6 +430,12 @@ internal sealed unsafe class SceneViewPanel(
         var x = (int)(mouse.X / size.X * framebuffer.Width);
         var y = (int)(mouse.Y / size.Y * framebuffer.Height);
         var picked = picker.Pick(context.Scene, view, framebuffer.Width, framebuffer.Height, x, y);
+
+        // A click on a prefab copy selects the whole copy (its root) first; a second click selects the part clicked.
+        if (picked?.PrefabInstanceRoot is { } instance && context.Selection?.PrefabInstanceRoot != instance)
+        {
+            picked = instance;
+        }
 
         // Ctrl+click adds or removes an object, Shift+click adds it; clicking empty space with either keeps the selection.
         var io = ImGui.GetIO();
@@ -642,6 +651,7 @@ internal sealed unsafe class SceneViewPanel(
             NavigationMode.Look => "Look  ·  WASD / Q / E to fly, Shift = faster",
             NavigationMode.Orbit => "Orbit",
             NavigationMode.Pan => "Pan",
+            _ when context.EditingPrefab is { } prefab => $"Editing the prefab '{prefab.Name}': every copy changes when it is saved (Ctrl+S)  ·  Back to Scene is in the Hierarchy",
             _ when EditingUI => "Click a UI element to select it  ·  drag it to move  ·  drag its edges or corners to resize  ·  the frame is the Game view's screen",
             _ when EditingCollider => "Drag the dots to resize the collider (Ctrl: snap)  ·  4 or Move / Rotate / Scale: back to the gizmo",
             _ when FlyOnlyWithRightMouse => "Click select (Ctrl/Shift: add)  ·  RMB look + WASD / Q / E fly  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",

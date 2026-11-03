@@ -11,6 +11,8 @@ namespace Lapis.Editor.Panels;
 /// </summary>
 internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnPosition) : EditorPanel("Hierarchy")
 {
+    private const string LeavePrefabPopup = "Leave Prefab##leavePrefab";
+
     private readonly List<Action> _pendingChanges = [];
     private string _filter = string.Empty;
     private Guid? _selectedFolder;
@@ -48,6 +50,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             _renamingEntity = null; // deleted or undone while being renamed
         }
 
+        DrawPrefabModeBar();
         DrawToolbar();
 
         if (_filter.Length == 0)
@@ -84,9 +87,16 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             _pendingChanges.Add(() => context.Execute(new MoveFolderCommand(scene, folderToRoot, null)));
         }
 
-        if (DragDrop.AcceptAsset(context.Assets) is { Type: Lapis.Assets.AssetType.Model } model)
+        if (DragDrop.AcceptAsset(context.Assets) is { } droppedAsset)
         {
-            _pendingChanges.Add(() => EditorActions.InstantiateModel(context, model, null, spawnPosition()));
+            if (droppedAsset.Type == Lapis.Assets.AssetType.Model)
+            {
+                _pendingChanges.Add(() => EditorActions.InstantiateModel(context, droppedAsset, null, spawnPosition()));
+            }
+            else if (droppedAsset.Type == Lapis.Assets.AssetType.Prefab)
+            {
+                _pendingChanges.Add(() => PrefabActions.Instantiate(context, droppedAsset, null, spawnPosition()));
+            }
         }
 
         if (ImGui.BeginPopupContextWindow("##hierarchyContext", ImGuiPopupFlags.MouseButtonRight | ImGuiPopupFlags.NoOpenOverItems))
@@ -144,6 +154,65 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     }
 
     /// <summary>The search box and the "new folder" button next to it.</summary>
+    /// <summary>While a prefab is open: its name, Save, and Back to Scene (asking about unsaved changes).</summary>
+    private void DrawPrefabModeBar()
+    {
+        if (context.EditingPrefab is not { } prefab)
+        {
+            return;
+        }
+
+        ImGui.TextColored(EditorTheme.Prefab, $"Prefab: {prefab.Name}{(context.IsDirty ? " *" : string.Empty)}");
+        var width = (ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X) * 0.5f;
+        ImGui.BeginDisabled(!context.IsDirty);
+        if (ImGui.Button("Save", new Vector2(width, 0)))
+        {
+            context.SavePrefab();
+        }
+
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (ImGui.Button("Back to Scene", new Vector2(width, 0)))
+        {
+            if (context.IsDirty)
+            {
+                ImGui.OpenPopup(LeavePrefabPopup);
+            }
+            else
+            {
+                _pendingChanges.Add(() => context.ExitPrefab(save: false));
+            }
+        }
+
+        if (ImGui.BeginPopupModal(LeavePrefabPopup, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextUnformatted($"Save the changes to the prefab '{prefab.Name}'?");
+            ImGui.Spacing();
+            if (ImGui.Button("Save", new Vector2(110, 0)))
+            {
+                _pendingChanges.Add(() => context.ExitPrefab(save: true));
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Don't Save", new Vector2(110, 0)))
+            {
+                _pendingChanges.Add(() => context.ExitPrefab(save: false));
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Cancel", new Vector2(110, 0)))
+            {
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.EndPopup();
+        }
+
+        ImGui.Separator();
+    }
+
     private void DrawToolbar()
     {
         var buttonSize = ImGui.GetFrameHeight();
@@ -685,7 +754,12 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             colorCount += 2;
         }
 
-        if (!entity.IsActiveInHierarchy)
+        if (entity.IsPartOfPrefab)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, entity.IsActiveInHierarchy ? EditorTheme.Prefab : EditorTheme.PrefabDim);
+            colorCount++;
+        }
+        else if (!entity.IsActiveInHierarchy)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, EditorTheme.TextDim);
             colorCount++;
@@ -704,7 +778,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
 
         if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen() &&
-            !ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift)
+            !ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift && !PrefabActions.IsInsideInstance(entity))
         {
             _pendingChanges.Add(() => StartRename(entity));
         }
@@ -719,6 +793,8 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             }
 
             var count = context.SelectedEntities.Count;
+            DrawPrefabMenu(entity);
+
             if (ImGui.MenuItem("Create Parent"))
             {
                 _pendingChanges.Add(() => EditorActions.CreateParent(context, InHierarchyOrder(context.SelectedRoots)));
@@ -741,7 +817,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             {
                 var active = !entity.IsActive;
                 _pendingChanges.Add(() => ExecuteEach(active ? "Activate" : "Deactivate", context.SelectedEntities,
-                    selectedEntity => selectedEntity.IsActive == active ? null : new SetActiveCommand(selectedEntity, active)));
+                    selectedEntity => selectedEntity.IsActive == active || PrefabActions.IsInsideInstance(selectedEntity) ? null : new SetActiveCommand(selectedEntity, active)));
             }
 
             DrawMoveToFolderMenu(entity);
@@ -781,9 +857,17 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         {
             _pendingChanges.Add(() =>
             {
-                if (asset.Type == Lapis.Assets.AssetType.Model)
+                if (PrefabActions.IsLocked(entity))
+                {
+                    Log.Warning(PrefabActions.LockedMessage(entity)); // a prefab copy gets nothing added in the scene
+                }
+                else if (asset.Type == Lapis.Assets.AssetType.Model)
                 {
                     EditorActions.InstantiateModel(context, asset, entity, Vector3.Zero);
+                }
+                else if (asset.Type == Lapis.Assets.AssetType.Prefab)
+                {
+                    PrefabActions.Instantiate(context, asset, entity, Vector3.Zero);
                 }
                 else if (asset.Type == Lapis.Assets.AssetType.Script)
                 {
@@ -809,6 +893,43 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
             ImGui.TreePop();
         }
+    }
+
+    /// <summary>Context menu items for prefab copies: open the prefab, unpack the copy, find the prefab file.</summary>
+    private void DrawPrefabMenu(Entity entity)
+    {
+        if (entity.PrefabInstanceRoot is not { } root)
+        {
+            return;
+        }
+
+        var asset = context.Assets?.Find(root.Prefab);
+        if (ImGui.MenuItem("Open Prefab", (string?)null, false, asset is not null))
+        {
+            _pendingChanges.Add(() => context.EnterPrefab(asset!));
+        }
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip(asset is null ? "The prefab file is missing." : "Edit the prefab: every copy in your scenes changes with it.");
+        }
+
+        if (ImGui.MenuItem("Unpack Prefab"))
+        {
+            _pendingChanges.Add(() => PrefabActions.Unpack(context, root));
+        }
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip("Turn this copy into ordinary entities you can change; it stops following the prefab.");
+        }
+
+        if (ImGui.MenuItem("Select Prefab Asset", (string?)null, false, asset is not null))
+        {
+            context.SelectedAsset = asset;
+        }
+
+        ImGui.Separator();
     }
 
     /// <summary>"Move to Folder" submenu: every folder (indented by depth) plus the top level.</summary>
@@ -888,7 +1009,8 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     }
 
     /// <summary>False when <paramref name="anchor"/> is the entity itself or inside it, so it cannot go there.</summary>
-    private static bool CanPlace(Entity entity, Entity anchor) => anchor != entity && !anchor.Transform.IsChildOf(entity.Transform);
+    private static bool CanPlace(Entity entity, Entity anchor) =>
+        anchor != entity && !anchor.Transform.IsChildOf(entity.Transform) && !PrefabActions.IsInsideInstance(entity);
 
     /// <summary>
     /// Moves the dragged entities (in Hierarchy order) under <paramref name="anchor"/> (placement null) or next to it,
@@ -896,8 +1018,21 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     /// </summary>
     private void Place(IReadOnlyList<Entity> entities, Entity anchor, Placement? placement)
     {
+        // Nothing moves into, out of or around inside a prefab copy; its contents come from the prefab.
+        var newParent = placement is null or Placement.FirstChild ? anchor : anchor.Parent;
+        if (newParent is not null && PrefabActions.IsLocked(newParent))
+        {
+            Log.Warning(PrefabActions.LockedMessage(newParent));
+            return;
+        }
+
+        if (entities.FirstOrDefault(PrefabActions.IsInsideInstance) is { } locked)
+        {
+            Log.Warning(PrefabActions.LockedMessage(locked));
+        }
+
         var movable = entities.Where(entity => CanPlace(entity, anchor)).ToList();
-        if (movable.Count < entities.Count && entities.Any(entity => entity != anchor))
+        if (entities.Any(entity => entity != anchor && !PrefabActions.IsInsideInstance(entity) && !CanPlace(entity, anchor)))
         {
             Log.Warning("An entity cannot be moved under or next to one of its own children; it was left where it was.");
         }

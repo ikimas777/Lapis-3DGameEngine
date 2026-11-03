@@ -120,7 +120,7 @@ The **Activity** list shows the latest calls; a red name failed, and hovering it
 
 ## Tools for AI
 
-The server offers 32 tools. Assistants read this list (with the same descriptions) when they connect.
+The server offers 35 tools. Assistants read this list (with the same descriptions) when they connect.
 
 **Conventions**
 
@@ -180,6 +180,9 @@ The server offers 32 tools. Assistants read this list (with the same description
 | `create_material` | `path`, *`color`*, *`metallic`*, *`roughness`*, *`texture`* | Creates a material (`.lmat`) and returns its reference | Change files |
 | `assign_asset` | `entity`, `asset` | Applies a material, texture or model to the entity's Mesh Renderer, adds the behaviour of a script asset to the entity, or makes a sound the clip of its Audio Source (adding one when needed) | Edit the scene |
 | `instantiate_model` | `asset`, *`parent`*, *`position`* | Adds a model (`.gltf`, `.glb`, `.obj`, `.stl`) to the scene as a new entity | Edit the scene |
+| `instantiate_prefab` | `asset`, *`parent`*, *`position`* | Places a copy of a prefab (`.lprefab`). The copy follows the prefab: only its root's name, tag, active flag and transform change in the scene | Edit the scene |
+| `make_prefab` | `entity`, *`folder`* | Saves an entity and its children as a new prefab in an Assets folder; the entity becomes a copy of it | Edit the scene |
+| `unpack_prefab` | `entity` | Turns a prefab copy into ordinary entities that can be changed freely | Edit the scene |
 
 ### Editor
 

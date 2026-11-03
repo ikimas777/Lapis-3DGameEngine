@@ -142,6 +142,7 @@ internal sealed unsafe partial class EditorApplication
 
         // The exported game reads scenes from disk, so unsaved changes to the open scene are saved first.
         _play.Stop();
+        _context.ExitPrefab(save: true);
         if (_context.IsDirty && _context.ScenePath is not null)
         {
             _context.SaveScene();

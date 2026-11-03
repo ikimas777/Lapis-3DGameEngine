@@ -63,6 +63,7 @@ internal sealed unsafe partial class EditorApplication : ILauncherHost
     private void RequestCloseProject()
     {
         _play.Stop();
+        _context.ExitPrefab(save: true); // an open prefab is saved; the scene then asks about its own changes
         if (_context.IsDirty)
         {
             _popupToOpen = UnsavedChangesPopup;

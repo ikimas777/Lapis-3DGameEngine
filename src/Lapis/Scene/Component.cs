@@ -34,6 +34,28 @@ public abstract class Component
     /// <summary>Returns every active entity in this entity's scene with the tag (an empty array when there are none).</summary>
     public Entity[] FindGameObjectsWithTag(string tag) => entity.Scene.FindGameObjectsWithTag(tag);
 
+    /// <summary>
+    /// Places a copy of a prefab in this entity's scene, e.g. an enemy, a bullet or a door. Keep the prefab in a
+    /// field marked <c>[AssetReference(AssetType.Prefab)]</c> and drop the <c>.lprefab</c> file onto it in the Inspector.
+    /// </summary>
+    /// <param name="prefab">The prefab (asset reference).</param>
+    /// <param name="position">World position of the copy.</param>
+    /// <param name="rotation">World rotation; the prefab's own rotation when null.</param>
+    /// <param name="parent">Entity to place the copy under, or null for the top level.</param>
+    /// <returns>The root entity of the copy.</returns>
+    /// <exception cref="Serialization.SceneFormatException">The prefab cannot be found or read.</exception>
+    public Entity Instantiate(string prefab, System.Numerics.Vector3 position, System.Numerics.Quaternion? rotation = null, Entity? parent = null)
+    {
+        var copy = Serialization.SceneSerializer.InstantiatePrefab(entity.Scene, prefab, parent);
+        copy.Transform.Position = position;
+        if (rotation is { } worldRotation)
+        {
+            copy.Transform.Rotation = worldRotation;
+        }
+
+        return copy;
+    }
+
     /// <summary>Called right after the component is attached to its entity.</summary>
     protected internal virtual void OnAdded()
     {

@@ -15,6 +15,12 @@ internal static unsafe class EditorTheme
     public static readonly Vector4 Warning = Rgb(0xE5B54A);
     public static readonly Vector4 Error = Rgb(0xE5534B);
 
+    /// <summary>Text of prefab instances in the Hierarchy and the prefab header in the Inspector.</summary>
+    public static readonly Vector4 Prefab = Rgb(0x6FA8FF);
+
+    /// <summary>Text of inactive prefab instances.</summary>
+    public static readonly Vector4 PrefabDim = Rgb(0x4D6E9E);
+
     public static void Apply()
     {
         LoadFont();

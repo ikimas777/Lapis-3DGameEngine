@@ -58,12 +58,19 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             ImGui.Spacing();
         }
 
+        // A prefab copy only lets its root be renamed, tagged, switched on or off and moved; the rest comes from the prefab.
+        var insideInstance = PrefabActions.IsInsideInstance(entity);
+        var locked = PrefabActions.IsLocked(entity);
+        DrawPrefabBar(entity);
+        ImGui.BeginDisabled(insideInstance);
         DrawHeader(entity);
         ImGui.Spacing();
         if (entity.GetComponent<RectTransform>() is null)
         {
             DrawTransform(entity); // UI elements are placed by their RectTransform instead
         }
+
+        ImGui.EndDisabled();
 
         Component? toRemove = null;
         var index = 0;
@@ -75,7 +82,8 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             }
 
             ImGui.PushID(index++);
-            if (!DrawComponent(component, entity.Scene))
+            var componentLocked = locked && !(component is RectTransform && !insideInstance); // a UI root still moves
+            if (!DrawComponent(component, entity.Scene, componentLocked))
             {
                 toRemove = component;
             }
@@ -91,7 +99,9 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
+        ImGui.BeginDisabled(locked);
         DrawAddComponent(entity);
+        ImGui.EndDisabled();
 
         ImGui.PopID();
     }
@@ -403,25 +413,78 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
     }
 
     /// <returns>False when the user asked to remove the component.</returns>
-    private bool DrawComponent(Component component, Scene scene)
+    private bool DrawComponent(Component component, Scene scene, bool locked)
     {
         var keep = true;
         var title = component is MissingComponent missing
             ? $"Missing: {missing.TypeName}"
             : PropertyGrid.Nicify(component.GetType().Name);
 
-        if (!ImGui.CollapsingHeader(title, &keep, ImGuiTreeNodeFlags.DefaultOpen))
+        // A locked component (from a prefab) has no remove button, and its fields are shown but cannot be edited.
+        var open = locked ? ImGui.CollapsingHeader(title, ImGuiTreeNodeFlags.DefaultOpen) : ImGui.CollapsingHeader(title, &keep, ImGuiTreeNodeFlags.DefaultOpen);
+        if (!open)
         {
             return keep;
         }
 
+        ImGui.BeginDisabled(locked);
+        DrawComponentBody(component, scene);
+        ImGui.EndDisabled();
+        ImGui.Spacing();
+        return keep;
+    }
+
+    /// <summary>For a prefab copy: which prefab it comes from, and Open / Unpack / Select buttons.</summary>
+    private void DrawPrefabBar(Entity entity)
+    {
+        if (entity.PrefabInstanceRoot is not { } root)
+        {
+            return;
+        }
+
+        var asset = context.Assets?.Find(root.Prefab);
+        var name = asset?.Name ?? "missing prefab";
+        ImGui.TextColored(Theme.EditorTheme.Prefab, root == entity ? $"Prefab: {name}" : $"Part of the prefab copy '{root.Name}' ({name})");
+        ImGui.PushTextWrapPos(0);
+        ImGui.TextDisabled(root == entity
+            ? "Its parts come from the prefab. Open the prefab to change every copy, or unpack this copy to change only it."
+            : "Nothing here can be changed in the scene. Open the prefab to change every copy, or unpack this copy.");
+        ImGui.PopTextWrapPos();
+
+        var width = (ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X * 2) / 3f;
+        ImGui.BeginDisabled(asset is null);
+        if (ImGui.Button("Open Prefab", new Vector2(width, 0)))
+        {
+            context.EnterPrefab(asset!);
+        }
+
+        ImGui.EndDisabled();
+        ImGui.SameLine();
+        if (ImGui.Button("Unpack", new Vector2(width, 0)))
+        {
+            PrefabActions.Unpack(context, root);
+        }
+
+        ImGui.SameLine();
+        ImGui.BeginDisabled(asset is null);
+        if (ImGui.Button("Select Asset", new Vector2(width, 0)))
+        {
+            context.SelectedAsset = asset;
+        }
+
+        ImGui.EndDisabled();
+        ImGui.Separator();
+        ImGui.Spacing();
+    }
+
+    private void DrawComponentBody(Component component, Scene scene)
+    {
         if (component is MissingComponent)
         {
             ImGui.PushTextWrapPos(0);
             ImGui.TextColored(PropertyGrid.WarningColor, "This component's type could not be found. Its data is kept and saved unchanged.");
             ImGui.PopTextWrapPos();
-            ImGui.Spacing();
-            return keep;
+            return;
         }
 
         if (scripts.FindScript(component.GetType()) is { } script)
@@ -481,9 +544,6 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
                 context.Record(new SetMemberCommand(component, member, before, member.GetValue(component)));
             }
         }
-
-        ImGui.Spacing();
-        return keep;
     }
 
     private void DrawAddComponent(Entity entity)

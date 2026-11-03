@@ -206,6 +206,23 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
         [Description("Position [x, y, z] (top level only).")] float[]? position = null) =>
         Run("instantiate_model", t => t.InstantiateModel(asset, parent, position));
 
+    [McpServerTool(Name = "instantiate_prefab"), Description("Places a copy of a prefab (.lprefab) in the scene. The copy follows the prefab: only its root's name, tag, active flag and transform can be changed in the scene.")]
+    public Task<string> InstantiatePrefab(
+        [Description("Prefab asset path relative to the Assets folder, or its reference.")] string asset,
+        [Description("Parent entity; empty for the top level.")] string? parent = null,
+        [Description("Position [x, y, z] (top level only).")] float[]? position = null) =>
+        Run("instantiate_prefab", t => t.InstantiatePrefab(asset, parent, position));
+
+    [McpServerTool(Name = "make_prefab"), Description("Saves an entity and its children as a new prefab (.lprefab) in an Assets folder; the entity becomes a copy of it.")]
+    public Task<string> MakePrefab(
+        [Description("Entity id, path or unique name.")] string entity,
+        [Description("Folder relative to the Assets folder, e.g. Prefabs; empty for the Assets folder itself.")] string? folder = null) =>
+        Run("make_prefab", t => t.MakePrefab(entity, folder));
+
+    [McpServerTool(Name = "unpack_prefab"), Description("Turns a prefab copy into ordinary entities that can be changed freely (no longer linked to the prefab).")]
+    public Task<string> UnpackPrefab([Description("Entity id, path or unique name (the copy or any part of it).")] string entity) =>
+        Run("unpack_prefab", t => t.UnpackPrefab(entity));
+
     // ----- Editor -----
 
     [McpServerTool(Name = "select"), Description("Selects an entity in the editor (shown in the Inspector) and optionally moves the Scene view camera to it.")]

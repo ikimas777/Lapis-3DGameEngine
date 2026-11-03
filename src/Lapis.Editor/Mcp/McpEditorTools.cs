@@ -216,6 +216,10 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         RequireSceneEdits();
         var scene = context.Scene;
         var parentEntity = string.IsNullOrWhiteSpace(parent) ? null : ResolveEntity(parent);
+        if (parentEntity is not null)
+        {
+            RequireEditable(parentEntity, rootAllowed: false);
+        }
         var mesh = (shape ?? "empty").Trim().ToLowerInvariant() switch
         {
             "cube" => BuiltInMeshes.Cube,
@@ -272,6 +276,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         Execute(EntityLifetimeCommand.Deleting([entity]));
         return WithPlayNote(new JsonObject { ["deleted"] = Summary(entity) }).ToJsonString();
     }
@@ -280,6 +285,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         var json = SceneSerializer.EntitiesToJson([entity]);
         var copy = SceneSerializer.EntitiesFromJson(context.Scene, json, entity.Parent, assignNewIds: true)[0];
         copy.Transform.SetSiblingIndex(entity.Transform.SiblingIndex + 1);
@@ -291,6 +297,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new McpException("The name cannot be empty.");
@@ -304,6 +311,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         var before = entity.tag;
         entity.tag = tag;
         if (entity.tag != before)
@@ -320,6 +328,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         if (entity.IsActive != active)
         {
             Execute(new SetActiveCommand(entity, active));
@@ -332,6 +341,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         var transform = entity.Transform;
         var before = TransformState.Of(transform);
         if (world)
@@ -364,6 +374,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: true);
         if (!string.IsNullOrWhiteSpace(before) || !string.IsNullOrWhiteSpace(after))
         {
             var anchor = ResolveEntity(!string.IsNullOrWhiteSpace(before) ? before : after!);
@@ -410,6 +421,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: false);
         var type = ResolveComponentType(componentType);
         var component = entity.AddComponent(type);
         try
@@ -437,6 +449,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: false);
         var component = FindComponent(entity, componentType);
         Execute(ComponentLifetimeCommand.Removing(component));
         return WithPlayNote(new JsonObject { ["entity"] = Summary(entity), ["removed"] = component.GetType().Name }).ToJsonString();
@@ -446,6 +459,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: componentType.EndsWith(nameof(RectTransform), StringComparison.Ordinal));
         var component = FindComponent(entity, componentType);
         var member = ResolveMember(component.GetType(), property);
         var before = member.GetValue(component);
@@ -602,6 +616,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     {
         RequireSceneEdits();
         var entity = ResolveEntity(entityReference);
+        RequireEditable(entity, rootAllowed: false);
         var info = ResolveAsset(asset, null);
         var done = info.Type switch
         {
@@ -625,10 +640,60 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         RequireSceneEdits();
         var info = ResolveAsset(asset, AssetType.Model);
         var parentEntity = string.IsNullOrWhiteSpace(parent) ? null : ResolveEntity(parent);
+        if (parentEntity is not null)
+        {
+            RequireEditable(parentEntity, rootAllowed: false);
+        }
         var entity = EditorActions.InstantiateModel(context, info, parentEntity, position is null ? Vector3.Zero : ToVector3(position, nameof(position)))
             ?? throw new McpException($"'{asset}' could not be imported; see get_console.");
         RenameLast($"Create {entity.Name}");
         return WithPlayNote(Summary(entity)).ToJsonString();
+    }
+
+    public string InstantiatePrefab(string asset, string? parent, float[]? position)
+    {
+        RequireSceneEdits();
+        var info = ResolveAsset(asset, AssetType.Prefab);
+        var parentEntity = string.IsNullOrWhiteSpace(parent) ? null : ResolveEntity(parent);
+        if (parentEntity is not null)
+        {
+            RequireEditable(parentEntity, rootAllowed: false);
+        }
+        var entity = PrefabActions.Instantiate(context, info, parentEntity, position is null ? Vector3.Zero : ToVector3(position, nameof(position)))
+            ?? throw new McpException($"'{asset}' could not be placed; see get_console.");
+        RenameLast($"Create {entity.Name}");
+        return WithPlayNote(Summary(entity)).ToJsonString();
+    }
+
+    public string MakePrefab(string entityReference, string? folder)
+    {
+        RequireSceneEdits();
+        var entity = ResolveEntity(entityReference);
+        var assets = RequireAssets();
+        var target = string.IsNullOrWhiteSpace(folder) ? assets.RootDirectory : AssetsPath(folder);
+        var asset = PrefabActions.CreatePrefab(context, entity, target)
+            ?? throw new McpException($"'{entity.Name}' could not be made into a prefab; see get_console.");
+        RenameLast($"Make Prefab {asset.Name}");
+        return new JsonObject
+        {
+            ["prefab"] = Path.GetRelativePath(assets.RootDirectory, asset.FullPath).Replace('\\', '/'),
+            ["reference"] = asset.Reference,
+            ["entity"] = Summary(entity),
+        }.ToJsonString();
+    }
+
+    public string UnpackPrefab(string entityReference)
+    {
+        RequireSceneEdits();
+        var entity = ResolveEntity(entityReference);
+        if (entity.PrefabInstanceRoot is not { } root)
+        {
+            throw new McpException($"'{entity.Name}' is not part of a prefab copy.");
+        }
+
+        PrefabActions.Unpack(context, root);
+        RenameLast($"Unpack {root.Name}");
+        return WithPlayNote(Summary(root)).ToJsonString();
     }
 
     // ----- Editor -----
@@ -791,6 +856,15 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
             _ => throw new McpException($"Several entities are named '{reference}': " +
                 string.Join(", ", matches.Select(entity => $"{EntityPath(entity)} ({entity.Id})")) + ". Use an id or a path."),
         };
+    }
+
+    // Prefab copies change only through their prefab: the root keeps its own name, tag, active flag and transform.
+    private static void RequireEditable(Entity entity, bool rootAllowed)
+    {
+        if (PrefabActions.IsInsideInstance(entity) || (!rootAllowed && entity.Prefab is not null))
+        {
+            throw new McpException(PrefabActions.LockedMessage(entity) + " Use unpack_prefab, or change the prefab file.");
+        }
     }
 
     private void RequireSceneEdits()

@@ -20,10 +20,22 @@ internal static class EditorActions
     /// <summary>Deletes every selected entity (with its children) as one undoable step.</summary>
     public static void DeleteSelection(EditorContext context)
     {
-        if (context.SelectedRoots is { Count: > 0 } roots)
+        if (UnlockedRoots(context) is { Count: > 0 } roots)
         {
             context.Execute(EntityLifetimeCommand.Deleting(roots));
         }
+    }
+
+    /// <summary>The selected roots, without entities inside prefab copies (those are reported: they cannot change).</summary>
+    private static IReadOnlyList<Entity> UnlockedRoots(EditorContext context)
+    {
+        var roots = context.SelectedRoots;
+        if (roots.FirstOrDefault(PrefabActions.IsInsideInstance) is { } locked)
+        {
+            Log.Warning(PrefabActions.LockedMessage(locked));
+        }
+
+        return [.. roots.Where(root => !PrefabActions.IsInsideInstance(root))];
     }
 
     /// <summary>Copies the entity and its children next to the original and selects the copy.</summary>
@@ -32,7 +44,7 @@ internal static class EditorActions
     /// <summary>Copies every selected entity (with its children) next to its original and selects the copies.</summary>
     public static void DuplicateSelection(EditorContext context)
     {
-        if (context.SelectedRoots is { Count: > 0 } roots)
+        if (UnlockedRoots(context) is { Count: > 0 } roots)
         {
             DuplicateAll(context, roots);
         }

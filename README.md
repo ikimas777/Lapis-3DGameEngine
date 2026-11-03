@@ -267,6 +267,13 @@ and a soft edge). All three cast shadows (the 4 spot and 2 point lights nearest 
 can fade the game picture to a colour with `Screen.FadeTo(Color.Black, 0.1f)`, e.g. for a blink. See
 [Lights, fog and fading](docs/scripting.md#lights-fog-and-fading).
 
+### Prefabs
+
+Drag an entity from the Hierarchy into the Assets panel to save it as a **prefab** (`.lprefab`), then drag the prefab
+into the scene as many times as you like. Copies are blue in the Hierarchy and follow the prefab: **Open Prefab**
+edits every copy at once, **Unpack** turns one copy into ordinary entities. Scripts place copies with
+`Instantiate(prefab, position)`. See the [prefab guide](docs/prefabs.md).
+
 ### UI
 
 **Create > UI** adds a **Canvas** with panels, images, text and buttons drawn over the game. Select an element to

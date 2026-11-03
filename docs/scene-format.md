@@ -47,8 +47,12 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 | `tag` | The entity's tag. Omitted for `Untagged`. |
 | `folder` | Root entities only: id of the Hierarchy folder the entity is shown in. Omitted at the top level. |
 | `active` | Omitted when `true`. |
+| `prefab` | Roots of prefab copies only: reference of the `.lprefab` asset. When the scene is read, the entities and components that follow the root are rebuilt from the prefab file (the stored copy is used only when the file is missing); the root keeps its own name, tag, active flag, folder and transform. |
 | `transform` | Local position, rotation (quaternion `x, y, z, w`) and scale. |
 | `components` | Every component except the transform: the full C# type name and its saved members. |
+
+A `.lprefab` file has the same layout with `"format": "lapis.entities"` and one root entity (the prefab), without
+`prefab` fields. See [prefabs.md](prefabs.md).
 
 ## Values
 

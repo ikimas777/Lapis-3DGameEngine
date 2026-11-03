@@ -311,8 +311,15 @@ internal sealed class UIHandles(EditorContext context)
 
     private static Vector2 Round(Vector2 value) => new(MathF.Round(value.X), MathF.Round(value.Y));
 
-    private void Begin(UIElement element, int handleX, int handleY, Vector2 mouse) =>
+    private void Begin(UIElement element, int handleX, int handleY, Vector2 mouse)
+    {
+        if (PrefabActions.IsInsideInstance(element.Entity))
+        {
+            return; // part of a prefab copy: it can be selected, not moved
+        }
+
         _drag = new Drag(element.Transform, handleX, handleY, mouse, element.Transform.Position, element.Transform.Size, element.PixelsPerUnit);
+    }
 
     private static void DrawSelection(ImDrawListPtr drawList, Rect rect)
     {

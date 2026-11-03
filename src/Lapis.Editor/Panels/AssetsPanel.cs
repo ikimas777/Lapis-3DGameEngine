@@ -142,6 +142,10 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         if (ImGui.BeginChild("##items", Vector2.Zero))
         {
             DrawItems(assets);
+
+            // Entities dragged from the Hierarchy onto the files become prefabs in the folder shown.
+            var min = ImGui.GetWindowPos();
+            AcceptEntitiesAsPrefabs(DragDrop.AcceptEntitiesInRect(context.Scene, min, min + ImGui.GetWindowSize(), "##itemsDrop"), CurrentFolder);
         }
 
         ImGui.EndChild();
@@ -227,6 +231,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         }
 
         AcceptMoveInto(assets, folder);
+        AcceptEntitiesAsPrefabs(DragDrop.AcceptEntities(context.Scene), folder);
 
         if (open)
         {
@@ -336,6 +341,7 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         else if (isFolder)
         {
             AcceptMoveInto(assets, path);
+            AcceptEntitiesAsPrefabs(DragDrop.AcceptEntities(context.Scene), path);
         }
 
         if (ImGui.BeginPopupContextItem())
@@ -615,6 +621,9 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
             case AssetType.Scene:
                 host.OpenScene(path);
                 break;
+            case AssetType.Prefab:
+                context.EnterPrefab(asset!);
+                break;
             case AssetType.Script:
                 CodeEditor.Open(path, 1, Path.GetDirectoryName(context.Assets!.RootDirectory));
                 break;
@@ -703,6 +712,15 @@ internal sealed unsafe class AssetsPanel(EditorContext context, TextureLibrary t
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             Log.Error($"Could not rename '{Path.GetFileName(path)}': {exception.Message}");
+        }
+    }
+
+    /// <summary>Makes a prefab in <paramref name="folder"/> from each dropped entity.</summary>
+    private void AcceptEntitiesAsPrefabs(IReadOnlyList<Entity> entities, string folder)
+    {
+        foreach (var entity in entities)
+        {
+            PrefabActions.CreatePrefab(context, entity, folder);
         }
     }
 
