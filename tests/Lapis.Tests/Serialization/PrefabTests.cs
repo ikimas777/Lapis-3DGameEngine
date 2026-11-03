@@ -3,8 +3,6 @@ using Lapis.Serialization;
 
 namespace Lapis.Tests.Serialization;
 
-using Scene = Lapis.Scene;
-
 [Collection(GlobalState.Collection)] // replaces the static prefab loader
 public sealed class PrefabTests : IDisposable
 {

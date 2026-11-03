@@ -7,7 +7,7 @@ public class SceneFolderSerializerTests
     [Fact]
     public void RoundTrip_KeepsFoldersAndWhichEntitiesAreInThem()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var environment = new SceneFolder(Guid.NewGuid(), "Environment");
         var lights = new SceneFolder(Guid.NewGuid(), "Lights", environment.Id);
         scene.Folders.AddRange([environment, lights]);
@@ -30,7 +30,7 @@ public class SceneFolderSerializerTests
     [Fact]
     public void RoundTrip_KeepsFolderColors()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         scene.Folders.Add(new SceneFolder(Guid.NewGuid(), "Red") { Color = new Color(0.9f, 0.3f, 0.3f) });
         scene.Folders.Add(new SceneFolder(Guid.NewGuid(), "Plain"));
 
@@ -45,7 +45,7 @@ public class SceneFolderSerializerTests
     [Fact]
     public void ScenesWithoutFolders_HaveNoFoldersField()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         scene.CreateEntity("Box");
 
         Assert.DoesNotContain("\"folders\"", SceneSerializer.ToJson(scene), StringComparison.Ordinal);
@@ -54,7 +54,7 @@ public class SceneFolderSerializerTests
     [Fact]
     public void FolderWithMissingParent_MovesToTheTopLevel()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         scene.Folders.Add(new SceneFolder(Guid.NewGuid(), "Orphan", Guid.NewGuid()));
 
         var loaded = SceneSerializer.FromJson(SceneSerializer.ToJson(scene));
@@ -65,7 +65,7 @@ public class SceneFolderSerializerTests
     [Fact]
     public void Fragment_KeepsTheFolderOfTopLevelEntities()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var folder = new SceneFolder(Guid.NewGuid(), "Props");
         scene.Folders.Add(folder);
         var crate = scene.CreateEntity("Crate");
@@ -79,7 +79,7 @@ public class SceneFolderSerializerTests
     [Fact]
     public void IsFolderInside_FollowsNestedFolders()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var a = new SceneFolder(Guid.NewGuid(), "A");
         var b = new SceneFolder(Guid.NewGuid(), "B", a.Id);
         var c = new SceneFolder(Guid.NewGuid(), "C", b.Id);

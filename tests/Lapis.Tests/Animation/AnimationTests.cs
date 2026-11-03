@@ -5,16 +5,12 @@ using Lapis.Assets.Importers;
 
 namespace Lapis.Tests.Animation;
 
-using Scene = Lapis.Scene;
-
 [Collection(GlobalState.Collection)] // sets AssetDatabase.Active
 public sealed class AnimationTests : IDisposable
 {
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "lapis-animation-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-animation-tests");
 
-    public AnimationTests() => Directory.CreateDirectory(_folder);
-
-    public void Dispose() => Directory.Delete(_folder, recursive: true);
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void Import_ReadsTheSkeletonClipsAndRestPoseVertices()
@@ -69,7 +65,7 @@ public sealed class AnimationTests : IDisposable
     public void Animator_PlaysLoopsFiresEventsAndStops()
     {
         var path = WriteArmModel();
-        var assets = new Lapis.Assets.AssetDatabase(_folder);
+        var assets = new Lapis.Assets.AssetDatabase(_temp.Path);
         var previous = Lapis.Assets.AssetDatabase.Active;
         Lapis.Assets.AssetDatabase.Active = assets;
         try
@@ -202,7 +198,7 @@ public sealed class AnimationTests : IDisposable
             ["accessors"] = accessors,
         };
 
-        var path = Path.Combine(_folder, "Arm.gltf");
+        var path = Path.Combine(_temp.Path, "Arm.gltf");
         File.WriteAllText(path, document.ToJsonString());
         return path;
     }

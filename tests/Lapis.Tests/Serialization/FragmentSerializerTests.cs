@@ -7,12 +7,12 @@ public class FragmentSerializerTests
     [Fact]
     public void Fragment_RoundTripsSubtreeUnderNewParent()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var root = scene.CreateEntity("Root");
         var child = scene.CreateEntity("Child", root);
         child.AddComponent<MeshRenderer>().MeshId = BuiltInMeshes.Sphere;
         var json = SceneSerializer.EntitiesToJson([root]);
-        var other = new Lapis.Scene();
+        var other = new Scene();
         var holder = other.CreateEntity("Holder");
 
         var roots = SceneSerializer.EntitiesFromJson(other, json, holder);
@@ -26,7 +26,7 @@ public class FragmentSerializerTests
     [Fact]
     public void NewIds_RemapInternalReferencesAndKeepExternalOnes()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var outside = scene.CreateEntity("Outside");
         var root = scene.CreateEntity("Root");
         var inner = scene.CreateEntity("Inner", root);
@@ -47,7 +47,7 @@ public class FragmentSerializerTests
     [Fact]
     public void SameIds_InSameScene_Throw()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var root = scene.CreateEntity("Root");
         var json = SceneSerializer.EntitiesToJson([root]);
 
@@ -57,7 +57,7 @@ public class FragmentSerializerTests
     [Fact]
     public void Component_RoundTrips()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var light = scene.CreateEntity().AddComponent<Light>();
         light.Type = LightType.Point;
         light.Color = Color.Red;
@@ -73,9 +73,9 @@ public class FragmentSerializerTests
     [Fact]
     public void SceneFile_IsNotAcceptedAsFragment()
     {
-        var json = SceneSerializer.ToJson(new Lapis.Scene());
+        var json = SceneSerializer.ToJson(new Scene());
 
-        Assert.Throws<SceneFormatException>(() => SceneSerializer.EntitiesFromJson(new Lapis.Scene(), json));
+        Assert.Throws<SceneFormatException>(() => SceneSerializer.EntitiesFromJson(new Scene(), json));
     }
 
 #pragma warning disable CA1051 // script-style public fields

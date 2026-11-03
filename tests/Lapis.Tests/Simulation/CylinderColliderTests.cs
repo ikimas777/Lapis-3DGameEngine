@@ -8,7 +8,7 @@ public class CylinderColliderTests
     [Fact]
     public void Ball_RestsOnTopOfAStaticCylinder()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var pillar = scene.CreateEntity("Pillar");
         pillar.Transform.Position = new Vector3(0, 1, 0);
         pillar.AddComponent<CylinderCollider>(); // 2 m tall: its top is at y = 2

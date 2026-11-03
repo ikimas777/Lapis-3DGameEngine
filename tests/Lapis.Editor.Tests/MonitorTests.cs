@@ -99,21 +99,15 @@ public class AlertEngineTests
 
 public sealed class SessionTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "LapisMonitorTests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("LapisMonitorTests", create: false);
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-        {
-            Directory.Delete(_root, recursive: true);
-        }
-    }
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void RecordedSession_LoadsWhatWasWritten()
     {
         var store = new MetricStore();
-        using (var recorder = new SessionRecorder(_root))
+        using (var recorder = new SessionRecorder(_temp.Path))
         {
             recorder.Begin("Lapis.Editor", 42);
             foreach (var sample in new[]
@@ -131,7 +125,7 @@ public sealed class SessionTests : IDisposable
             recorder.End(store);
         }
 
-        var folder = Assert.Single(RecordedSession.List(_root));
+        var folder = Assert.Single(RecordedSession.List(_temp.Path));
         Assert.True(File.Exists(Path.Combine(folder, "summary.json")));
 
         var session = RecordedSession.Load(folder);

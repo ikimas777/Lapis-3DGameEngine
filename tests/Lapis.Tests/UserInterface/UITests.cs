@@ -4,8 +4,6 @@ using Lapis.Serialization;
 
 namespace Lapis.Tests.UserInterface;
 
-using Scene = Lapis.Scene;
-
 [Collection(GlobalState.Collection)] // the UI's mouse state is static
 public class UITests
 {

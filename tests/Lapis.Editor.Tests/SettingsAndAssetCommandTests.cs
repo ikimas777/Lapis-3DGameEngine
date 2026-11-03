@@ -7,14 +7,12 @@ namespace Lapis.Editor.Tests;
 [Collection(GlobalState.Collection)] // sets AssetDatabase.Active
 public sealed class SettingsAndAssetCommandTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-undo-asset-tests", Guid.NewGuid().ToString("N"));
-
-    public SettingsAndAssetCommandTests() => Directory.CreateDirectory(_root);
+    private readonly TempFolder _temp = new("lapis-undo-asset-tests");
 
     public void Dispose()
     {
         AssetDatabase.Active = null;
-        Directory.Delete(_root, recursive: true);
+        _temp.Dispose();
     }
 
     [Fact]
@@ -43,8 +41,8 @@ public sealed class SettingsAndAssetCommandTests : IDisposable
         var history = new UndoStack();
         var saved = history.StateId;
 
-        File.WriteAllText(Path.Combine(_root, "a.txt"), "a");
-        history.Execute(new MoveAssetCommand(Path.Combine(_root, "a.txt"), Path.Combine(_root, "b.txt")), scene);
+        File.WriteAllText(Path.Combine(_temp.Path, "a.txt"), "a");
+        history.Execute(new MoveAssetCommand(Path.Combine(_temp.Path, "a.txt"), Path.Combine(_temp.Path, "b.txt")), scene);
         Assert.Equal(saved, history.StateId);
 
         var member = SerializedMember.For(typeof(SceneEnvironment)).First(m => m.Name == nameof(SceneEnvironment.Skybox));
@@ -55,12 +53,12 @@ public sealed class SettingsAndAssetCommandTests : IDisposable
     [Fact]
     public void MoveAsset_UndoMovesFileAndMetaBack_KeepingTheId()
     {
-        var path = Path.Combine(_root, "Crate.lmat");
+        var path = Path.Combine(_temp.Path, "Crate.lmat");
         new Material().Save(path);
-        var assets = AssetDatabase.Active = new AssetDatabase(_root);
+        var assets = AssetDatabase.Active = new AssetDatabase(_temp.Path);
         var id = assets.FindByPath(path)!.Id;
-        Directory.CreateDirectory(Path.Combine(_root, "Props"));
-        var target = Path.Combine(_root, "Props", "Box.lmat");
+        Directory.CreateDirectory(Path.Combine(_temp.Path, "Props"));
+        var target = Path.Combine(_temp.Path, "Props", "Box.lmat");
         var history = new UndoStack();
 
         history.Execute(new MoveAssetCommand(path, target), new Scene());
@@ -74,9 +72,9 @@ public sealed class SettingsAndAssetCommandTests : IDisposable
     [Fact]
     public void MaterialMember_UndoRewritesTheFile()
     {
-        var path = Path.Combine(_root, "Metal.lmat");
+        var path = Path.Combine(_temp.Path, "Metal.lmat");
         new Material { Roughness = 0.5f }.Save(path);
-        var assets = AssetDatabase.Active = new AssetDatabase(_root);
+        var assets = AssetDatabase.Active = new AssetDatabase(_temp.Path);
         var asset = assets.FindByPath(path)!;
         var member = SerializedMember.For(typeof(Material)).First(m => m.Name == nameof(Material.Roughness));
         var history = new UndoStack();

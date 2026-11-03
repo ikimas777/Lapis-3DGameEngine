@@ -3,8 +3,6 @@ using Lapis.Rendering;
 
 namespace Lapis.Tests.Rendering;
 
-using Scene = Lapis.Scene;
-
 public class LocalShadowTests
 {
     [Fact]

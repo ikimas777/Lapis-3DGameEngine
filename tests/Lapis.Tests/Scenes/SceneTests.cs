@@ -1,11 +1,11 @@
-namespace Lapis.Tests.Scene;
+namespace Lapis.Tests.Scenes;
 
 public class SceneTests
 {
     [Fact]
     public void CreateEntity_AddsRootWithTransform()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
 
         var entity = scene.CreateEntity("Player");
 
@@ -19,7 +19,7 @@ public class SceneTests
     [Fact]
     public void AllEntities_IsDepthFirstInHierarchyOrder()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var a = scene.CreateEntity("A");
         scene.CreateEntity("A1", a);
         var a2 = scene.CreateEntity("A2", a);
@@ -33,7 +33,7 @@ public class SceneTests
     [Fact]
     public void Destroy_RemovesEntityAndDescendants()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
         var renderer = child.AddComponent<MeshRenderer>();
@@ -51,7 +51,7 @@ public class SceneTests
     [Fact]
     public void Destroy_CallsOnRemoved()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var entity = scene.CreateEntity();
         var tracker = entity.AddComponent<RemovalTracker>();
 
@@ -63,7 +63,7 @@ public class SceneTests
     [Fact]
     public void Find_ReturnsFirstComponentDepthFirst()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var first = scene.CreateEntity("First");
         var nested = scene.CreateEntity("Nested", first).AddComponent<Light>();
         scene.CreateEntity("Second").AddComponent<Light>();
@@ -76,7 +76,7 @@ public class SceneTests
     [Fact]
     public void FindMainCamera_PrefersHighestPriorityOnActiveEntity()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var low = scene.CreateEntity("Low").AddComponent<Camera>();
         var high = scene.CreateEntity("High").AddComponent<Camera>();
         var hidden = scene.CreateEntity("Hidden").AddComponent<Camera>();
@@ -93,7 +93,7 @@ public class SceneTests
     [Fact]
     public void IsActiveInHierarchy_FollowsParents()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
 
@@ -106,7 +106,7 @@ public class SceneTests
     [Fact]
     public void AddComponent_RejectsTransformAndAbstractTypes()
     {
-        var entity = new Lapis.Scene().CreateEntity();
+        var entity = new Scene().CreateEntity();
 
         Assert.Throws<ArgumentException>(() => entity.AddComponent<Transform>());
         Assert.Throws<ArgumentException>(() => entity.AddComponent<Behaviour>());
@@ -116,7 +116,7 @@ public class SceneTests
     [Fact]
     public void GetComponent_FindsByTypeAndBaseType()
     {
-        var entity = new Lapis.Scene().CreateEntity();
+        var entity = new Scene().CreateEntity();
         var tracker = entity.AddComponent<RemovalTracker>();
 
         Assert.Same(tracker, entity.GetComponent<RemovalTracker>());
@@ -131,7 +131,7 @@ public class SceneTests
     [Fact]
     public void RemoveComponent_DetachesComponent()
     {
-        var entity = new Lapis.Scene().CreateEntity();
+        var entity = new Scene().CreateEntity();
         var tracker = entity.AddComponent<RemovalTracker>();
 
         entity.RemoveComponent(tracker);
@@ -145,7 +145,7 @@ public class SceneTests
     [Fact]
     public void GetComponentInChildren_SearchesDescendants()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var root = scene.CreateEntity("Root");
         var child = scene.CreateEntity("Child", root);
         var light = scene.CreateEntity("Grandchild", child).AddComponent<Light>();

@@ -2,18 +2,16 @@ namespace Lapis.Editor.Tests;
 
 public sealed class PlatformShellTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-trash-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-trash-tests");
 
-    public PlatformShellTests() => Directory.CreateDirectory(_root);
-
-    public void Dispose() => Directory.Delete(_root, recursive: true);
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void MoveToFreedesktopTrash_MovesFileAndWritesInfo()
     {
-        var file = Path.Combine(_root, "My Box.lmat");
+        var file = Path.Combine(_temp.Path, "My Box.lmat");
         File.WriteAllText(file, "x");
-        var trash = Path.Combine(_root, "Trash");
+        var trash = Path.Combine(_temp.Path, "Trash");
 
         PlatformShell.MoveToFreedesktopTrash(file, isFolder: false, trash);
 
@@ -28,10 +26,10 @@ public sealed class PlatformShellTests : IDisposable
     [Fact]
     public void MoveToFreedesktopTrash_KeepsEarlierItemsWithTheSameName()
     {
-        var trash = Path.Combine(_root, "Trash");
+        var trash = Path.Combine(_temp.Path, "Trash");
         for (var i = 0; i < 2; i++)
         {
-            var folder = Path.Combine(_root, "Models");
+            var folder = Path.Combine(_temp.Path, "Models");
             Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "a.obj"), i.ToString(System.Globalization.CultureInfo.InvariantCulture));
             PlatformShell.MoveToFreedesktopTrash(folder, isFolder: true, trash);

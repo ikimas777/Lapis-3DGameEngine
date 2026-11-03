@@ -12,14 +12,12 @@ namespace Lapis.Editor.Tests;
 [Collection(GlobalState.Collection)] // sets AssetDatabase.Active
 public sealed class McpTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-mcp-tests", Guid.NewGuid().ToString("N"));
-
-    public McpTests() => Directory.CreateDirectory(_root);
+    private readonly TempFolder _temp = new("lapis-mcp-tests");
 
     public void Dispose()
     {
         AssetDatabase.Active = null;
-        Directory.Delete(_root, recursive: true);
+        _temp.Dispose();
     }
 
     private static (EditorContext Context, McpEditorTools Tools, McpSettings Settings) Create()
@@ -155,9 +153,9 @@ public sealed class McpTests : IDisposable
     [Fact]
     public void WriteScript_ReplacingAFile_IsUndoable()
     {
-        var path = Path.Combine(_root, "Spinner.cs");
+        var path = Path.Combine(_temp.Path, "Spinner.cs");
         File.WriteAllText(path, "// old");
-        AssetDatabase.Active = new AssetDatabase(_root);
+        AssetDatabase.Active = new AssetDatabase(_temp.Path);
         var (context, tools, _) = Create();
 
         tools.WriteScript("Spinner.cs", "// new");

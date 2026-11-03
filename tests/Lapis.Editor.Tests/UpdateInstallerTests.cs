@@ -6,11 +6,9 @@ namespace Lapis.Editor.Tests;
 
 public sealed class UpdateInstallerTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-installer-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-installer-tests");
 
-    public UpdateInstallerTests() => Directory.CreateDirectory(_root);
-
-    public void Dispose() => Directory.Delete(_root, recursive: true);
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public async Task ZipPackage_ReplacesEditorAndRuntime_KeepsOtherFiles()
@@ -21,7 +19,7 @@ public sealed class UpdateInstallerTests : IDisposable
         File.WriteAllText(Path.Combine(install, "Runtime", "Lapis.Runtime.exe"), "old runtime");
         File.WriteAllText(Path.Combine(install, "notes.txt"), "mine");
 
-        var package = Path.Combine(_root, "Lapis-Windows-x64.zip");
+        var package = Path.Combine(_temp.Path, "Lapis-Windows-x64.zip");
         var content = Folder("content");
         Directory.CreateDirectory(Path.Combine(content, "Lapis", "Runtime"));
         File.WriteAllText(Path.Combine(content, "Lapis", "Lapis.Editor.exe"), "new editor");
@@ -80,7 +78,7 @@ public sealed class UpdateInstallerTests : IDisposable
         File.WriteAllText(Path.Combine(content, "Lapis", "Lapis.Editor"), "editor");
         File.WriteAllText(Path.Combine(content, "Lapis", "Runtime", "Lapis.Runtime"), "player");
 
-        var package = Path.Combine(_root, "Lapis-Linux-x64.tar.gz");
+        var package = Path.Combine(_temp.Path, "Lapis-Linux-x64.tar.gz");
         await using (var file = File.Create(package))
         await using (var gzip = new GZipStream(file, CompressionLevel.Fastest))
         {
@@ -111,14 +109,14 @@ public sealed class UpdateInstallerTests : IDisposable
 
     private async Task<int> Install(string package, string install)
     {
-        var unpacked = Path.Combine(_root, "unpacked-" + Path.GetFileName(package));
+        var unpacked = Path.Combine(_temp.Path, "unpacked-" + Path.GetFileName(package));
         await UpdateInstaller.ExtractAsync(package, unpacked, TestContext.Current.CancellationToken);
         return UpdateInstaller.ReplaceFiles(UpdateInstaller.FindPackageRoot(unpacked), install);
     }
 
     private string Folder(string name)
     {
-        var path = Path.Combine(_root, name);
+        var path = Path.Combine(_temp.Path, name);
         Directory.CreateDirectory(path);
         return path;
     }

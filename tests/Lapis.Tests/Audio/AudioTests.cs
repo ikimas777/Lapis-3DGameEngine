@@ -65,7 +65,7 @@ public sealed class AudioTests
     [Fact]
     public void AudioSource_IsSavedWithTheScene_AndHidesDistancesWhenNotSpatial()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var source = scene.CreateEntity("Radio").AddComponent<AudioSource>();
         source.Clip = "asset:0123456789abcdef0123456789abcdef";
         source.Volume = 0.4f;
@@ -88,7 +88,7 @@ public sealed class AudioTests
     [Fact]
     public void AGame_WithAMissingSound_KeepsRunning()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var source = scene.CreateEntity("Speaker").AddComponent<AudioSource>();
         source.Clip = "asset:00000000000000000000000000000001";
 

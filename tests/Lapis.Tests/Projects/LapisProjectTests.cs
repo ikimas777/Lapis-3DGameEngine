@@ -4,20 +4,14 @@ namespace Lapis.Tests.Projects;
 
 public sealed class LapisProjectTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-tests", create: false);
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-        {
-            Directory.Delete(_root, recursive: true);
-        }
-    }
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void Create_MakesStandardLayout_AndOpenReadsItBack()
     {
-        var folder = Path.Combine(_root, "MyGame");
+        var folder = Path.Combine(_temp.Path, "MyGame");
 
         var created = LapisProject.Create(folder);
         var opened = LapisProject.Open(folder);
@@ -32,7 +26,7 @@ public sealed class LapisProjectTests : IDisposable
     [Fact]
     public void Create_RefusesExistingProject()
     {
-        var folder = Path.Combine(_root, "Twice");
+        var folder = Path.Combine(_temp.Path, "Twice");
         LapisProject.Create(folder);
 
         Assert.Throws<InvalidOperationException>(() => LapisProject.Create(folder));
@@ -41,21 +35,21 @@ public sealed class LapisProjectTests : IDisposable
     [Fact]
     public void Create_RejectsInvalidName()
     {
-        Assert.Throws<ArgumentException>(() => LapisProject.Create(Path.Combine(_root, "bad"), "my game!"));
+        Assert.Throws<ArgumentException>(() => LapisProject.Create(Path.Combine(_temp.Path, "bad"), "my game!"));
     }
 
     [Fact]
     public void Open_FolderWithoutProject_Throws()
     {
-        Directory.CreateDirectory(_root);
+        Directory.CreateDirectory(_temp.Path);
 
-        Assert.Throws<ProjectFormatException>(() => LapisProject.Open(_root));
+        Assert.Throws<ProjectFormatException>(() => LapisProject.Open(_temp.Path));
     }
 
     [Fact]
     public void ToProjectPath_UsesForwardSlashes()
     {
-        var project = LapisProject.Create(Path.Combine(_root, "Paths"));
+        var project = LapisProject.Create(Path.Combine(_temp.Path, "Paths"));
 
         Assert.Equal("Assets/Scenes/A.lscene", project.ToProjectPath(Path.Combine(project.AssetsDirectory, "Scenes", "A.lscene")));
     }

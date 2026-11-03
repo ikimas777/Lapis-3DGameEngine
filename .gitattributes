@@ -1,8 +1,17 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Text files are stored with LF and checked out with LF on every system (also on Windows with core.autocrlf),
+# so files never mix line endings. .editorconfig says the same for editors.
+* text=auto eol=lf
 
-# Prebuilt executables in the repository root
+# Binary files
 *.exe binary
-
-# Shell scripts must keep LF line endings to run on Linux
-*.sh text eol=lf
+*.dll binary
+*.so binary
+*.dylib binary
+*.png binary
+*.jpg binary
+*.ttf binary
+*.otf binary
+*.glb binary
+*.wav binary
+*.ogg binary
+*.ico binary

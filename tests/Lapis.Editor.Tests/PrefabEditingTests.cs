@@ -7,18 +7,17 @@ namespace Lapis.Editor.Tests;
 [Collection(GlobalState.Collection)] // sets AssetDatabase.Active
 public sealed class PrefabEditingTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-prefab-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-prefab-tests");
 
     public PrefabEditingTests()
     {
-        Directory.CreateDirectory(_root);
-        AssetDatabase.Active = new AssetDatabase(_root);
+        AssetDatabase.Active = new AssetDatabase(_temp.Path);
     }
 
     public void Dispose()
     {
         AssetDatabase.Active = null;
-        Directory.Delete(_root, recursive: true);
+        _temp.Dispose();
     }
 
     [Fact]
@@ -27,10 +26,10 @@ public sealed class PrefabEditingTests : IDisposable
         var context = new EditorContext(new Scene());
         var lamp = MakeLamp(context.Scene);
 
-        var asset = PrefabActions.CreatePrefab(context, lamp, Path.Combine(_root, "Prefabs"))!;
+        var asset = PrefabActions.CreatePrefab(context, lamp, Path.Combine(_temp.Path, "Prefabs"))!;
 
         Assert.Equal(AssetType.Prefab, asset.Type);
-        Assert.True(File.Exists(Path.Combine(_root, "Prefabs", "Lamp.lprefab")));
+        Assert.True(File.Exists(Path.Combine(_temp.Path, "Prefabs", "Lamp.lprefab")));
         Assert.Equal(asset.Reference, lamp.Prefab);
         Assert.True(PrefabActions.IsInsideInstance(lamp.Children.Single()));
 
@@ -43,7 +42,7 @@ public sealed class PrefabEditingTests : IDisposable
     public void Instantiate_AndUnpack_AreUndoable()
     {
         var context = new EditorContext(new Scene());
-        var asset = PrefabActions.CreatePrefab(context, MakeLamp(context.Scene), _root)!;
+        var asset = PrefabActions.CreatePrefab(context, MakeLamp(context.Scene), _temp.Path)!;
 
         var copy = PrefabActions.Instantiate(context, asset, null, new Vector3(3f, 0f, 0f))!;
         Assert.Equal(new Vector3(3f, 0f, 0f), copy.Transform.Position);
@@ -63,7 +62,7 @@ public sealed class PrefabEditingTests : IDisposable
     public void EditingAPrefab_UpdatesTheCopiesInTheScene_AndKeepsTheScenesState()
     {
         var context = new EditorContext(new Scene());
-        var asset = PrefabActions.CreatePrefab(context, MakeLamp(context.Scene), _root)!;
+        var asset = PrefabActions.CreatePrefab(context, MakeLamp(context.Scene), _temp.Path)!;
         var copy = PrefabActions.Instantiate(context, asset, null, new Vector3(5f, 0f, 0f))!;
         var undoSteps = context.History.UndoName;
 
@@ -90,7 +89,7 @@ public sealed class PrefabEditingTests : IDisposable
     public void SavePrefab_RefusesMoreThanOneTopLevelEntity()
     {
         var context = new EditorContext(new Scene());
-        var asset = PrefabActions.CreatePrefab(context, MakeLamp(context.Scene), _root)!;
+        var asset = PrefabActions.CreatePrefab(context, MakeLamp(context.Scene), _temp.Path)!;
         var before = File.ReadAllText(asset.FullPath);
         context.EnterPrefab(asset);
         context.Scene.CreateEntity("Stray");

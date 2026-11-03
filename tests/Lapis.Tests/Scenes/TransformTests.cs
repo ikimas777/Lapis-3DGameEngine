@@ -1,11 +1,11 @@
-namespace Lapis.Tests.Scene;
+namespace Lapis.Tests.Scenes;
 
 public class TransformTests
 {
     [Fact]
     public void NewTransform_IsIdentity()
     {
-        var transform = new Lapis.Scene().CreateEntity().Transform;
+        var transform = new Scene().CreateEntity().Transform;
 
         Assert.Equal(Vector3.Zero, transform.Position);
         Assert.Equal(Quaternion.Identity, transform.Rotation);
@@ -16,7 +16,7 @@ public class TransformTests
     [Fact]
     public void Forward_IsNegativeZ()
     {
-        var transform = new Lapis.Scene().CreateEntity().Transform;
+        var transform = new Scene().CreateEntity().Transform;
 
         VectorAssert.Equal(-Vector3.UnitZ, transform.Forward);
         VectorAssert.Equal(Vector3.UnitX, transform.Right);
@@ -26,7 +26,7 @@ public class TransformTests
     [Fact]
     public void Yaw90_TurnsForwardToNegativeX()
     {
-        var transform = new Lapis.Scene().CreateEntity().Transform;
+        var transform = new Scene().CreateEntity().Transform;
 
         transform.LocalEulerAngles = new Vector3(0, 90, 0);
 
@@ -36,7 +36,7 @@ public class TransformTests
     [Fact]
     public void Child_WorldPositionCombinesParentTranslationRotationAndScale()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
 
@@ -52,7 +52,7 @@ public class TransformTests
     [Fact]
     public void MovingParent_UpdatesCachedChildMatrix()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
         child.Transform.LocalPosition = new Vector3(1, 0, 0);
@@ -66,7 +66,7 @@ public class TransformTests
     [Fact]
     public void SettingWorldPosition_UnderRotatedParent_ConvertsToLocal()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
         parent.Transform.LocalPosition = new Vector3(3, 0, 0);
@@ -81,7 +81,7 @@ public class TransformTests
     [Fact]
     public void SettingWorldRotation_UnderRotatedParent_ConvertsToLocal()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
         parent.Transform.LocalEulerAngles = new Vector3(0, 90, 0);
@@ -95,7 +95,7 @@ public class TransformTests
     [Fact]
     public void SetParent_KeepsWorldTransformByDefault()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         parent.Transform.LocalPosition = new Vector3(5, 0, 0);
         parent.Transform.LocalEulerAngles = new Vector3(0, 45, 0);
@@ -118,7 +118,7 @@ public class TransformTests
     [Fact]
     public void SetParent_WithoutKeepingWorld_KeepsLocalValues()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         parent.Transform.LocalPosition = new Vector3(5, 0, 0);
         var child = scene.CreateEntity("Child");
@@ -133,7 +133,7 @@ public class TransformTests
     [Fact]
     public void SetParent_ToDescendant_Throws()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var grandparent = scene.CreateEntity("A");
         var parent = scene.CreateEntity("B", grandparent);
         var child = scene.CreateEntity("C", parent);
@@ -145,8 +145,8 @@ public class TransformTests
     [Fact]
     public void SetParent_ToEntityInAnotherScene_Throws()
     {
-        var a = new Lapis.Scene().CreateEntity();
-        var b = new Lapis.Scene().CreateEntity();
+        var a = new Scene().CreateEntity();
+        var b = new Scene().CreateEntity();
 
         Assert.Throws<InvalidOperationException>(() => a.Transform.SetParent(b.Transform));
     }
@@ -154,7 +154,7 @@ public class TransformTests
     [Fact]
     public void SetParentToNull_MovesEntityToSceneRoot()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         var child = scene.CreateEntity("Child", parent);
 
@@ -168,7 +168,7 @@ public class TransformTests
     [Fact]
     public void SetSiblingIndex_ReordersChildren()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var parent = scene.CreateEntity("Parent");
         scene.CreateEntity("A", parent);
         scene.CreateEntity("B", parent);
@@ -183,7 +183,7 @@ public class TransformTests
     [Fact]
     public void LookAt_PointsForwardAtTarget()
     {
-        var transform = new Lapis.Scene().CreateEntity().Transform;
+        var transform = new Scene().CreateEntity().Transform;
         transform.Position = new Vector3(4, 3, 6);
 
         transform.LookAt(new Vector3(0, 0.5f, 0));
@@ -200,7 +200,7 @@ public class TransformTests
     [InlineData(10, -120, 179)]
     public void EulerAngles_RoundTrip(float x, float y, float z)
     {
-        var transform = new Lapis.Scene().CreateEntity().Transform;
+        var transform = new Scene().CreateEntity().Transform;
         var angles = new Vector3(x, y, z);
 
         transform.LocalEulerAngles = angles;

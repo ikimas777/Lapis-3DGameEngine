@@ -7,14 +7,12 @@ namespace Lapis.Editor.Tests;
 [Collection(nameof(ScriptCompilerTests))]
 public sealed class ScriptCompilerTests : IDisposable
 {
-    private readonly string _folder = Path.Combine(Path.GetTempPath(), "lapis-script-tests", Guid.NewGuid().ToString("N"));
-
-    public ScriptCompilerTests() => Directory.CreateDirectory(_folder);
+    private readonly TempFolder _temp = new("lapis-script-tests");
 
     public void Dispose()
     {
         ComponentTypes.SetScriptAssembly(null);
-        Directory.Delete(_folder, recursive: true);
+        _temp.Dispose();
     }
 
     [Fact]
@@ -165,7 +163,7 @@ public sealed class ScriptCompilerTests : IDisposable
 
     private string Write(string name, string source)
     {
-        var path = Path.Combine(_folder, name);
+        var path = Path.Combine(_temp.Path, name);
         File.WriteAllText(path, source);
         return path;
     }

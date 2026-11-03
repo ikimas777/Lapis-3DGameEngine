@@ -7,29 +7,29 @@ namespace Lapis.Editor.Tests;
 [Collection(nameof(ScriptCompilerTests))] // compiles scripts like those tests
 public sealed class GameExporterTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-export-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-export-tests");
     private readonly LapisProject _project;
     private readonly string _runtime;
 
     public GameExporterTests()
     {
-        _project = LapisProject.Create(Path.Combine(_root, "MyGame"));
+        _project = LapisProject.Create(Path.Combine(_temp.Path, "MyGame"));
         SceneSerializer.Save(new Scene { Name = "Main" }, _project.StartScenePath!);
         File.WriteAllText(Path.Combine(_project.AssetsDirectory, "Scripts", "Spin.cs"), "public class Spin : Behaviour { }");
         File.WriteAllText(Path.Combine(_project.AssetsDirectory, "Scripts", "Spin.cs.lmeta"), "{}");
         Directory.CreateDirectory(Path.Combine(_project.AssetsDirectory, "Textures"));
         File.WriteAllText(Path.Combine(_project.AssetsDirectory, "Textures", "a.png"), "image");
 
-        _runtime = Path.Combine(_root, "Lapis.Runtime.exe");
+        _runtime = Path.Combine(_temp.Path, "Lapis.Runtime.exe");
         File.WriteAllText(_runtime, "player");
     }
 
-    public void Dispose() => Directory.Delete(_root, recursive: true);
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void Export_WritesExecutableScriptsManifestAndAssets()
     {
-        var output = Path.Combine(_root, "Out");
+        var output = Path.Combine(_temp.Path, "Out");
 
         var result = GameExporter.Export(new ExportSettings(_project, output, _project.StartScene!, "My Game"), _runtime);
 
@@ -58,10 +58,10 @@ public sealed class GameExporterTests : IDisposable
     public void Export_CopiesTheSoundLibraryAndItsLicences()
     {
         // The runtime keeps OpenAL Soft (LGPL) as a separate file with its licences next to it.
-        File.WriteAllText(Path.Combine(_root, "soft_oal.dll"), "openal");
-        Directory.CreateDirectory(Path.Combine(_root, "licenses"));
-        File.WriteAllText(Path.Combine(_root, "licenses", "THIRD-PARTY-NOTICES.txt"), "notices");
-        var output = Path.Combine(_root, "Out");
+        File.WriteAllText(Path.Combine(_temp.Path, "soft_oal.dll"), "openal");
+        Directory.CreateDirectory(Path.Combine(_temp.Path, "licenses"));
+        File.WriteAllText(Path.Combine(_temp.Path, "licenses", "THIRD-PARTY-NOTICES.txt"), "notices");
+        var output = Path.Combine(_temp.Path, "Out");
 
         GameExporter.Export(new ExportSettings(_project, output, _project.StartScene!, "Game"), _runtime);
 
@@ -73,7 +73,7 @@ public sealed class GameExporterTests : IDisposable
     [Fact]
     public void Export_Again_ReplacesOldData()
     {
-        var output = Path.Combine(_root, "Out");
+        var output = Path.Combine(_temp.Path, "Out");
         var settings = new ExportSettings(_project, output, _project.StartScene!, "Game");
         GameExporter.Export(settings, _runtime);
         File.Delete(Path.Combine(_project.AssetsDirectory, "Textures", "a.png"));
@@ -93,7 +93,7 @@ public sealed class GameExporterTests : IDisposable
         File.WriteAllText(Path.Combine(_project.AssetsDirectory, "Scripts", "Broken.cs"), "public class Broken : Behaviour { void X() { nope(); } }");
 
         var exception = Assert.Throws<ExportException>(() =>
-            GameExporter.Export(new ExportSettings(_project, Path.Combine(_root, "Out"), _project.StartScene!, "Game"), _runtime));
+            GameExporter.Export(new ExportSettings(_project, Path.Combine(_temp.Path, "Out"), _project.StartScene!, "Game"), _runtime));
 
         Assert.Contains("error", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -109,6 +109,6 @@ public sealed class GameExporterTests : IDisposable
     public void Export_WithMissingScene_IsRefused()
     {
         Assert.Throws<ExportException>(() =>
-            GameExporter.Export(new ExportSettings(_project, Path.Combine(_root, "Out"), "Assets/Scenes/Nope.lscene", "Game"), _runtime));
+            GameExporter.Export(new ExportSettings(_project, Path.Combine(_temp.Path, "Out"), "Assets/Scenes/Nope.lscene", "Game"), _runtime));
     }
 }

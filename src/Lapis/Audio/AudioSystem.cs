@@ -303,6 +303,15 @@ internal static unsafe class AudioSystem
         StopPreview();
         if (_alc is { } alc && _device != null)
         {
+            if (_al is { } al)
+            {
+                foreach (var buffer in Buffers.Values)
+                {
+                    al.DeleteBuffer(buffer);
+                }
+            }
+
+            Buffers.Clear();
             alc.MakeContextCurrent(null);
             alc.DestroyContext(_context);
             alc.CloseDevice(_device);
@@ -436,6 +445,9 @@ internal static unsafe class AudioSystem
             // Sounds are at full volume within MinDistance and silent from MaxDistance on.
             _al.DistanceModel(DistanceModel.LinearDistanceClamped);
             _al.SetListenerProperty(ListenerFloat.Gain, _volume);
+
+            // Any program that opened the device closes it on exit (OpenAL Soft crashes when a process ends with it open).
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => Shutdown();
             return true;
         }
         catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException or InvalidOperationException or FileNotFoundException)

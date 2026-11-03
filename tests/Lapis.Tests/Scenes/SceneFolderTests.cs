@@ -1,8 +1,8 @@
-namespace Lapis.Tests.Scene;
+namespace Lapis.Tests.Scenes;
 
 public class SceneFolderTests
 {
-    private readonly Lapis.Scene _scene = new();
+    private readonly Scene _scene = new();
     private readonly SceneFolder _level;
     private readonly SceneFolder _enemies;
     private readonly SceneFolder _flying;

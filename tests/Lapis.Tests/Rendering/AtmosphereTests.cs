@@ -16,7 +16,7 @@ public sealed class AtmosphereTests : IDisposable
     [Fact]
     public void SpotCone_IsFullInsideTheSoftEdge_AndPointLightsCoverEverything()
     {
-        var spot = new Lapis.Scene().CreateEntity().AddComponent<Light>();
+        var spot = new Scene().CreateEntity().AddComponent<Light>();
         spot.Type = LightType.Spot;
         spot.SpotAngle = 60f;
         spot.SpotSoftness = 0.5f;
@@ -36,7 +36,7 @@ public sealed class AtmosphereTests : IDisposable
     [Fact]
     public void FogAndSpotLights_AreSavedWithTheScene()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         scene.Environment.Fog = true;
         scene.Environment.FogMode = FogMode.Linear;
         scene.Environment.FogColor = new Color(0.1f, 0.1f, 0.12f);
@@ -90,7 +90,7 @@ public sealed class AtmosphereTests : IDisposable
     {
         Screen.FadeTo(Color.Black, 0f);
 
-        using (var game = new GameSimulation(new Lapis.Scene()))
+        using (var game = new GameSimulation(new Scene()))
         {
             Assert.Equal(Color.Transparent, Screen.FadeColor); // a new run starts with a clear picture
 
@@ -121,7 +121,7 @@ public sealed class AtmosphereTests : IDisposable
         Assert.Contains("FogEnd", Shown(environment));
         Assert.DoesNotContain("FogDensity", Shown(environment));
 
-        var light = new Lapis.Scene().CreateEntity().AddComponent<Light>();
+        var light = new Scene().CreateEntity().AddComponent<Light>();
         Assert.DoesNotContain("SpotAngle", Shown(light)); // directional
         Assert.DoesNotContain("Range", Shown(light));
         light.Type = LightType.Spot;

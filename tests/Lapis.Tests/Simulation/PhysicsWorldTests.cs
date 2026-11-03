@@ -24,7 +24,7 @@ public class PhysicsWorldTests
     [Fact]
     public void WithoutGravity_BodyKeepsItsVelocity()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var ball = CreateBall(scene, Vector3.Zero);
         var body = ball.GetComponent<RigidBody>()!;
         body.UseGravity = false;
@@ -41,7 +41,7 @@ public class PhysicsWorldTests
     [Fact]
     public void FreezePosition_StopsMovementOnThatAxis()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var ball = CreateBall(scene, new Vector3(0, 5, 0));
         ball.GetComponent<RigidBody>()!.FreezePositionY = true;
 
@@ -178,7 +178,7 @@ public class PhysicsWorldTests
     [Fact]
     public void MeshCollider_OnStaticBody_IsSolid()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var ground = scene.CreateEntity("Ground");
         ground.Transform.LocalScale = new Vector3(10, 1, 10);
         ground.AddComponent<MeshRenderer>().MeshId = BuiltInMeshes.Plane;
@@ -194,7 +194,7 @@ public class PhysicsWorldTests
     [Fact]
     public void Scene_PhysicsSettings_AreSaved()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         scene.Physics.Gravity = new Vector3(0, -3, 0);
         scene.Physics.StepsPerSecond = 120;
 
@@ -204,16 +204,16 @@ public class PhysicsWorldTests
         Assert.Equal(120, loaded.Physics.StepsPerSecond);
     }
 
-    private static Lapis.Scene SceneWithFloor()
+    private static Scene SceneWithFloor()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var floor = scene.CreateEntity("Floor");
         floor.Transform.Position = new Vector3(0, -0.5f, 0);
         floor.AddComponent<BoxCollider>().Size = new Vector3(20, 1, 20);
         return scene;
     }
 
-    private static Entity CreateBall(Lapis.Scene scene, Vector3 position)
+    private static Entity CreateBall(Scene scene, Vector3 position)
     {
         var ball = scene.CreateEntity("Ball");
         ball.Transform.Position = position;

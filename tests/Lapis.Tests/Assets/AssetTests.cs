@@ -6,23 +6,21 @@ namespace Lapis.Tests.Assets;
 
 public sealed class AssetTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-asset-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-asset-tests");
 
-    public AssetTests() => Directory.CreateDirectory(_root);
-
-    public void Dispose() => Directory.Delete(_root, recursive: true);
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void Refresh_CreatesMetaFiles_AndKeepsIdsStable()
     {
         Write("Models/Box.obj", "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n");
-        var database = new AssetDatabase(_root);
+        var database = new AssetDatabase(_temp.Path);
         var asset = Assert.Single(database.Assets);
 
         Assert.True(File.Exists(asset.FullPath + AssetDatabase.MetaExtension));
         Assert.Equal(AssetType.Model, asset.Type);
 
-        var reopened = new AssetDatabase(_root);
+        var reopened = new AssetDatabase(_temp.Path);
         Assert.Equal(asset.Id, Assert.Single(reopened.Assets).Id);
     }
 
@@ -30,25 +28,25 @@ public sealed class AssetTests : IDisposable
     public void Move_KeepsTheId()
     {
         Write("a.png", "x");
-        var database = new AssetDatabase(_root);
+        var database = new AssetDatabase(_temp.Path);
         var asset = Assert.Single(database.Assets);
 
-        var moved = database.Move(asset, Path.Combine(_root, "Textures", "b.png"));
+        var moved = database.Move(asset, Path.Combine(_temp.Path, "Textures", "b.png"));
 
         Assert.Equal(asset.Id, moved.Id);
-        Assert.False(File.Exists(Path.Combine(_root, "a.png.lmeta")));
-        Assert.Equal(moved, database.FindByPath(Path.Combine(_root, "Textures", "b.png")));
+        Assert.False(File.Exists(Path.Combine(_temp.Path, "a.png.lmeta")));
+        Assert.Equal(moved, database.FindByPath(Path.Combine(_temp.Path, "Textures", "b.png")));
     }
 
     [Fact]
     public void CopiedFileWithMeta_GetsItsOwnId()
     {
         Write("a.lmat", "{}");
-        var first = Assert.Single(new AssetDatabase(_root).Assets);
-        File.Copy(first.FullPath, Path.Combine(_root, "copy.lmat"));
-        File.Copy(first.FullPath + AssetDatabase.MetaExtension, Path.Combine(_root, "copy.lmat" + AssetDatabase.MetaExtension));
+        var first = Assert.Single(new AssetDatabase(_temp.Path).Assets);
+        File.Copy(first.FullPath, Path.Combine(_temp.Path, "copy.lmat"));
+        File.Copy(first.FullPath + AssetDatabase.MetaExtension, Path.Combine(_temp.Path, "copy.lmat" + AssetDatabase.MetaExtension));
 
-        var database = new AssetDatabase(_root);
+        var database = new AssetDatabase(_temp.Path);
 
         Assert.Equal(2, database.Assets.Select(a => a.Id).Distinct().Count());
     }
@@ -58,10 +56,10 @@ public sealed class AssetTests : IDisposable
     {
         Write("gone.png" + AssetDatabase.MetaExtension, "{ \"guid\": \"" + Guid.NewGuid() + "\" }");
 
-        var database = new AssetDatabase(_root);
+        var database = new AssetDatabase(_temp.Path);
 
         Assert.Empty(database.Assets);
-        Assert.False(File.Exists(Path.Combine(_root, "gone.png" + AssetDatabase.MetaExtension)));
+        Assert.False(File.Exists(Path.Combine(_temp.Path, "gone.png" + AssetDatabase.MetaExtension)));
     }
 
     [Theory]
@@ -94,14 +92,14 @@ public sealed class AssetTests : IDisposable
             usemtl Stone
             f -4/1 -3/2 -2/3 -1/4
             """);
-        var database = new AssetDatabase(_root);
+        var database = new AssetDatabase(_temp.Path);
 
         var model = ObjImporter.Import(path, database);
 
         Assert.Equal(2, model.Mesh.TriangleCount);
         Assert.Equal(4, model.Mesh.Vertices.Length);
         Assert.Equal(new Color(0.5f, 0.25f, 1f), model.BaseColor);
-        Assert.Equal(database.FindByPath(Path.Combine(_root, "Textures", "stone.png"))!.Reference, model.TextureId);
+        Assert.Equal(database.FindByPath(Path.Combine(_temp.Path, "Textures", "stone.png"))!.Reference, model.TextureId);
         Assert.All(model.Mesh.Vertices, v => Assert.True(v.Normal.Y > 0.99f, "Computed normals should face up."));
         Assert.Equal(1f, model.Mesh.Vertices[0].TexCoord.Y, 5); // OBJ v=0 is the bottom row
     }
@@ -158,7 +156,7 @@ public sealed class AssetTests : IDisposable
             }
         }
 
-        var path = Path.Combine(_root, "two.stl");
+        var path = Path.Combine(_temp.Path, "two.stl");
         File.WriteAllBytes(path, stream.ToArray());
 
         Assert.Equal(2, StlImporter.Import(path).Mesh.TriangleCount);
@@ -192,7 +190,7 @@ public sealed class AssetTests : IDisposable
     [Fact]
     public void Material_RoundTrips()
     {
-        var path = Path.Combine(_root, "m.lmat");
+        var path = Path.Combine(_temp.Path, "m.lmat");
         new Material { Color = Color.Red, TextureId = "asset:0f8fad5bd9cb469fa16570867728950e", Metallic = 1, Roughness = 0.2f }.Save(path);
 
         var loaded = Material.Load(path);
@@ -207,7 +205,7 @@ public sealed class AssetTests : IDisposable
     public void ModelAsset_CanBeUsedByMeshCollider()
     {
         Write("Models/floor.obj", "v -5 0 5\nv 5 0 5\nv 5 0 -5\nv -5 0 -5\nf 1 2 3 4\n");
-        var database = new AssetDatabase(_root);
+        var database = new AssetDatabase(_temp.Path);
         var previous = AssetDatabase.Active;
         AssetDatabase.Active = database;
         try
@@ -225,7 +223,7 @@ public sealed class AssetTests : IDisposable
 
     private string Write(string relativePath, string content)
     {
-        var path = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var path = Path.Combine(_temp.Path, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, content);
         return path;

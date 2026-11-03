@@ -12,11 +12,17 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Lapis.Tests.Common" />
     <Using Include="System.Numerics" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lapis\Lapis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Helpers shared by both test projects -->
+    <Compile Include="../Common/**/*.cs" LinkBase="Common" />
   </ItemGroup>
 
 </Project>

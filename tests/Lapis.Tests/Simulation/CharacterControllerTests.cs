@@ -129,7 +129,7 @@ public class CharacterControllerTests
     [Fact]
     public void Inspector_HidesTheColliderSettingsThatDoNotApply()
     {
-        var controller = new Lapis.Scene().CreateEntity().AddComponent<CharacterController>();
+        var controller = new Scene().CreateEntity().AddComponent<CharacterController>();
         string[] shown = [.. SerializedMember.For(typeof(CharacterController)).Where(m => m.IsShownIn(controller)).Select(m => m.Name)];
 
         Assert.Contains(nameof(CharacterController.Height), shown);
@@ -139,21 +139,21 @@ public class CharacterControllerTests
         Assert.DoesNotContain(nameof(CharacterController.IsGrounded), shown); // runtime state, not a setting
     }
 
-    private static Lapis.Scene SceneWithFloor()
+    private static Scene SceneWithFloor()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         AddBox(scene, "Floor", new Vector3(0, -0.5f, 0), new Vector3(40, 1, 40));
         return scene;
     }
 
-    private static void AddBox(Lapis.Scene scene, string name, Vector3 position, Vector3 size)
+    private static void AddBox(Scene scene, string name, Vector3 position, Vector3 size)
     {
         var box = scene.CreateEntity(name);
         box.Transform.Position = position;
         box.AddComponent<BoxCollider>().Size = size;
     }
 
-    private static CharacterController CreatePlayer(Lapis.Scene scene, Vector3 position, string name = "Player")
+    private static CharacterController CreatePlayer(Scene scene, Vector3 position, string name = "Player")
     {
         var player = scene.CreateEntity(name);
         player.Transform.Position = position;

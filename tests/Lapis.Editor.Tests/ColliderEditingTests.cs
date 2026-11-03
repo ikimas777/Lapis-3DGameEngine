@@ -42,14 +42,14 @@ public class ColliderEditingTests
     [InlineData(typeof(MeshCollider), false)]
     public void OnlyShapeCollidersHaveHandles(Type type, bool editable)
     {
-        var collider = (Collider)new Lapis.Scene().CreateEntity().AddComponent(type);
+        var collider = (Collider)new Scene().CreateEntity().AddComponent(type);
         Assert.Equal(editable, ColliderHandles.CanEdit(collider));
     }
 
     [Fact]
     public void CreateCapsule_IsAnUprightCapsuleMatchingItsCollider()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var capsule = EntityFactory.CreateMesh(scene, BuiltInMeshes.Capsule);
 
         Assert.Equal("Capsule", capsule.Name);
@@ -77,7 +77,7 @@ public class ColliderEditingTests
     [Fact]
     public void CreateCylinder_IsAFlatEndedCylinderMatchingItsCollider()
     {
-        var cylinder = EntityFactory.CreateMesh(new Lapis.Scene(), BuiltInMeshes.Cylinder);
+        var cylinder = EntityFactory.CreateMesh(new Scene(), BuiltInMeshes.Cylinder);
 
         Assert.Equal("Cylinder", cylinder.Name);
         var collider = cylinder.GetComponent<CylinderCollider>()!;

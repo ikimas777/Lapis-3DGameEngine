@@ -8,7 +8,7 @@ public class SceneSerializerTests
     [Fact]
     public void RoundTrip_PreservesHierarchyAndTransforms()
     {
-        var scene = new Lapis.Scene { Name = "Level 1" };
+        var scene = new Scene { Name = "Level 1" };
         var parent = scene.CreateEntity("Parent");
         parent.Transform.LocalPosition = new Vector3(1, 2, 3);
         parent.Transform.LocalEulerAngles = new Vector3(10, 20, 30);
@@ -37,7 +37,7 @@ public class SceneSerializerTests
     [Fact]
     public void RoundTrip_PreservesBuiltInComponents()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var entity = scene.CreateEntity("Thing");
         var camera = entity.AddComponent<Camera>();
         camera.Projection = ProjectionMode.Orthographic;
@@ -69,7 +69,7 @@ public class SceneSerializerTests
     [Fact]
     public void RoundTrip_PreservesScriptFieldsAndReferences()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var target = scene.CreateEntity("Target");
         var targetLight = target.AddComponent<Light>();
         var entity = scene.CreateEntity("Player");
@@ -98,7 +98,7 @@ public class SceneSerializerTests
     [Fact]
     public void ReferenceToEntityLaterInFile_IsResolved()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var first = scene.CreateEntity("First");
         var later = scene.CreateEntity("Later");
         first.AddComponent<TestScript>().target = later;
@@ -111,7 +111,7 @@ public class SceneSerializerTests
     [Fact]
     public void UnknownComponent_IsKeptAndWrittenBack()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var entity = scene.CreateEntity("Holder");
         var json = JsonNode.Parse(SceneSerializer.ToJson(scene))!;
         json["entities"]![0]!["components"]!.AsArray().Add(new JsonObject
@@ -133,7 +133,7 @@ public class SceneSerializerTests
     [Fact]
     public void MissingMembers_KeepDefaults()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var entity = scene.CreateEntity();
         entity.AddComponent<TestScript>();
         var json = JsonNode.Parse(SceneSerializer.ToJson(scene))!;
@@ -148,7 +148,7 @@ public class SceneSerializerTests
     [Fact]
     public void Output_IsReadableJson()
     {
-        var scene = new Lapis.Scene { Name = "Readable" };
+        var scene = new Scene { Name = "Readable" };
         scene.CreateEntity("Box").AddComponent<MeshRenderer>();
 
         var json = SceneSerializer.ToJson(scene);
@@ -185,7 +185,7 @@ public class SceneSerializerTests
         Assert.DoesNotContain("entity", keys);
     }
 
-    private static Lapis.Scene RoundTrip(Lapis.Scene scene) => SceneSerializer.FromJson(SceneSerializer.ToJson(scene));
+    private static Scene RoundTrip(Scene scene) => SceneSerializer.FromJson(SceneSerializer.ToJson(scene));
 
 #pragma warning disable CA1051, IDE1006, SA1401 // script-style public fields are the point of this test type
     public sealed class TestScript : Behaviour

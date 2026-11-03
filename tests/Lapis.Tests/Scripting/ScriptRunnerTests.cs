@@ -9,7 +9,7 @@ public class ScriptRunnerTests
     [Fact]
     public void Tick_CallsLifecycleInOrder()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var recorder = scene.CreateEntity().AddComponent<Recorder>();
         var runner = new ScriptRunner(scene) { FixedDeltaTime = 0.1f };
 
@@ -24,7 +24,7 @@ public class ScriptRunnerTests
     [Fact]
     public void DisabledBehaviours_AndInactiveEntities_AreSkipped()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var disabled = scene.CreateEntity().AddComponent<Recorder>();
         disabled.Enabled = false;
         var parent = scene.CreateEntity();
@@ -40,7 +40,7 @@ public class ScriptRunnerTests
     [Fact]
     public void Start_RunsOnceEvenForBehavioursAddedLater()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var entity = scene.CreateEntity();
         var runner = new ScriptRunner(scene);
         runner.Tick(0.01f);
@@ -56,7 +56,7 @@ public class ScriptRunnerTests
     [Fact]
     public void ThrowingBehaviour_IsDisabledAndOthersKeepRunning()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var broken = scene.CreateEntity().AddComponent<Thrower>();
         var healthy = scene.CreateEntity().AddComponent<Recorder>();
         var runner = new ScriptRunner(scene);
@@ -72,7 +72,7 @@ public class ScriptRunnerTests
     [Fact]
     public void DestroyingEntity_CallsOnDestroyForStartedBehaviours()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var entity = scene.CreateEntity();
         var recorder = entity.AddComponent<Recorder>();
         var runner = new ScriptRunner(scene);
@@ -86,7 +86,7 @@ public class ScriptRunnerTests
     [Fact]
     public void Shutdown_CallsOnDestroyOnce()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var recorder = scene.CreateEntity().AddComponent<Recorder>();
         var runner = new ScriptRunner(scene);
         runner.Tick(0.01f);
@@ -100,7 +100,7 @@ public class ScriptRunnerTests
     [Fact]
     public void PhysicsSteps_AreCappedPerFrame()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var recorder = scene.CreateEntity().AddComponent<Recorder>();
         var steps = 0;
         var runner = new ScriptRunner(scene) { FixedDeltaTime = 0.01f };
@@ -115,7 +115,7 @@ public class ScriptRunnerTests
     [Fact]
     public void BehaviourDestroyingAnother_DuringUpdate_IsSafe()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var victim = scene.CreateEntity("Victim");
         var victimScript = victim.AddComponent<Recorder>();
         var killer = scene.CreateEntity("Killer").AddComponent<Killer>();
@@ -131,7 +131,7 @@ public class ScriptRunnerTests
     [Fact]
     public void Time_ReportsGameTimeDuringTick_AndIsRestoredAfterwards()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var probe = scene.CreateEntity().AddComponent<TimeProbe>();
         var runner = new ScriptRunner(scene) { FixedDeltaTime = 0.05f };
         var before = Time.DeltaTime;

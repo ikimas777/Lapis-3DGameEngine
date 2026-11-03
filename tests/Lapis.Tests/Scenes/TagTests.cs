@@ -1,24 +1,18 @@
 using Lapis.Projects;
 using Lapis.Serialization;
 
-namespace Lapis.Tests.Scene;
+namespace Lapis.Tests.Scenes;
 
 public sealed class TagTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "lapis-tests", Guid.NewGuid().ToString("N"));
+    private readonly TempFolder _temp = new("lapis-tests", create: false);
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-        {
-            Directory.Delete(_root, recursive: true);
-        }
-    }
+    public void Dispose() => _temp.Dispose();
 
     [Fact]
     public void NewEntity_IsUntagged_AndBlankTagsMeanUntagged()
     {
-        var entity = new Lapis.Scene().CreateEntity();
+        var entity = new Scene().CreateEntity();
 
         Assert.Equal(Entity.Untagged, entity.tag);
         entity.tag = "  Enemy ";
@@ -32,7 +26,7 @@ public sealed class TagTests : IDisposable
     [Fact]
     public void FindWithTag_ReturnsActiveEntitiesInHierarchyOrder()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var player = scene.CreateEntity("Player");
         player.tag = "Player";
         var group = scene.CreateEntity("Group");
@@ -54,7 +48,7 @@ public sealed class TagTests : IDisposable
     [Fact]
     public void Components_ReadAndAssignTheirEntitysTag_AndSearchItsScene()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         var player = scene.CreateEntity("Player").AddComponent<Light>();
         var enemy = scene.CreateEntity("Enemy");
 
@@ -70,7 +64,7 @@ public sealed class TagTests : IDisposable
     [Fact]
     public void Tags_AreSavedWithTheScene()
     {
-        var scene = new Lapis.Scene();
+        var scene = new Scene();
         scene.CreateEntity("Player").tag = "Player";
         scene.CreateEntity("Rock");
 
@@ -85,7 +79,7 @@ public sealed class TagTests : IDisposable
     [Fact]
     public void ProjectTags_StartWithDefaults_AndAddedTagsAreSaved()
     {
-        var folder = Path.Combine(_root, "Tagged");
+        var folder = Path.Combine(_temp.Path, "Tagged");
         var project = LapisProject.Create(folder);
         Assert.Equal(LapisProject.DefaultTags, project.Tags);
 

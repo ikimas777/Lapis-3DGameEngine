@@ -4,8 +4,6 @@ using Lapis.Simulation;
 
 namespace Lapis.Tests.Navigation;
 
-using Scene = Lapis.Scene;
-
 [Collection(GlobalState.Collection)] // the running game's navigation and physics are static
 public sealed class NavigationTests
 {
