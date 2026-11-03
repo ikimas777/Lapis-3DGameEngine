@@ -1,4 +1,3 @@
-using System.Numerics;
 using Lapis.Rendering;
 
 namespace Lapis.Editor.SceneView;

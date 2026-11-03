@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Numerics;
 using DotRecast.Core;
-using DotRecast.Core.Numerics;
 using DotRecast.Detour;
 using DotRecast.Detour.Io;
 using DotRecast.Recast;
