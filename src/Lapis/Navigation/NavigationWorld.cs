@@ -63,6 +63,7 @@ namespace Lapis.Navigation
         private readonly DtQueryDefaultFilter _filter = new();
         private readonly Dictionary<NavMeshAgent, DtCrowdAgent> _agents = [];
         private readonly Dictionary<NavMeshAgent, Vector3> _written = [];
+        private readonly List<NavMeshAgent> _agentBuffer = [];
         private bool _warnedNoMesh;
 
         public NavigationWorld(Scene scene)
@@ -83,14 +84,10 @@ namespace Lapis.Navigation
         /// <summary>Moves every agent on by <paramref name="deltaTime"/> seconds.</summary>
         public void Step(float deltaTime)
         {
-            var agents = new List<NavMeshAgent>();
-            foreach (var entity in _scene.AllEntities)
-            {
-                if (entity.GetComponent<NavMeshAgent>() is { } agent && entity.IsActiveInHierarchy)
-                {
-                    agents.Add(agent);
-                }
-            }
+            var agents = _agentBuffer;
+            agents.Clear();
+            _scene.CollectComponents(agents);
+            agents.RemoveAll(agent => !agent.entity.IsActiveInHierarchy);
 
             // Agents that were removed or switched off leave the crowd.
             foreach (var gone in _agents.Keys.Where(agent => !agents.Contains(agent)).ToList())

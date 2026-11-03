@@ -177,6 +177,53 @@ public sealed class Scene
         return best;
     }
 
+    // Every attached component by its exact type, so systems find theirs without walking the whole scene each frame.
+    private readonly Dictionary<Type, List<Component>> _componentsByType = [];
+    private readonly Dictionary<Type, Type[]> _matchingTypes = [];
+
+    internal void Register(Component component)
+    {
+        var type = component.GetType();
+        if (!_componentsByType.TryGetValue(type, out var list))
+        {
+            _componentsByType[type] = list = [];
+            _matchingTypes.Clear(); // a new type may match queries made before
+        }
+
+        list.Add(component);
+    }
+
+    internal void Unregister(Component component)
+    {
+        if (_componentsByType.TryGetValue(component.GetType(), out var list))
+        {
+            list.Remove(component);
+        }
+    }
+
+    /// <summary>
+    /// Adds every component of type <typeparamref name="T"/> (or a type derived from it) attached in the scene to
+    /// <paramref name="output"/>, in the order they were added; inactive entities included. Faster than
+    /// <see cref="FindAll{T}"/> when the order in the Hierarchy does not matter.
+    /// </summary>
+    internal void CollectComponents<T>(List<T> output)
+        where T : Component
+    {
+        if (!_matchingTypes.TryGetValue(typeof(T), out var types))
+        {
+            types = [.. _componentsByType.Keys.Where(typeof(T).IsAssignableFrom)];
+            _matchingTypes[typeof(T)] = types;
+        }
+
+        foreach (var type in types)
+        {
+            foreach (var component in _componentsByType[type])
+            {
+                output.Add((T)component);
+            }
+        }
+    }
+
     /// <summary>Destroys an entity and all of its children.</summary>
     public void Destroy(Entity entity)
     {

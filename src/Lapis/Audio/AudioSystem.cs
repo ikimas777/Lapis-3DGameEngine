@@ -181,7 +181,8 @@ internal static unsafe class AudioSystem
     public static void Update(Scene scene)
     {
         // A game without sounds never opens the sound device.
-        var components = scene.FindAll<AudioSource>().ToList();
+        var components = new List<AudioSource>();
+        scene.CollectComponents(components);
         if ((components.Count == 0 && Sources.Count == 0 && OneShots.Count == 0) || !EnsureDevice() || _al is not { } al)
         {
             return;

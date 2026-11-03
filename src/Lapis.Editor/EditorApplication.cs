@@ -200,14 +200,18 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
     /// <summary>Plays the animations the Inspector's preview started, while the game is not running.</summary>
     private void PreviewAnimations(float deltaTime)
     {
-        foreach (var entity in _context.Scene.AllEntities)
+        _previewAnimators.Clear();
+        _context.Scene.CollectComponents(_previewAnimators);
+        foreach (var animator in _previewAnimators)
         {
-            if (entity.GetComponent<Animator>() is { Previewing: true } animator)
+            if (animator.Previewing)
             {
                 animator.Advance(deltaTime);
             }
         }
     }
+
+    private readonly List<Animator> _previewAnimators = [];
 
     protected override void OnRender()
     {

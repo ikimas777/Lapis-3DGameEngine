@@ -224,6 +224,7 @@ public sealed class Entity
 
         component.OnRemoved();
         _components.Remove(component);
+        Scene.Unregister(component);
         component.Detach();
     }
 
@@ -237,6 +238,7 @@ public sealed class Entity
     {
         component.Attach(this);
         _components.Add(component);
+        Scene.Register(component);
         component.OnAdded();
     }
 
@@ -256,6 +258,7 @@ public sealed class Entity
         for (var i = _components.Count - 1; i >= 0; i--)
         {
             _components[i].OnRemoved();
+            Scene.Unregister(_components[i]);
             _components[i].Detach();
         }
 
