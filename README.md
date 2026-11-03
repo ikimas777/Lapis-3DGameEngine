@@ -5,6 +5,10 @@ Build scenes in the editor, write gameplay in C# scripts, and export your game a
 
 > **Status:** early development — the editor, C# scripting, physics, assets and export work on Windows, Linux and macOS.
 
+**Community:** join the Lapis server on Discord to ask questions, get help, share ideas and show what you make:
+[discord.gg/K9vFUdfzw5](https://discord.gg/K9vFUdfzw5). The project launcher (the window for choosing a project) links to it too:
+**Join the Community**.
+
 ## Quick start
 
 Download the latest editor, unpack it and run it. Nothing else needs to be installed.
@@ -410,6 +414,11 @@ The editor stores its window layout in `%LOCALAPPDATA%\Lapis\editor-layout.ini`;
 | `src/Lapis.Monitor` | Lapis Monitor: live performance charts, alerts and recorded sessions |
 | `samples/Sandbox` | Sample game project |
 | `tests/Lapis.Tests` | Unit tests |
+
+## Community
+
+Questions, bug reports, ideas and screenshots of your games are welcome on the Lapis Discord server:
+**[discord.gg/K9vFUdfzw5](https://discord.gg/K9vFUdfzw5)**. Bugs can also be reported as GitHub issues.
 
 ## License
 

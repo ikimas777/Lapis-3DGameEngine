@@ -61,3 +61,4 @@ Lapis Monitor records every run in the Monitor\Sessions folder next to that log
 (Debug > Open Monitor Sessions Folder).
 
 Source code, releases and issues: https://github.com/ikimas777/Lapis-3DGameEngine
+Community (questions, help, ideas): https://discord.gg/K9vFUdfzw5

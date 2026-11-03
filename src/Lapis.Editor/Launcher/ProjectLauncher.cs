@@ -97,11 +97,14 @@ internal sealed unsafe partial class ProjectLauncher(EditorSettings settings, IL
             Open(_openPath.Trim().Trim('"'));
         }
 
-        var bottom = ImGui.GetWindowHeight() - 60;
+        var bottom = ImGui.GetWindowHeight() - 116;
         if (ImGui.GetCursorPosY() < bottom)
         {
             ImGui.SetCursorPosY(bottom);
         }
+
+        Community.DrawLauncherButton(width);
+        ImGui.Dummy(new Vector2(0, 12));
 
         ImGui.PushTextWrapPos(SidebarWidth - 20);
         ImGui.TextDisabled("Tip: drop a project folder onto this window to open it.");
