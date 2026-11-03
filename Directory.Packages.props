@@ -15,6 +15,10 @@
     <PackageVersion Include="Silk.NET.OpenAL.Soft.Native" Version="1.23.1" />
     <PackageVersion Include="NVorbis" Version="0.10.5" />
     <PackageVersion Include="StbTrueTypeSharp" Version="1.26.13" />
+    <PackageVersion Include="DotRecast.Detour.Crowd" Version="2026.3.1" />
+    <PackageVersion Include="DotRecast.Detour" Version="2026.3.1" />
+    <PackageVersion Include="DotRecast.Recast" Version="2026.3.1" />
+    <PackageVersion Include="DotRecast.Core" Version="2026.3.1" />
   </ItemGroup>
 
   <ItemGroup Label="Editor">

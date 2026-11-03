@@ -59,6 +59,9 @@ internal sealed class EditorContext
     /// </summary>
     public System.Numerics.Vector2 GameViewSize { get; set; } = new(1920f, 1080f);
 
+    /// <summary>Whether the Scene view draws the baked navigation mesh (the Navigation tab's checkbox).</summary>
+    public bool ShowNavMesh { get; set; } = true;
+
     /// <summary>
     /// The entity shown in the Inspector and moved by the gizmo: the one selected last, or null. Setting it selects
     /// only that entity. Entities are remembered by id, so one deleted and restored by undo (or reloaded with the

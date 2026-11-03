@@ -314,6 +314,7 @@ Attributes for the Inspector:
 | `entity.GetComponent<T>()`, `entity.AddComponent<T>()`, `entity.Destroy()` | Components and lifetime |
 | `Instantiate(prefab, position)`, `entity.Prefab` | Placing copies of prefabs (see the [prefab guide](prefabs.md)) |
 | `GetComponent<Animator>().Play("Run")` | Model animations (see the [animation guide](animation.md)) |
+| `GetComponent<NavMeshAgent>().SetDestination(target)`, `NavMesh.CalculatePath` | Creatures finding their way (see the [navigation guide](navigation.md)) |
 | `entity.Scene.Find<T>()`, `entity.Scene.FindByName("Player")` | Finding other objects |
 | `tag`, `CompareTag("Player")`, `FindWithTag("Player")`, `FindGameObjectsWithTag("Enemy")` | Tags (see below) |
 | `entity.Parent`, `entity.Children`, `transform.Parent` | Parent and children (never a folder) |

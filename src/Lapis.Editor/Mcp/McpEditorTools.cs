@@ -480,7 +480,8 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         {
             "environment" => context.Scene.Environment,
             "physics" => context.Scene.Physics,
-            _ => throw new McpException("The section must be \"environment\" or \"physics\"."),
+            "navigation" => context.Scene.Navigation,
+            _ => throw new McpException("The section must be \"environment\", \"physics\" or \"navigation\"."),
         };
 
         var member = ResolveMember(target.GetType(), property);
@@ -507,7 +508,36 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
         {
             ["environment"] = Members(context.Scene.Environment),
             ["physics"] = Members(context.Scene.Physics),
+            ["navigation"] = Navigation(),
         }.ToJsonString();
+
+        // The baked mesh is only described (its size), not listed.
+        JsonObject Navigation()
+        {
+            var values = Members(context.Scene.Navigation);
+            values.Remove("data");
+            values["baked"] = context.Scene.Navigation.Data is { } data ? $"{data.Length} bytes" : "no";
+            return values;
+        }
+    }
+
+    public string BakeNavMesh()
+    {
+        RequireSceneEdits();
+        var navigation = context.Scene.Navigation;
+        var result = Lapis.Navigation.NavMeshBaker.Bake(context.Scene);
+        if (result.Data is null)
+        {
+            throw new McpException(result.TriangleCount == 0
+                ? "Nothing to walk on: the floors need colliders (without a RigidBody)."
+                : "Nothing is walkable for this agent: check the floors' slope and the agent size (set_scene_setting section navigation).");
+        }
+
+        var member = SerializedMember.For(typeof(SceneNavigation)).First(m => m.Name == nameof(SceneNavigation.Data));
+        var before = navigation.Data;
+        navigation.Data = result.Data;
+        Record(new SetSceneSettingCommand(navigation, member, before, result.Data, "Bake Navigation Mesh"));
+        return new JsonObject { ["polygons"] = result.PolygonCount, ["colliderTriangles"] = result.TriangleCount, ["milliseconds"] = (int)(result.Seconds * 1000) }.ToJsonString();
     }
 
     // ----- Assets -----

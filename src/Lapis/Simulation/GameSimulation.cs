@@ -11,6 +11,7 @@ public sealed class GameSimulation : IDisposable
 {
     private readonly ScriptRunner _scripts;
     private readonly PhysicsWorld _physics;
+    private readonly Navigation.NavigationWorld _navigation;
     private bool _disposed;
 
     /// <summary>Starts simulating <paramref name="scene"/>; physics bodies are created immediately.</summary>
@@ -26,6 +27,8 @@ public sealed class GameSimulation : IDisposable
         };
         _scripts.PhysicsStep += _physics.Step;
         Lapis.Physics.ActiveWorld = _physics;
+        _navigation = new Navigation.NavigationWorld(scene);
+        NavMesh.Active = _navigation;
         Screen.Reset(); // every run starts with a clear picture
         Cursor.Reset();
         UI.Reset();
@@ -52,6 +55,7 @@ public sealed class GameSimulation : IDisposable
             Input.GetMouseButtonDown(MouseButton.Left), Input.GetMouseButtonUp(MouseButton.Left));
 
         _scripts.Tick(deltaTime);
+        _navigation.Step(deltaTime);
         AdvanceAnimators(Scene, deltaTime);
         Screen.Advance(deltaTime);
         AudioSystem.Update(Scene);
@@ -82,6 +86,11 @@ public sealed class GameSimulation : IDisposable
         Cursor.Reset();
         UI.Reset();
         AudioSystem.EndGame();
+        if (NavMesh.Active == _navigation)
+        {
+            NavMesh.Active = null;
+        }
+
         if (Lapis.Physics.ActiveWorld == _physics)
         {
             Lapis.Physics.ActiveWorld = null;

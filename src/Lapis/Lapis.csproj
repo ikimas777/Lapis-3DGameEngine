@@ -25,6 +25,10 @@
     <PackageReference Include="Silk.NET.OpenAL.Soft.Native" />
     <PackageReference Include="NVorbis" />
     <PackageReference Include="StbTrueTypeSharp" />
+    <PackageReference Include="DotRecast.Core" />
+    <PackageReference Include="DotRecast.Recast" />
+    <PackageReference Include="DotRecast.Detour" />
+    <PackageReference Include="DotRecast.Detour.Crowd" />
   </ItemGroup>
 
   <ItemGroup>

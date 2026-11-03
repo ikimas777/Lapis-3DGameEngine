@@ -120,7 +120,7 @@ The **Activity** list shows the latest calls; a red name failed, and hovering it
 
 ## Tools for AI
 
-The server offers 35 tools. Assistants read this list (with the same descriptions) when they connect.
+The server offers 36 tools. Assistants read this list (with the same descriptions) when they connect.
 
 **Conventions**
 
@@ -143,7 +143,7 @@ The server offers 35 tools. Assistants read this list (with the same description
 | `get_entity` | `entity` | One entity: local position / rotation / scale and world position, parent, folder, children, and every component with its property values in the format `set_property` takes | — |
 | `find_entities` | *`name`*, *`component`*, *`tag`* | Entities whose name contains a text, that have a component type and/or that have a tag (up to 200) | — |
 | `list_component_types` | — | Every component type that can be added (engine and game scripts), whether it is a script, and its properties with their types | — |
-| `get_scene_settings` | — | Environment (ambient light, sky, shadow distance) and physics (gravity, steps per second) settings | — |
+| `get_scene_settings` | — | Environment (ambient light, sky, shadow distance, fog), physics (gravity, steps per second) and navigation (agent radius, height, step height, max slope, whether it is baked) settings | — |
 | `get_console` | *`count`* (1-500, default 30), *`level`* (`Info` / `Warning` / `Error`) | The latest Console messages, with the file and line for script errors | — |
 | `screenshot` | *`view`* (`scene` default, or `game`) | A PNG of the Scene view (editor camera) or the Game view (the scene's main camera). The view's tab must be shown in the editor | — |
 
@@ -168,7 +168,8 @@ The server offers 35 tools. Assistants read this list (with the same description
 | `add_component` | `entity`, `component`, *`properties`* | Adds a component (e.g. `Light`, `RigidBody` or a script class), optionally setting properties at once: `{"range": 10}` | Edit the scene |
 | `remove_component` | `entity`, `component` | Removes the component | Edit the scene |
 | `set_property` | `entity`, `component`, `property`, `value` | Sets one property, e.g. `MeshRenderer` / `color` / `[1, 0, 0, 1]` | Edit the scene |
-| `set_scene_setting` | `section` (`environment` / `physics`), `property`, `value` | Sets one scene-wide setting, e.g. `physics` / `gravity` / `[0, -20, 0]` | Edit the scene |
+| `set_scene_setting` | `section` (`environment` / `physics` / `navigation`), `property`, `value` | Sets one scene-wide setting, e.g. `physics` / `gravity` / `[0, -20, 0]` or `navigation` / `maxSlope` / `30` | Edit the scene |
+| `bake_navmesh` | — | Bakes the navigation mesh (where NavMeshAgents walk) from the scene's colliders with the navigation settings; returns its size | Edit the scene |
 
 ### Assets and scripts
 

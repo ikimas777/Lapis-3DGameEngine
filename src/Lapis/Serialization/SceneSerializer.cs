@@ -60,6 +60,7 @@ public static partial class SceneSerializer
             ["name"] = scene.Name,
             ["environment"] = WriteMembers(scene.Environment),
             ["physics"] = WriteMembers(scene.Physics),
+            ["navigation"] = WriteMembers(scene.Navigation),
         };
 
         if (scene.Folders.Count > 0)
@@ -104,6 +105,11 @@ public static partial class SceneSerializer
         if (root["physics"] is JsonObject physics)
         {
             ReadMembers(scene.Physics, physics, context);
+        }
+
+        if (root["navigation"] is JsonObject navigation)
+        {
+            ReadMembers(scene.Navigation, navigation, context);
         }
 
         if (root["folders"] is JsonArray folders)

@@ -127,6 +127,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         var inspector = new InspectorPanel(_context, _scripts, new AssetInspector(_context, _renderer.Textures, this, () => _camera.Pivot));
         _panels.Add(inspector);
         _panels.Add(new SceneSettingsPanel(_context, () => inspector.DockId));
+        _panels.Add(new NavigationPanel(_context, () => inspector.DockId));
         var console = new ConsolePanel(_logBuffer, (file, line) => CodeEditor.Open(file, line, _scripts.Project?.Directory))
         {
             ClearOnPlay = _settings.ClearConsoleOnPlay,
@@ -491,6 +492,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
                 {
                     sceneView.ShowGrid = !sceneView.ShowGrid;
                 }
+
+                if (ImGui.MenuItem("Show Navigation Mesh", string.Empty, _context.ShowNavMesh))
+                {
+                    _context.ShowNavMesh = !_context.ShowNavMesh;
+                }
             }
 
             ImGui.EndMenu();
@@ -752,6 +758,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
         ImGuiP.DockBuilderDockWindow("Hierarchy", left);
         ImGuiP.DockBuilderDockWindow("Inspector", right);
         ImGuiP.DockBuilderDockWindow(Panels.SceneSettingsPanel.PanelTitle, right);
+        ImGuiP.DockBuilderDockWindow(Panels.NavigationPanel.PanelTitle, right);
         ImGuiP.DockBuilderDockWindow("Assets", bottom);
         ImGuiP.DockBuilderDockWindow("Console", bottom);
         ImGuiP.DockBuilderDockWindow("Scene", center);

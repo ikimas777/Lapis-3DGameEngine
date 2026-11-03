@@ -118,6 +118,11 @@ internal sealed unsafe class SceneViewPanel(
 
         CameraGizmos.Add(lines, context.Scene, context.IsSelected);
         LightGizmos.Add(lines, context.Scene, context.IsSelected);
+        if (context.ShowNavMesh)
+        {
+            NavMeshGizmos.Add(lines, context.Scene);
+        }
+
         lines.Render(view);
         if (EditingUI)
         {

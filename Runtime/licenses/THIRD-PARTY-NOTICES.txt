@@ -22,5 +22,5 @@ Lato 2.015 (default font of in-game text)
 
 Everything else in Lapis is under the MIT licence (LICENSE.txt next to the editor). The
 other libraries built into the programs (.NET, Silk.NET, GLFW, Dear ImGui, Jolt Physics,
-SharpGLTF, StbImageSharp, StbTrueTypeSharp, NVorbis, Roslyn) are under the MIT, BSD, zlib
-or Apache 2.0 licences, or in the public domain.
+SharpGLTF, StbImageSharp, StbTrueTypeSharp, NVorbis, DotRecast, Roslyn) are under the MIT, BSD,
+zlib or Apache 2.0 licences, or in the public domain.

@@ -16,6 +16,9 @@ public sealed class Scene
     /// <summary>Physics settings for this scene.</summary>
     public ScenePhysics Physics { get; } = new();
 
+    /// <summary>The navigation mesh (where creatures with a <see cref="NavMeshAgent"/> can walk) and how it is baked.</summary>
+    public SceneNavigation Navigation { get; } = new();
+
     /// <summary>
     /// Folders that organise root entities in the editor's Hierarchy, in display order. They do not affect the game.
     /// </summary>
@@ -232,6 +235,42 @@ public sealed class Scene
 
         return entity;
     }
+}
+
+/// <summary>
+/// The navigation mesh of a scene: the floors, ramps and stairs a <see cref="NavMeshAgent"/> can walk on, baked from
+/// the scene's colliders for an agent of the given size (the Navigation tab's Bake button).
+/// </summary>
+public sealed class SceneNavigation
+{
+    /// <summary>How close to walls agents walk, in metres (their radius).</summary>
+    [Range(0.05f, 3f)]
+    [Tooltip("Agent radius: how far from walls and edges the walkable area stays, in metres.")]
+    public float AgentRadius { get; set; } = 0.4f;
+
+    /// <summary>Lowest ceiling agents fit under, in metres (their height).</summary>
+    [Range(0.2f, 6f)]
+    [Tooltip("Agent height: places with a lower ceiling are left out, in metres.")]
+    public float AgentHeight { get; set; } = 1.8f;
+
+    /// <summary>Highest step (stair, kerb) agents walk up, in metres.</summary>
+    [Range(0f, 2f)]
+    [Tooltip("Step height: the highest step or kerb agents walk up, in metres.")]
+    public float MaxStepHeight { get; set; } = 0.4f;
+
+    /// <summary>Steepest slope agents walk up, in degrees.</summary>
+    [Range(0f, 60f)]
+    [Tooltip("Max slope: the steepest ramp or hill agents climb, in degrees. Steeper ground is not walkable.")]
+    public float MaxSlope { get; set; } = 45f;
+
+    /// <summary>Size of the cells the scene is measured in while baking, in metres: smaller is more exact and slower.</summary>
+    [Range(0.05f, 1f)]
+    [Tooltip("Detail: the size of the cells the scene is measured in. Smaller follows walls more closely but bakes slower.")]
+    public float CellSize { get; set; } = 0.15f;
+
+    /// <summary>The baked navigation mesh, or null before the first bake.</summary>
+    [HideInEditor]
+    public byte[]? Data { get; set; }
 }
 
 /// <summary>Scene-wide physics settings.</summary>

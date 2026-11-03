@@ -3,25 +3,25 @@ using Lapis.Serialization;
 
 namespace Lapis.Editor.Commands;
 
-/// <summary>Changes one scene-wide setting (<see cref="Scene.Environment"/> or <see cref="Scene.Physics"/>).</summary>
+/// <summary>Changes one scene-wide setting (<see cref="Scene.Environment"/>, <see cref="Scene.Physics"/> or <see cref="Scene.Navigation"/>).</summary>
 internal sealed class SetSceneSettingCommand : IEditorCommand
 {
-    private readonly bool _isPhysics;
+    private readonly Type _section;
     private readonly string _memberKey;
     private readonly MemberValue _before;
     private MemberValue _after;
 
-    /// <param name="settings">The scene's <see cref="SceneEnvironment"/> or <see cref="ScenePhysics"/>.</param>
+    /// <param name="settings">The scene's <see cref="SceneEnvironment"/>, <see cref="ScenePhysics"/> or <see cref="SceneNavigation"/>.</param>
     /// <param name="member">The edited member.</param>
     /// <param name="before">Value before the edit.</param>
     /// <param name="after">Value after the edit.</param>
-    public SetSceneSettingCommand(object settings, SerializedMember member, object? before, object? after)
+    public SetSceneSettingCommand(object settings, SerializedMember member, object? before, object? after, string? name = null)
     {
-        _isPhysics = settings is ScenePhysics;
+        _section = settings.GetType();
         _memberKey = member.Key;
         _before = MemberValue.Capture(before, member.ValueType);
         _after = MemberValue.Capture(after, member.ValueType);
-        Name = $"Change {PropertyDrawers.PropertyGrid.Nicify(member.Name)}";
+        Name = name ?? $"Change {PropertyDrawers.PropertyGrid.Nicify(member.Name)}";
     }
 
     public string Name { get; }
@@ -32,7 +32,7 @@ internal sealed class SetSceneSettingCommand : IEditorCommand
 
     public bool TryMerge(IEditorCommand next)
     {
-        if (next is not SetSceneSettingCommand other || other._isPhysics != _isPhysics || other._memberKey != _memberKey)
+        if (next is not SetSceneSettingCommand other || other._section != _section || other._memberKey != _memberKey)
         {
             return false;
         }
@@ -43,7 +43,7 @@ internal sealed class SetSceneSettingCommand : IEditorCommand
 
     private void Apply(Scene scene, MemberValue value)
     {
-        object settings = _isPhysics ? scene.Physics : scene.Environment;
+        object settings = _section == typeof(ScenePhysics) ? scene.Physics : _section == typeof(SceneNavigation) ? scene.Navigation : scene.Environment;
         var member = SerializedMember.For(settings.GetType()).First(m => m.Key == _memberKey);
         member.SetValue(settings, value.Restore(scene, member.ValueType));
     }

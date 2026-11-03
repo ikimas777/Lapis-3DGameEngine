@@ -44,7 +44,7 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
     [McpServerTool(Name = "list_component_types", ReadOnly = true), Description("Every component type that can be added (engine and game scripts) with its properties and their types.")]
     public Task<string> ListComponentTypes() => Run("list_component_types", _ => McpEditorTools.ListComponentTypes());
 
-    [McpServerTool(Name = "get_scene_settings", ReadOnly = true), Description("Scene-wide settings: environment (ambient light, sky, shadows) and physics (gravity, steps per second).")]
+    [McpServerTool(Name = "get_scene_settings", ReadOnly = true), Description("Scene-wide settings: environment (ambient light, sky, shadows, fog), physics (gravity, steps per second) and navigation (agent radius, height, step height, max slope; whether a navigation mesh is baked).")]
     public Task<string> GetSceneSettings() => Run("get_scene_settings", t => t.GetSceneSettings());
 
     [McpServerTool(Name = "list_assets", ReadOnly = true), Description("Files in the project's Assets folder with their type and the reference used in asset properties.")]
@@ -144,10 +144,13 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
 
     [McpServerTool(Name = "set_scene_setting"), Description("Sets one scene-wide setting (see get_scene_settings).")]
     public Task<string> SetSceneSetting(
-        [Description("\"environment\" or \"physics\".")] string section,
+        [Description("\"environment\", \"physics\" or \"navigation\".")] string section,
         [Description("Property name, e.g. ambientIntensity or gravity.")] string property,
         [Description("The new value as JSON.")] JsonElement value) =>
         Run("set_scene_setting", t => t.SetSceneSetting(section, property, value));
+
+    [McpServerTool(Name = "bake_navmesh"), Description("Bakes the scene's navigation mesh (where NavMeshAgents walk) from its colliders, with the navigation settings (see get_scene_settings). Bake again after changing the map.")]
+    public Task<string> BakeNavMesh() => Run("bake_navmesh", t => t.BakeNavMesh());
 
     // ----- Assets -----
 

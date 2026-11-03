@@ -48,6 +48,24 @@ public sealed class McpTests : IDisposable
     }
 
     [Fact]
+    public void BakeNavMesh_StoresTheMeshInTheScene_AndCanBeUndone()
+    {
+        var (context, tools, _) = Create();
+        tools.CreateEntity("Floor", "plane", null, null, null, null, physics: false);
+        tools.SetSceneSetting("navigation", "maxSlope", JsonDocument.Parse("30").RootElement);
+
+        var result = Json(tools.BakeNavMesh());
+
+        Assert.True(result.GetProperty("polygons").GetInt32() > 0);
+        Assert.NotNull(context.Scene.Navigation.Data);
+        Assert.Equal(30f, context.Scene.Navigation.MaxSlope);
+        Assert.Equal("MCP: Bake Navigation Mesh", context.History.UndoName);
+
+        context.Undo();
+        Assert.Null(context.Scene.Navigation.Data);
+    }
+
+    [Fact]
     public void CreateEntity_UIButton_CreatesItsCanvasInTheSameUndoStep()
     {
         var (context, tools, _) = Create();
@@ -181,7 +199,7 @@ public sealed class McpTests : IDisposable
 
             var listed = await client.ListToolsAsync(cancellationToken: TestContext.Current.CancellationToken);
             var names = listed.Select(tool => tool.Name).ToList();
-            Assert.Equal(35, names.Count); // docs/mcp.md lists every tool
+            Assert.Equal(36, names.Count); // docs/mcp.md lists every tool
             Assert.Contains("get_scene", names);
             Assert.Contains("create_entity", names);
 

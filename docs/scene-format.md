@@ -21,6 +21,8 @@ The reader and writer live in `src/Lapis/Serialization/SceneSerializer.cs`.
 | `version` | Format version. Files with a newer version than the engine supports are rejected. |
 | `name` | Scene name. |
 | `environment` | Scene-wide lighting and fog (`SceneEnvironment`): ambient colours and intensity, `skybox` and sky colours, `shadowDistance`, and `fog`, `fogMode` (`Exponential` or `Linear`), `fogColor`, `fogDensity`, `fogStart`, `fogEnd`, `fogHeight`. Values left at their defaults are omitted. |
+| `physics` | Scene-wide physics (`ScenePhysics`): `gravity` and `stepsPerSecond`. |
+| `navigation` | Navigation settings (`SceneNavigation`): `agentRadius`, `agentHeight`, `maxStepHeight`, `maxSlope`, `cellSize`, and `data`, the baked navigation mesh (Base64), or `null` before the first bake. See [navigation.md](navigation.md). |
 | `folders` | Hierarchy folders, in display order: `{ "id", "name", "parent", "color" }` (`parent` is the id of the folder it is inside, omitted at the top level; `color` is an sRGB `[r, g, b, a]`, omitted for the default colour). Omitted when the scene has no folders. Folders only organise the editor's Hierarchy and do not affect the game. |
 | `entities` | Every entity, depth-first: a parent always comes before its children, and siblings keep their order. |
 

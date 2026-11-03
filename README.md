@@ -281,6 +281,13 @@ glTF models exported from Blender (`.glb`) bring their skeleton and animations. 
 from scripts with `Play("Run")`, which blends smoothly. See the [animation guide](docs/animation.md), which also
 lists the Blender export settings.
 
+### Navigation
+
+Creatures with a **Nav Mesh Agent** find their own way around walls, through doorways and up stairs and ramps, and
+step out of each other's way. Bake the navigation mesh in the **Navigation** tab (agent radius, height, step
+height and the steepest slope agents climb), then call `SetDestination(target)` from a script. Navigation uses
+[DotRecast](https://github.com/ikpil/DotRecast). See the [navigation guide](docs/navigation.md).
+
 ### UI
 
 **Create > UI** adds a **Canvas** with panels, images, text and buttons drawn over the game. Select an element to
