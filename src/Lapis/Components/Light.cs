@@ -42,7 +42,10 @@ public sealed class Light : Component
     [ShowWhen(nameof(Type), LightType.Spot)]
     public float SpotSoftness { get; set; } = 0.3f;
 
-    /// <summary>Whether a directional light casts shadows (point and spot lights do not cast shadows yet).</summary>
-    [ShowWhen(nameof(Type), LightType.Directional)]
+    /// <summary>
+    /// Whether the light casts shadows. Of the point and spot lights that do, the ones nearest the camera cast them:
+    /// up to 4 spot lights and 2 point lights at a time (a point light's shadow costs about six spot lights').
+    /// </summary>
+    [Tooltip("Objects block this light. Only the 4 spot lights and 2 point lights nearest the camera cast shadows at a time.")]
     public bool CastShadows { get; set; } = true;
 }

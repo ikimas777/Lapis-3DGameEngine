@@ -34,8 +34,8 @@ outside the editor, move the `.lmeta` file together with its asset; commit `.lme
 
 Lapis uses physically based shading. A surface has a **Color** (optionally multiplied by a texture),
 **Metallic** (0 for plastic, wood, stone; 1 for metal) and **Roughness** (0 = polished, 1 = matte).
-The first directional light is the sun: it casts soft shadows (turn off with **Cast Shadows** on the light or on
-individual Mesh Renderers) and appears as a sun disk in the sky. Sky colours, ambient light and the shadow
+The first directional light is the sun: it casts soft shadows, and so do spot and point lights near the camera (turn
+off with **Cast Shadows** on the light or on individual Mesh Renderers) and appears as a sun disk in the sky. Sky colours, ambient light and the shadow
 distance are scene settings, edited in the **Scene Settings** tab next to the Inspector.
 
 ## Using assets

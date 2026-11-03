@@ -36,6 +36,16 @@ uniform float u_LocalLightRanges[MAX_LOCAL_LIGHTS];
 uniform vec3 u_LocalLightDirections[MAX_LOCAL_LIGHTS];
 uniform vec2 u_LocalLightCones[MAX_LOCAL_LIGHTS]; // (cos outer, cos inner)
 
+// Shadows of point and spot lights. u_LocalLightShadows is the light's layer in the spot or point shadow maps, or -1
+// for none. The maps store the distance from the light divided by its range.
+#define MAX_SPOT_SHADOWS 4
+uniform int u_LocalLightShadows[MAX_LOCAL_LIGHTS];
+uniform sampler2DArrayShadow u_SpotShadowMaps;   // unit 2
+uniform samplerCubeArrayShadow u_PointShadowMaps; // unit 3
+uniform mat4 u_SpotShadowMatrices[MAX_SPOT_SHADOWS];
+uniform float u_SpotShadowTexel;   // 1 / spot shadow map size
+uniform float u_PointShadowTexel;  // 1 / point shadow map face size
+
 // Hemisphere ambient: sky colour from above, ground colour from below.
 uniform vec3 u_SkyColor;
 uniform vec3 u_GroundColor;
@@ -130,6 +140,59 @@ float shadowFactor(vec3 normal, vec3 toLight)
     return mix(lit, 1.0, fade);
 }
 
+// How much of point or spot light i reaches this surface past the objects between them (1 = all, 0 = in shadow).
+float localShadowFactor(int i, vec3 normal, vec3 toLight, float dist)
+{
+    int index = u_LocalLightShadows[i];
+    if (index < 0)
+    {
+        return 1.0;
+    }
+
+    // Normal offset grows with the distance, as one shadow texel covers more of the surface further away.
+    float slope = 1.0 - max(dot(normal, toLight), 0.0);
+    vec3 position = v_WorldPosition + normal * (0.01 + dist * 0.015) * (0.5 + slope);
+    vec3 fromLight = position - u_LocalLightPositions[i];
+    float depth = length(fromLight) / u_LocalLightRanges[i] - 0.002;
+    float lit = 0.0;
+
+    if (u_LocalLightCones[i].x > -1.5) // a spot light: one view
+    {
+        vec4 clip = u_SpotShadowMatrices[index] * vec4(position, 1.0);
+        if (clip.w <= 0.0)
+        {
+            return 1.0;
+        }
+
+        vec2 uv = clip.xy / clip.w * 0.5 + 0.5;
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                lit += texture(u_SpotShadowMaps, vec4(uv + vec2(x, y) * u_SpotShadowTexel, float(index), depth));
+            }
+        }
+
+        return lit / 9.0;
+    }
+
+    // A point light: a cube around it, sampled in the direction from the light, plus a few directions around it.
+    vec3 direction = normalize(fromLight);
+    vec3 side = normalize(cross(direction, abs(direction.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+    vec3 other = cross(direction, side);
+    float spread = 2.0 * u_PointShadowTexel;
+    for (int x = -1; x <= 1; x++)
+    {
+        for (int y = -1; y <= 1; y++)
+        {
+            vec3 sampleDirection = direction + (side * float(x) + other * float(y)) * spread;
+            lit += texture(u_PointShadowMaps, vec4(sampleDirection, float(index)), depth);
+        }
+    }
+
+    return lit / 9.0;
+}
+
 // How much fog covers a point this far from the camera (0 = clear, 1 = only fog).
 float fogAmount(float dist)
 {
@@ -189,7 +252,12 @@ void main()
         float ratio = clamp(dist / u_LocalLightRanges[i], 0.0, 1.0);
         float falloff = (1.0 - ratio * ratio) * (1.0 - ratio * ratio) / (1.0 + dist * dist);
         float cone = smoothstep(u_LocalLightCones[i].x, u_LocalLightCones[i].y, dot(-l, u_LocalLightDirections[i]));
-        color += shade(albedo, f0, n, v, l, u_LocalLightColors[i] * falloff * cone);
+        if (falloff * cone <= 0.0)
+        {
+            continue; // out of reach: no need to look at the shadow map
+        }
+
+        color += shade(albedo, f0, n, v, l, u_LocalLightColors[i] * falloff * cone) * localShadowFactor(i, n, l, dist);
     }
 
     vec3 display = pow(toneMap(color), vec3(1.0 / 2.2));

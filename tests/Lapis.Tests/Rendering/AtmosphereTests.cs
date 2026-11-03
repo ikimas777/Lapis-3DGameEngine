@@ -127,6 +127,6 @@ public sealed class AtmosphereTests : IDisposable
         light.Type = LightType.Spot;
         Assert.Contains("SpotAngle", Shown(light));
         Assert.Contains("Range", Shown(light));
-        Assert.DoesNotContain("CastShadows", Shown(light));
+        Assert.Contains("CastShadows", Shown(light)); // every kind of light casts shadows
     }
 }

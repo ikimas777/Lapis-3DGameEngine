@@ -337,7 +337,11 @@ Attributes for the Inspector:
 - `Range` is how far it reaches.
 
 The Scene view draws the cone of a selected spot light. Up to 8 point and spot lights light the scene together.
-Only the directional light casts shadows for now.
+**Shadows.** Every light with **Cast Shadows** on throws shadows: the sun up to the shadow distance, spot and point
+lights within their range. To keep the game fast, only the 4 spot lights and 2 point lights nearest the camera cast
+shadows at a time (a point light needs six views, a spot light one); the others still light the scene. Turn
+**Cast Shadows** off on lights that do not need them (fill lights, small lamps far away) and on Mesh Renderers that
+should not block light (a lamp's glass, the player's own body).
 
 A flashlight is a spot light on a child of the camera; turning it off is one line:
 
@@ -367,7 +371,7 @@ public class Flashlight : Behaviour
   the fog sees a clear sky.
 
 The editor only shows the options that apply to the chosen mode, and the same goes for lights: **Range** only
-for point and spot lights, the cone only for spot lights, **Cast Shadows** only for the directional light.
+for point and spot lights, the cone only for spot lights, and **Cast Shadows** for every light.
 
 When the sky is off, fog seen from inside it also covers the empty background. Scripts can change the fog
 while the game runs, for example to thicken it near a monster:

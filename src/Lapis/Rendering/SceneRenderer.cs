@@ -28,6 +28,8 @@ public sealed class SceneRenderer : IDisposable
     private static readonly string[] LocalLightRangeNames = UniformArrayNames("u_LocalLightRanges");
     private static readonly string[] LocalLightDirectionNames = UniformArrayNames("u_LocalLightDirections");
     private static readonly string[] LocalLightConeNames = UniformArrayNames("u_LocalLightCones");
+    private static readonly string[] LocalLightShadowNames = UniformArrayNames("u_LocalLightShadows");
+    private static readonly string[] SpotShadowMatrixNames = [.. Enumerable.Range(0, LocalShadowMaps.MaxSpotShadows).Select(i => $"u_SpotShadowMatrices[{i}]")];
 
     private readonly GL _gl;
     private readonly Shader _litShader;
@@ -39,6 +41,9 @@ public sealed class SceneRenderer : IDisposable
     private readonly Shader _skyShader;
     private readonly Shader _fadeShader;
     private readonly ShadowMap _shadowMap;
+    private readonly LocalShadowMaps _localShadows;
+    private readonly Shader _localShadowShader;
+    private int[] _localShadowIndices = [];
     private readonly UIRenderer _ui;
     private readonly uint _emptyVertexArray;
     private Light? _directionalLight;
@@ -55,6 +60,8 @@ public sealed class SceneRenderer : IDisposable
         _skyShader = Shader.LoadBuiltIn(gl, "fullscreen", "sky");
         _fadeShader = Shader.LoadBuiltIn(gl, "fullscreen", "fade");
         _shadowMap = new ShadowMap(gl, 2048);
+        _localShadows = new LocalShadowMaps(gl);
+        _localShadowShader = Shader.LoadBuiltIn(gl, "shadow-local");
         _ui = new UIRenderer(gl, _textures);
         _emptyVertexArray = gl.GenVertexArray(); // the sky triangle is generated in the shader
     }
@@ -92,6 +99,7 @@ public sealed class SceneRenderer : IDisposable
 
         _shadowDrawCount = 0;
         var shadows = _directionalLight is { CastShadows: true } && RenderShadowMap(view, _directionalLight, environment.ShadowDistance);
+        RenderLocalShadowMaps(view.Position);
 
         // Without a sky, fog also covers the empty background (seen from inside the fog), so far objects fade into it.
         var foggyBackground = environment.Fog && !environment.Skybox && view.Position.Y <= environment.FogHeight;
@@ -106,10 +114,12 @@ public sealed class SceneRenderer : IDisposable
         shader.Set("u_CameraPosition", view.Position);
         shader.Set("u_Texture", 0);
         shader.Set("u_ShadowMap", 1);
+        shader.Set("u_SpotShadowMaps", 2);
+        shader.Set("u_PointShadowMaps", 3);
         shader.Set("u_ShadowsEnabled", shadows ? 1 : 0);
+        Texture2D.BindToUnit(_gl, 1, _shadowMap.DepthTexture); // always, so the shadow sampler never sees a colour texture
         if (shadows)
         {
-            Texture2D.BindToUnit(_gl, 1, _shadowMap.DepthTexture);
             shader.Set("u_LightViewProjection", _shadowMap.LightViewProjection);
             shader.Set("u_ShadowTexelSize", _shadowMap.TexelSize);
             shader.Set("u_ShadowCenter", _shadowMap.Center);
@@ -117,6 +127,7 @@ public sealed class SceneRenderer : IDisposable
         }
 
         SetLights(shader, environment);
+        BindLocalShadowMaps(shader);
 
         DrawCount = 0;
         foreach (var renderer in _renderers)
@@ -203,6 +214,8 @@ public sealed class SceneRenderer : IDisposable
         _meshes.Dispose();
         _textures.Dispose();
         _shadowMap.Dispose();
+        _localShadows.Dispose();
+        _localShadowShader.Dispose();
         _gl.DeleteVertexArray(_emptyVertexArray);
         _fadeShader.Dispose();
         _skyShader.Dispose();
@@ -244,6 +257,52 @@ public sealed class SceneRenderer : IDisposable
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)previousFramebuffer);
         _gl.Viewport(viewport[0], viewport[1], (uint)viewport[2], (uint)viewport[3]);
         return true;
+    }
+
+    /// <summary>Renders the shadow maps of the point and spot lights that cast shadows (the nearest to the camera).</summary>
+    private void RenderLocalShadowMaps(Vector3 cameraPosition)
+    {
+        _localShadowIndices = LocalShadowMaps.Assign(_localLights, cameraPosition);
+        if (_localShadowIndices.All(index => index < 0))
+        {
+            return;
+        }
+
+        _shadowDrawCount += _localShadows.Render(_localLights, _localShadowIndices, _localShadowShader, DrawShadowCasters);
+    }
+
+    private void DrawShadowCasters()
+    {
+        foreach (var renderer in _renderers)
+        {
+            if (renderer.CastShadows && _meshes.Get(renderer.MeshId) is { } mesh)
+            {
+                _localShadowShader.Set("u_Model", renderer.ModelMatrix);
+                mesh.Draw();
+            }
+        }
+    }
+
+    /// <summary>Binds the point and spot shadow maps (always, so the samplers never point at a wrong texture).</summary>
+    private void BindLocalShadowMaps(Shader shader)
+    {
+        _gl.ActiveTexture(TextureUnit.Texture2);
+        _gl.BindTexture(TextureTarget.Texture2DArray, _localShadows.SpotTexture);
+        _gl.ActiveTexture(TextureUnit.Texture3);
+        _gl.BindTexture(TextureTarget.TextureCubeMapArray, _localShadows.PointTexture);
+        _gl.ActiveTexture(TextureUnit.Texture0);
+
+        shader.Set("u_SpotShadowTexel", 1f / LocalShadowMaps.SpotSize);
+        shader.Set("u_PointShadowTexel", 1f / LocalShadowMaps.PointSize);
+        for (var i = 0; i < _localLights.Count; i++)
+        {
+            var index = i < _localShadowIndices.Length ? _localShadowIndices[i] : -1;
+            shader.Set(LocalLightShadowNames[i], index);
+            if (index >= 0 && _localLights[i].Type == LightType.Spot)
+            {
+                shader.Set(SpotShadowMatrixNames[index], _localShadows.SpotMatrices[index]);
+            }
+        }
     }
 
     /// <summary>Draws the sky on every pixel nothing else covered (depth 1).</summary>
