@@ -4,8 +4,7 @@ Lapis is a small 3D game engine with a visual editor, written entirely in C#.
 Build scenes in the editor, write gameplay in C# scripts, and export your game as a standalone app for Windows, Linux
 or macOS.
 
-> **Status:** 1.0.0, the first stable version, for Windows and Linux. Mac builds exist for some older versions
-> (the newest is v0.10.0).
+> **Status:** 1.0.0, the first stable version, for Windows and Linux.
 
 **Community:** join the Lapis server on Discord to ask questions, get help, share ideas and show what you make:
 [discord.gg/K9vFUdfzw5](https://discord.gg/K9vFUdfzw5).
