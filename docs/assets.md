@@ -7,7 +7,7 @@ Everything a game uses lives in the project's `Assets` folder and appears in the
 
 | Type | Extensions | Notes |
 |---|---|---|
-| Model | `.gltf`, `.glb`, `.obj`, `.stl` | All parts are merged into one mesh. The first material's colour and texture are used. STL is converted from Z-up to Y-up. |
+| Model | `.gltf`, `.glb`, `.obj`, `.stl` | All parts are merged into one mesh. The first material's colour and texture are used. STL is converted from Z-up to Y-up. glTF models with a skeleton or animations keep them: see [animation.md](animation.md). |
 | Texture | `.png`, `.jpg`, `.jpeg`, `.tga`, `.bmp` | Treated as sRGB colour, with mipmaps and repeat wrapping. |
 | Material | `.lmat` | Colour, texture, metallic and roughness shared by many objects. Edited in the Inspector. |
 | Sound | `.wav`, `.ogg` | WAV: 8, 16, 24 or 32-bit PCM, or 32-bit float. Mono or stereo (more channels keep the first two). Select one to see its length and press **Play** (or double-click it) to listen. Drop it on an object to play it from there. See [Sound](scripting.md#sound). |

@@ -274,6 +274,13 @@ into the scene as many times as you like. Copies are blue in the Hierarchy and f
 edits every copy at once, **Unpack** turns one copy into ordinary entities. Scripts place copies with
 `Instantiate(prefab, position)`. See the [prefab guide](docs/prefabs.md).
 
+### Animation
+
+glTF models exported from Blender (`.glb`) bring their skeleton and animations. An animated model gets an
+**Animator**: pick the animation to start with, preview every animation in the Scene view, and switch between them
+from scripts with `Play("Run")`, which blends smoothly. See the [animation guide](docs/animation.md), which also
+lists the Blender export settings.
+
 ### UI
 
 **Create > UI** adds a **Canvas** with panels, images, text and buttons drawn over the game. Select an element to

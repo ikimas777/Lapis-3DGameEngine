@@ -45,6 +45,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly Shader _localShadowShader;
     private int[] _localShadowIndices = [];
     private readonly UIRenderer _ui;
+    private readonly BoneBuffer _bones;
     private readonly uint _emptyVertexArray;
     private Light? _directionalLight;
     private int _shadowDrawCount;
@@ -62,6 +63,10 @@ public sealed class SceneRenderer : IDisposable
         _shadowMap = new ShadowMap(gl, 2048);
         _localShadows = new LocalShadowMaps(gl);
         _localShadowShader = Shader.LoadBuiltIn(gl, "shadow-local");
+        _bones = new BoneBuffer(gl);
+        BoneBuffer.Attach(_litShader);
+        BoneBuffer.Attach(_shadowShader);
+        BoneBuffer.Attach(_localShadowShader);
         _ui = new UIRenderer(gl, _textures);
         _emptyVertexArray = gl.GenVertexArray(); // the sky triangle is generated in the shader
     }
@@ -138,6 +143,7 @@ public sealed class SceneRenderer : IDisposable
             }
 
             shader.Set("u_Model", renderer.ModelMatrix);
+            SetSkin(shader, renderer, mesh);
             var (color, textureId, metallic, roughness) = renderer.ResolveSurface();
             (_textures.Get(textureId) ?? _textures.White).Bind(0);
             shader.Set("u_Albedo", color.ToLinear().ToVector3());
@@ -211,6 +217,7 @@ public sealed class SceneRenderer : IDisposable
     public void Dispose()
     {
         _ui.Dispose();
+        _bones.Dispose();
         _meshes.Dispose();
         _textures.Dispose();
         _shadowMap.Dispose();
@@ -247,6 +254,7 @@ public sealed class SceneRenderer : IDisposable
             if (renderer.CastShadows && _meshes.Get(renderer.MeshId) is { } mesh)
             {
                 _shadowShader.Set("u_Model", renderer.ModelMatrix);
+                SetSkin(_shadowShader, renderer, mesh);
                 mesh.Draw();
                 _shadowDrawCount++;
             }
@@ -278,6 +286,7 @@ public sealed class SceneRenderer : IDisposable
             if (renderer.CastShadows && _meshes.Get(renderer.MeshId) is { } mesh)
             {
                 _localShadowShader.Set("u_Model", renderer.ModelMatrix);
+                SetSkin(_localShadowShader, renderer, mesh);
                 mesh.Draw();
             }
         }
@@ -302,6 +311,20 @@ public sealed class SceneRenderer : IDisposable
             {
                 shader.Set(SpotShadowMatrixNames[index], _localShadows.SpotMatrices[index]);
             }
+        }
+    }
+
+    /// <summary>
+    /// Gives the shader the pose of an animated model: the bone matrices of the entity's <see cref="Animator"/>, or none
+    /// (the rest pose the vertices are stored in) when it has no animator or is not animating.
+    /// </summary>
+    internal void SetSkin(Shader shader, MeshRenderer renderer, Mesh mesh)
+    {
+        var bones = mesh.IsSkinned ? renderer.entity.GetComponent<Animator>()?.BoneMatrices : null;
+        shader.Set("u_Skinned", bones is null ? 0 : 1);
+        if (bones is not null)
+        {
+            _bones.Upload(bones);
         }
     }
 

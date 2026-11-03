@@ -52,8 +52,21 @@ public sealed class GameSimulation : IDisposable
             Input.GetMouseButtonDown(MouseButton.Left), Input.GetMouseButtonUp(MouseButton.Left));
 
         _scripts.Tick(deltaTime);
+        AdvanceAnimators(Scene, deltaTime);
         Screen.Advance(deltaTime);
         AudioSystem.Update(Scene);
+    }
+
+    /// <summary>Moves every active <see cref="Animator"/> of the scene on by <paramref name="deltaTime"/> seconds.</summary>
+    public static void AdvanceAnimators(Scene scene, float deltaTime)
+    {
+        foreach (var entity in scene.AllEntities)
+        {
+            if (entity.GetComponent<Animator>() is { } animator && entity.IsActiveInHierarchy)
+            {
+                animator.Advance(deltaTime);
+            }
+        }
     }
 
     /// <summary>Calls <c>OnDestroy</c> on the scripts and releases the physics engine.</summary>

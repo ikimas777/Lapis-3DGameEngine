@@ -12,6 +12,7 @@ public sealed unsafe class Mesh : IDisposable
     private readonly uint _vertexArray;
     private readonly uint _vertexBuffer;
     private readonly uint _indexBuffer;
+    private readonly uint _skinBuffer;
     private readonly long _gpuBytes;
     private bool _disposed;
 
@@ -47,11 +48,31 @@ public sealed unsafe class Mesh : IDisposable
             SetAttribute(0, 3, Vertex.PositionOffset);
             SetAttribute(1, 3, Vertex.NormalOffset);
             SetAttribute(2, 2, Vertex.TexCoordOffset);
+
+            // Animated models: the bones each vertex follows (location 3) and their weights (location 4).
+            if (data.Skin is { } skin)
+            {
+                _skinBuffer = gl.GenBuffer();
+                gl.BindBuffer(BufferTargetARB.ArrayBuffer, _skinBuffer);
+                fixed (VertexSkin* entries = skin)
+                {
+                    gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(skin.Length * VertexSkin.SizeInBytes), entries, BufferUsageARB.StaticDraw);
+                }
+
+                gl.EnableVertexAttribArray(3);
+                gl.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, VertexSkin.SizeInBytes, (void*)0);
+                gl.EnableVertexAttribArray(4);
+                gl.VertexAttribPointer(4, 4, VertexAttribPointerType.Float, false, VertexSkin.SizeInBytes, (void*)16);
+                IsSkinned = true;
+            }
         }
 
-        _gpuBytes = ((long)data.Vertices.Length * Vertex.SizeInBytes) + ((long)data.Indices.Length * sizeof(uint));
+        _gpuBytes = ((long)data.Vertices.Length * Vertex.SizeInBytes) + ((long)data.Indices.Length * sizeof(uint)) + ((long)(data.Skin?.Length ?? 0) * VertexSkin.SizeInBytes);
         EngineMetrics.MeshCreated(_gpuBytes);
     }
+
+    /// <summary>True when the vertices carry bones (an animated model), so shaders can move them.</summary>
+    public bool IsSkinned { get; }
 
     /// <summary>Number of indices drawn by <see cref="Draw"/>.</summary>
     public int IndexCount { get; }
@@ -74,6 +95,11 @@ public sealed unsafe class Mesh : IDisposable
         _gl.DeleteVertexArray(_vertexArray);
         _gl.DeleteBuffer(_vertexBuffer);
         _gl.DeleteBuffer(_indexBuffer);
+        if (_skinBuffer != 0)
+        {
+            _gl.DeleteBuffer(_skinBuffer);
+        }
+
         EngineMetrics.MeshDeleted(_gpuBytes);
         _disposed = true;
     }

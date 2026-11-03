@@ -92,6 +92,12 @@ internal static class EditorActions
         renderer.Color = model.BaseColor;
         renderer.TextureId = model.TextureId;
 
+        // Animated models get an Animator, which plays their first animation when the game runs.
+        if (model.Skeleton is { Clips.Count: > 0 })
+        {
+            entity.AddComponent<Animator>();
+        }
+
         context.Selection = entity;
         RecordCreated(context, entity);
         return entity;

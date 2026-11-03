@@ -539,11 +539,92 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             }
 
             var before = member.GetValue(component);
-            if (PropertyGrid.Member(component, member, scene))
+            var changed = component is Animator animator && member.Name == nameof(Animator.Clip)
+                ? DrawClipChoice(animator)
+                : PropertyGrid.Member(component, member, scene);
+            if (changed)
             {
                 context.Record(new SetMemberCommand(component, member, before, member.GetValue(component)));
             }
         }
+
+        if (component is Animator previewed)
+        {
+            DrawAnimationPreview(previewed);
+        }
+    }
+
+    /// <summary>The start animation as a list of the model's animations.</summary>
+    private static bool DrawClipChoice(Animator animator)
+    {
+        var clips = animator.ClipNames;
+        PropertyGrid.Label("Clip", "Animation played when the game starts.");
+        if (clips.Count == 0)
+        {
+            ImGui.TextDisabled("The Mesh Renderer's model has no animations.");
+            return false;
+        }
+
+        var current = animator.Clip.Length == 0 ? $"{clips[0]} (first)" : animator.Clip;
+        var changed = false;
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.BeginCombo("##clip", current))
+        {
+            foreach (var clip in clips)
+            {
+                if (ImGui.Selectable(clip, clip == animator.Clip))
+                {
+                    animator.Clip = clip;
+                    changed = true;
+                }
+            }
+
+            ImGui.EndCombo();
+        }
+
+        return changed;
+    }
+
+    /// <summary>Buttons that play each animation in the Scene view without running the game.</summary>
+    private void DrawAnimationPreview(Animator animator)
+    {
+        var clips = animator.ClipNames;
+        if (clips.Count == 0 || context.IsPlaying)
+        {
+            return;
+        }
+
+        PropertyGrid.Label("Preview", "Play an animation in the Scene view (the game is not started).");
+        foreach (var clip in clips)
+        {
+            var playing = animator.Previewing && animator.CurrentClip == clip;
+            if (playing)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, Theme.EditorTheme.Accent);
+            }
+
+            if (ImGui.Button($"{clip}##preview"))
+            {
+                animator.Previewing = true;
+                animator.Play(clip, fade: 0.2f);
+            }
+
+            if (playing)
+            {
+                ImGui.PopStyleColor();
+            }
+
+            ImGui.SameLine();
+        }
+
+        ImGui.BeginDisabled(!animator.Previewing);
+        if (ImGui.Button("Stop##preview"))
+        {
+            animator.Previewing = false;
+            animator.ResetPose();
+        }
+
+        ImGui.EndDisabled();
     }
 
     private void DrawAddComponent(Entity entity)

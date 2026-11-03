@@ -148,6 +148,16 @@ public sealed unsafe class Shader : IDisposable
         }
     }
 
+    /// <summary>Connects a uniform block (e.g. <c>Bones</c>) to a binding point; nothing happens when the shader has no such block.</summary>
+    public void BindUniformBlock(string blockName, uint bindingPoint)
+    {
+        var index = _gl.GetUniformBlockIndex(_program, blockName);
+        if (index != uint.MaxValue)
+        {
+            _gl.UniformBlockBinding(_program, index, bindingPoint);
+        }
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {

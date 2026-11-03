@@ -20,6 +20,9 @@ public sealed class ImportedModel
 
     /// <summary>Encoded images stored inside the model file (GLB / embedded glTF).</summary>
     public IReadOnlyList<byte[]> EmbeddedImages { get; init; } = [];
+
+    /// <summary>The skeleton and animations of an animated model (glTF), or null for a model that does not move.</summary>
+    public Animation.ModelSkeleton? Skeleton { get; init; }
 }
 
 /// <summary>Picks the importer for a model file by its extension.</summary>

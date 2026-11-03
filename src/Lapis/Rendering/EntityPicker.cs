@@ -25,6 +25,7 @@ public sealed unsafe class EntityPicker : IDisposable
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
         _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
         _shader = Shader.LoadBuiltIn(gl, "entity-id");
+        BoneBuffer.Attach(_shader); // animated models are picked in their rest pose (u_Skinned stays 0)
     }
 
     /// <summary>

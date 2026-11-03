@@ -176,6 +176,11 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
 
         // Scripts see the input gathered since the previous frame, then the per-frame flags are cleared.
         _play.Update(Time.DeltaTime);
+        if (!_context.IsPlaying)
+        {
+            PreviewAnimations(Time.DeltaTime);
+        }
+
         Input.BeginFrame();
 
         _titleTimer += Time.DeltaTime;
@@ -188,6 +193,18 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             var project = _scripts.Project?.Name ?? _context.Scene.Name;
             var compiling = _scripts.IsCompiling ? " — compiling scripts..." : string.Empty;
             Window.Title = _inLauncher ? $"Projects — {editor}" : $"{project}{dirty}{compiling} — {editor}";
+        }
+    }
+
+    /// <summary>Plays the animations the Inspector's preview started, while the game is not running.</summary>
+    private void PreviewAnimations(float deltaTime)
+    {
+        foreach (var entity in _context.Scene.AllEntities)
+        {
+            if (entity.GetComponent<Animator>() is { Previewing: true } animator)
+            {
+                animator.Advance(deltaTime);
+            }
         }
     }
 
