@@ -12,7 +12,7 @@ internal static class CreateMenu
     /// </summary>
     public static void DrawItems(EditorContext context, Entity? parent, Vector3 spawnPosition)
     {
-        if (parent is not null && PrefabActions.IsLocked(parent))
+        if (parent is not null && !EditPolicy.CanHaveNewChildren(parent))
         {
             ImGui.TextDisabled("Part of a prefab copy: open the prefab or unpack the copy to add children.");
             return;
@@ -116,7 +116,7 @@ internal static class CreateMenu
                 if (ImGui.MenuItem(kind.ToString()))
                 {
                     // From the main menu, a new element goes inside the selected UI element.
-                    var uiParent = parent ?? (SceneView.UIHandles.IsUI(context.Selection) && !PrefabActions.IsLocked(context.Selection!) ? context.Selection : null);
+                    var uiParent = parent ?? (SceneView.UIHandles.IsUI(context.Selection) && EditPolicy.CanHaveNewChildren(context.Selection!) ? context.Selection : null);
                     createdUI = EntityFactory.CreateUI(scene, kind, uiParent, out newCanvas);
                 }
             }

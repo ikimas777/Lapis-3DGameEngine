@@ -891,9 +891,9 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
     // Prefab copies change only through their prefab: the root keeps its own name, tag, active flag and transform.
     private static void RequireEditable(Entity entity, bool rootAllowed)
     {
-        if (PrefabActions.IsInsideInstance(entity) || (!rootAllowed && entity.Prefab is not null))
+        if (rootAllowed ? !EditPolicy.CanEditEntity(entity) : !EditPolicy.CanEditComponents(entity))
         {
-            throw new McpException(PrefabActions.LockedMessage(entity) + " Use unpack_prefab, or change the prefab file.");
+            throw new McpException(EditPolicy.LockedMessage(entity) + " Use unpack_prefab, or change the prefab file.");
         }
     }
 

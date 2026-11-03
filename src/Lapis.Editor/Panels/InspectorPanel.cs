@@ -25,7 +25,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
     // Euler angles are cached while editing so values like 180° do not flip to -180° mid-drag.
     private Transform? _eulerOwner;
-    private readonly SceneView.UIHandles _uiHandles = new(context);
+    private readonly Inspector.ComponentDrawers _drawers = Inspector.ComponentDrawers.Create(context, scripts);
     private Quaternion _eulerSource;
     private Vector3 _euler;
 
@@ -59,8 +59,8 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         }
 
         // A prefab copy only lets its root be renamed, tagged, switched on or off and moved; the rest comes from the prefab.
-        var insideInstance = PrefabActions.IsInsideInstance(entity);
-        var locked = PrefabActions.IsLocked(entity);
+        var insideInstance = !EditPolicy.CanEditEntity(entity);
+        var locked = !EditPolicy.CanEditComponents(entity);
         DrawPrefabBar(entity);
         ImGui.BeginDisabled(insideInstance);
         DrawHeader(entity);
@@ -82,7 +82,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             }
 
             ImGui.PushID(index++);
-            var componentLocked = locked && !(component is RectTransform && !insideInstance); // a UI root still moves
+            var componentLocked = !EditPolicy.CanEditComponent(component);
             if (!DrawComponent(component, entity.Scene, componentLocked))
             {
                 toRemove = component;
@@ -390,28 +390,6 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         ImGui.EndPopup();
     }
 
-    /// <summary>A menu of common anchors; the element stays where it is on screen.</summary>
-    private void DrawAnchorPresets(RectTransform transform)
-    {
-        PropertyGrid.Label("Anchor Preset", "Pin the element to a corner, an edge or the centre of its parent, or stretch it with the parent. It stays where it is.");
-        var current = SceneView.UIHandles.AnchorPresets.FirstOrDefault(preset => preset.Min == transform.AnchorMin && preset.Max == transform.AnchorMax).Name ?? "Custom";
-        ImGui.SetNextItemWidth(-1);
-        if (!ImGui.BeginCombo("##anchorPreset", current))
-        {
-            return;
-        }
-
-        foreach (var (name, min, max) in SceneView.UIHandles.AnchorPresets)
-        {
-            if (ImGui.Selectable(name, name == current))
-            {
-                _uiHandles.ApplyAnchorPreset(transform, min, max);
-            }
-        }
-
-        ImGui.EndCombo();
-    }
-
     /// <returns>False when the user asked to remove the component.</returns>
     private bool DrawComponent(Component component, Scene scene, bool locked)
     {
@@ -487,48 +465,10 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             return;
         }
 
-        if (scripts.FindScript(component.GetType()) is { } script)
+        var drawers = _drawers.For(component.GetType());
+        foreach (var drawer in drawers)
         {
-            PropertyGrid.Label("Script");
-            if (ImGui.Button($"{Path.GetFileName(script.FilePath)}##script", new Vector2(-1, 0)))
-            {
-                CodeEditor.Open(script.FilePath, script.Line, scripts.Project?.Directory);
-            }
-
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip("Open the script in VS Code");
-            }
-        }
-
-        if (component is RectTransform rectTransform)
-        {
-            DrawAnchorPresets(rectTransform);
-        }
-
-        if (component is Collider collider && SceneView.ColliderHandles.CanEdit(collider))
-        {
-            // Same switch as the Scene view's Collider tool (key 4): dots on the collider's sides to drag.
-            var editing = context.EditingCollider;
-            if (editing)
-            {
-                ImGui.PushStyleColor(ImGuiCol.Button, Theme.EditorTheme.Accent);
-            }
-
-            if (ImGui.Button(editing ? "Editing Collider (drag the dots in the Scene view)##editCollider" : "Edit Collider##editCollider", new Vector2(-1, 0)))
-            {
-                context.EditingCollider = !editing;
-            }
-
-            if (editing)
-            {
-                ImGui.PopStyleColor();
-            }
-
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip("Resize the collider by dragging the dots on its sides in the Scene view (4)");
-            }
+            drawer.DrawBefore(component);
         }
 
         foreach (var member in SerializedMember.For(component.GetType()))
@@ -539,93 +479,24 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             }
 
             var before = member.GetValue(component);
-            var changed = component is Animator animator && member.Name == nameof(Animator.Clip)
-                ? DrawClipChoice(animator)
-                : PropertyGrid.Member(component, member, scene);
+            var changed = false;
+            if (!drawers.Any(drawer => drawer.TryDrawMember(component, member, out changed)))
+            {
+                changed = PropertyGrid.Member(component, member, scene);
+            }
+
             if (changed)
             {
                 context.Record(new SetMemberCommand(component, member, before, member.GetValue(component)));
             }
         }
 
-        if (component is Animator previewed)
+        foreach (var drawer in drawers)
         {
-            DrawAnimationPreview(previewed);
+            drawer.DrawAfter(component);
         }
     }
 
-    /// <summary>The start animation as a list of the model's animations.</summary>
-    private static bool DrawClipChoice(Animator animator)
-    {
-        var clips = animator.ClipNames;
-        PropertyGrid.Label("Clip", "Animation played when the game starts.");
-        if (clips.Count == 0)
-        {
-            ImGui.TextDisabled("The Mesh Renderer's model has no animations.");
-            return false;
-        }
-
-        var current = animator.Clip.Length == 0 ? $"{clips[0]} (first)" : animator.Clip;
-        var changed = false;
-        ImGui.SetNextItemWidth(-1);
-        if (ImGui.BeginCombo("##clip", current))
-        {
-            foreach (var clip in clips)
-            {
-                if (ImGui.Selectable(clip, clip == animator.Clip))
-                {
-                    animator.Clip = clip;
-                    changed = true;
-                }
-            }
-
-            ImGui.EndCombo();
-        }
-
-        return changed;
-    }
-
-    /// <summary>Buttons that play each animation in the Scene view without running the game.</summary>
-    private void DrawAnimationPreview(Animator animator)
-    {
-        var clips = animator.ClipNames;
-        if (clips.Count == 0 || context.IsPlaying)
-        {
-            return;
-        }
-
-        PropertyGrid.Label("Preview", "Play an animation in the Scene view (the game is not started).");
-        foreach (var clip in clips)
-        {
-            var playing = animator.Previewing && animator.CurrentClip == clip;
-            if (playing)
-            {
-                ImGui.PushStyleColor(ImGuiCol.Button, Theme.EditorTheme.Accent);
-            }
-
-            if (ImGui.Button($"{clip}##preview"))
-            {
-                animator.Previewing = true;
-                animator.Play(clip, fade: 0.2f);
-            }
-
-            if (playing)
-            {
-                ImGui.PopStyleColor();
-            }
-
-            ImGui.SameLine();
-        }
-
-        ImGui.BeginDisabled(!animator.Previewing);
-        if (ImGui.Button("Stop##preview"))
-        {
-            animator.Previewing = false;
-            animator.ResetPose();
-        }
-
-        ImGui.EndDisabled();
-    }
 
     private void DrawAddComponent(Entity entity)
     {

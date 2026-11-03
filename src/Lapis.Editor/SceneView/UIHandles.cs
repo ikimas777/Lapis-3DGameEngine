@@ -313,7 +313,7 @@ internal sealed class UIHandles(EditorContext context)
 
     private void Begin(UIElement element, int handleX, int handleY, Vector2 mouse)
     {
-        if (PrefabActions.IsInsideInstance(element.Entity))
+        if (!EditPolicy.CanEditEntity(element.Entity))
         {
             return; // part of a prefab copy: it can be selected, not moved
         }

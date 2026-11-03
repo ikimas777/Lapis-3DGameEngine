@@ -30,12 +30,12 @@ internal static class EditorActions
     private static IReadOnlyList<Entity> UnlockedRoots(EditorContext context)
     {
         var roots = context.SelectedRoots;
-        if (roots.FirstOrDefault(PrefabActions.IsInsideInstance) is { } locked)
+        if (roots.FirstOrDefault(root => !EditPolicy.CanRestructure(root)) is { } locked)
         {
-            Log.Warning(PrefabActions.LockedMessage(locked));
+            Log.Warning(EditPolicy.LockedMessage(locked));
         }
 
-        return [.. roots.Where(root => !PrefabActions.IsInsideInstance(root))];
+        return [.. roots.Where(EditPolicy.CanRestructure)];
     }
 
     /// <summary>Copies the entity and its children next to the original and selects the copy.</summary>

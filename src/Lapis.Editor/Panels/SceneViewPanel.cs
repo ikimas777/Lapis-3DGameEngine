@@ -49,7 +49,7 @@ internal sealed unsafe class SceneViewPanel(
 
     /// <summary>True while the Collider tool is on and the selection has a collider it can resize.</summary>
     private bool EditingCollider =>
-        context.EditingCollider && context.Selection is { } selection && !PrefabActions.IsLocked(selection) && selection.Components.OfType<Collider>().Any(ColliderHandles.CanEdit);
+        context.EditingCollider && context.Selection is { } selection && EditPolicy.CanEditComponents(selection) && selection.Components.OfType<Collider>().Any(ColliderHandles.CanEdit);
 
     /// <summary>True while a canvas or UI element is selected: the view shows the game screen with the UI to edit.</summary>
     private bool EditingUI => UIHandles.IsUI(context.Selection);
@@ -296,7 +296,7 @@ internal sealed unsafe class SceneViewPanel(
         ImGuizmo.SetOrthographic(false);
 
         var selection = context.Selection;
-        if (selection is null || PrefabActions.IsInsideInstance(selection))
+        if (selection is null || !EditPolicy.CanEditEntity(selection))
         {
             FinishGizmoDrag();
             return;
@@ -372,7 +372,7 @@ internal sealed unsafe class SceneViewPanel(
         _gizmoOthers.Clear();
         foreach (var root in context.SelectedRoots)
         {
-            if (root != primary && !PrefabActions.IsInsideInstance(root) && !primary.Transform.IsChildOf(root.Transform) && !root.Transform.IsChildOf(primary.Transform))
+            if (root != primary && EditPolicy.CanEditEntity(root) && !primary.Transform.IsChildOf(root.Transform) && !root.Transform.IsChildOf(primary.Transform))
             {
                 _gizmoOthers.Add((root, TransformState.Of(root.Transform)));
             }

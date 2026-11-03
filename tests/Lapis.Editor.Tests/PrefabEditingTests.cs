@@ -31,7 +31,7 @@ public sealed class PrefabEditingTests : IDisposable
         Assert.Equal(AssetType.Prefab, asset.Type);
         Assert.True(File.Exists(Path.Combine(_temp.Path, "Prefabs", "Lamp.lprefab")));
         Assert.Equal(asset.Reference, lamp.Prefab);
-        Assert.True(PrefabActions.IsInsideInstance(lamp.Children.Single()));
+        Assert.False(EditPolicy.CanEditEntity(lamp.Children.Single()));
 
         context.Undo();
         Assert.Null(lamp.Prefab); // the link is undone; the file stays

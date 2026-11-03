@@ -6,29 +6,11 @@ using Lapis.Serialization;
 namespace Lapis.Editor;
 
 /// <summary>
-/// Prefabs in the editor: making one from the Hierarchy, placing copies (instances), unpacking them and the rules
-/// that keep instances in sync with their prefab (only an instance root's name, tag, active flag, folder and
-/// transform can be changed in the scene; everything else is edited in the prefab with Open Prefab).
+/// Prefabs in the editor: making one from the Hierarchy, placing copies (instances) and unpacking them. What may
+/// change in a copy is decided by <see cref="EditPolicy"/>.
 /// </summary>
 internal static class PrefabActions
 {
-    /// <summary>
-    /// True when <paramref name="entity"/>'s components and children cannot be changed in the scene because they
-    /// come from a prefab. For an instance root, its transform, name, tag and active flag can still be changed.
-    /// </summary>
-    public static bool IsLocked(Entity entity) => entity.IsPartOfPrefab;
-
-    /// <summary>True for entities inside an instance (not its root): nothing about them can be changed in the scene.</summary>
-    public static bool IsInsideInstance(Entity entity) => entity.Prefab is null && entity.IsPartOfPrefab;
-
-    /// <summary>The message shown when something locked by a prefab is about to be changed.</summary>
-    public static string LockedMessage(Entity entity) =>
-        $"'{entity.Name}' is part of the prefab '{PrefabName(entity.PrefabInstanceRoot!)}'. Open the prefab to change every copy, or unpack this copy to change only it.";
-
-    /// <summary>File name (without extension) of the prefab an instance root comes from.</summary>
-    public static string PrefabName(Entity instanceRoot) =>
-        AssetDatabase.Active?.Find(instanceRoot.Prefab) is { } asset ? asset.Name : "missing prefab";
-
     /// <summary>
     /// Saves <paramref name="entity"/> and its children as a new <c>.lprefab</c> in <paramref name="folder"/> and turns
     /// the entity into an instance of it (one undo step for the scene; the file stays). Returns the new asset.
@@ -41,9 +23,9 @@ internal static class PrefabActions
             return null;
         }
 
-        if (IsInsideInstance(entity))
+        if (!EditPolicy.CanRestructure(entity))
         {
-            Log.Warning(LockedMessage(entity));
+            Log.Warning(EditPolicy.LockedMessage(entity));
             return null;
         }
 
@@ -73,9 +55,9 @@ internal static class PrefabActions
     /// <summary>Places a copy of a prefab under <paramref name="parent"/>, or at <paramref name="position"/> at the top level.</summary>
     public static Entity? Instantiate(EditorContext context, AssetInfo prefab, Entity? parent, Vector3 position)
     {
-        if (parent is not null && IsLocked(parent))
+        if (parent is not null && !EditPolicy.CanHaveNewChildren(parent))
         {
-            Log.Warning(LockedMessage(parent));
+            Log.Warning(EditPolicy.LockedMessage(parent));
             return null;
         }
 

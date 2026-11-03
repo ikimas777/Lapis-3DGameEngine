@@ -778,7 +778,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         }
 
         if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) && !ImGui.IsItemToggledOpen() &&
-            !ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift && !PrefabActions.IsInsideInstance(entity))
+            !ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift && EditPolicy.CanEditEntity(entity))
         {
             _pendingChanges.Add(() => StartRename(entity));
         }
@@ -817,7 +817,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
             {
                 var active = !entity.IsActive;
                 _pendingChanges.Add(() => ExecuteEach(active ? "Activate" : "Deactivate", context.SelectedEntities,
-                    selectedEntity => selectedEntity.IsActive == active || PrefabActions.IsInsideInstance(selectedEntity) ? null : new SetActiveCommand(selectedEntity, active)));
+                    selectedEntity => selectedEntity.IsActive == active || !EditPolicy.CanEditEntity(selectedEntity) ? null : new SetActiveCommand(selectedEntity, active)));
             }
 
             DrawMoveToFolderMenu(entity);
@@ -857,9 +857,9 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
         {
             _pendingChanges.Add(() =>
             {
-                if (PrefabActions.IsLocked(entity))
+                if (!EditPolicy.CanEditComponents(entity))
                 {
-                    Log.Warning(PrefabActions.LockedMessage(entity)); // a prefab copy gets nothing added in the scene
+                    Log.Warning(EditPolicy.LockedMessage(entity)); // a prefab copy gets nothing added in the scene
                 }
                 else if (asset.Type == Lapis.Assets.AssetType.Model)
                 {
@@ -1010,7 +1010,7 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
 
     /// <summary>False when <paramref name="anchor"/> is the entity itself or inside it, so it cannot go there.</summary>
     private static bool CanPlace(Entity entity, Entity anchor) =>
-        anchor != entity && !anchor.Transform.IsChildOf(entity.Transform) && !PrefabActions.IsInsideInstance(entity);
+        anchor != entity && !anchor.Transform.IsChildOf(entity.Transform) && EditPolicy.CanRestructure(entity);
 
     /// <summary>
     /// Moves the dragged entities (in Hierarchy order) under <paramref name="anchor"/> (placement null) or next to it,
@@ -1020,19 +1020,19 @@ internal sealed class HierarchyPanel(EditorContext context, Func<Vector3> spawnP
     {
         // Nothing moves into, out of or around inside a prefab copy; its contents come from the prefab.
         var newParent = placement is null or Placement.FirstChild ? anchor : anchor.Parent;
-        if (newParent is not null && PrefabActions.IsLocked(newParent))
+        if (newParent is not null && !EditPolicy.CanHaveNewChildren(newParent))
         {
-            Log.Warning(PrefabActions.LockedMessage(newParent));
+            Log.Warning(EditPolicy.LockedMessage(newParent));
             return;
         }
 
-        if (entities.FirstOrDefault(PrefabActions.IsInsideInstance) is { } locked)
+        if (entities.FirstOrDefault(entity => !EditPolicy.CanRestructure(entity)) is { } locked)
         {
-            Log.Warning(PrefabActions.LockedMessage(locked));
+            Log.Warning(EditPolicy.LockedMessage(locked));
         }
 
         var movable = entities.Where(entity => CanPlace(entity, anchor)).ToList();
-        if (entities.Any(entity => entity != anchor && !PrefabActions.IsInsideInstance(entity) && !CanPlace(entity, anchor)))
+        if (entities.Any(entity => entity != anchor && EditPolicy.CanRestructure(entity) && !CanPlace(entity, anchor)))
         {
             Log.Warning("An entity cannot be moved under or next to one of its own children; it was left where it was.");
         }
