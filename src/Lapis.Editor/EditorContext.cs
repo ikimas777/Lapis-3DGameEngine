@@ -55,6 +55,11 @@ internal sealed class EditorContext
     public bool EditingCollider { get; set; }
 
     /// <summary>
+    /// Size of the Game view's picture in pixels, as last drawn; the Scene view lays out UI for this screen size.
+    /// </summary>
+    public System.Numerics.Vector2 GameViewSize { get; set; } = new(1920f, 1080f);
+
+    /// <summary>
     /// The entity shown in the Inspector and moved by the gizmo: the one selected last, or null. Setting it selects
     /// only that entity. Entities are remembered by id, so one deleted and restored by undo (or reloaded with the
     /// scripts) is selected again.

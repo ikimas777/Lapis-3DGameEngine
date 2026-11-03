@@ -1,7 +1,7 @@
 namespace Lapis;
 
 /// <summary>
-/// Effects over the whole game picture. <see cref="FadeTo"/> blends the picture towards a colour, e.g. to black for
+/// The game picture: its size, and effects over all of it. <see cref="FadeTo"/> blends the picture towards a colour, e.g. to black for
 /// a blink, a scene change or a death screen. The fade follows game time: it stops while the game is paused and
 /// starts clear every time the game starts.
 /// </summary>
@@ -19,6 +19,15 @@ public static class Screen
     private static Color _to = Color.Transparent;
     private static float _duration;
     private static float _elapsed;
+
+    /// <summary>Width of the game picture in pixels.</summary>
+    public static int Width { get; private set; } = 1920;
+
+    /// <summary>Height of the game picture in pixels.</summary>
+    public static int Height { get; private set; } = 1080;
+
+    /// <summary>Pixels per window point: 2 on a high-density (Retina) display, where mouse positions are in points.</summary>
+    internal static float PixelsPerPoint { get; private set; } = 1f;
 
     /// <summary>The colour over the picture right now; its alpha says how much of the picture it covers (0–1).</summary>
     public static Color FadeColor { get; private set; } = Color.Transparent;
@@ -48,6 +57,14 @@ public static class Screen
 
     /// <summary>Clears the picture over <paramref name="seconds"/>, from whatever covers it now.</summary>
     public static void FadeIn(float seconds) => FadeTo(FadeColor with { A = 0f }, seconds);
+
+    /// <summary>Sets the size of the game picture; called by the program showing the game, before each frame.</summary>
+    internal static void SetSize(int width, int height, float pixelsPerPoint)
+    {
+        Width = Math.Max(width, 1);
+        Height = Math.Max(height, 1);
+        PixelsPerPoint = pixelsPerPoint > 0f ? pixelsPerPoint : 1f;
+    }
 
     /// <summary>Moves the running fade on by <paramref name="deltaTime"/> seconds of game time.</summary>
     internal static void Advance(float deltaTime)

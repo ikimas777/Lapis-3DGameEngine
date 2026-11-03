@@ -62,3 +62,15 @@ public sealed class TooltipAttribute(string text) : Attribute
     /// <summary>The help text.</summary>
     public string Text { get; } = text;
 }
+
+/// <summary>Edits a <see cref="string"/> member in a box with several lines in the editor.</summary>
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+public sealed class MultilineAttribute : Attribute;
+
+/// <summary>How much a number changes per pixel of mouse movement when dragged in the editor (default 0.05).</summary>
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+public sealed class DragSpeedAttribute(float speed) : Attribute
+{
+    /// <summary>Change per pixel.</summary>
+    public float Speed { get; } = speed;
+}

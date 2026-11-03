@@ -263,6 +263,14 @@ and a soft edge). **Fog** (exponential or linear, any colour, optionally only up
 can fade the game picture to a colour with `Screen.FadeTo(Color.Black, 0.1f)`, e.g. for a blink. See
 [Lights, fog and fading](docs/scripting.md#lights-fog-and-fading).
 
+### UI
+
+**Create > UI** adds a **Canvas** with panels, images, text and buttons drawn over the game. Select an element to
+see the game screen in the Scene view, then move and resize elements there by dragging. Anchors keep elements in
+a corner, at an edge or stretched across the screen at any resolution, text can use any `.ttf` / `.otf` font, and
+buttons call a script method when clicked. Scripts show the mouse cursor for menus with `Cursor.Locked = false`.
+See the [UI guide](docs/ui.md).
+
 ### Sound
 
 `.wav` and `.ogg` files in `Assets` are sounds: select one and press **Play** to listen, or drop it on an object

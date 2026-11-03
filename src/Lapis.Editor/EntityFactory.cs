@@ -106,4 +106,69 @@ internal static class EntityFactory
 
         return entity;
     }
+
+    /// <summary>A canvas: the screen that UI elements are laid out on.</summary>
+    public static Entity CreateCanvas(Scene scene, Entity? parent = null)
+    {
+        var entity = Create(scene, "Canvas", parent);
+        entity.AddComponent<Canvas>();
+        return entity;
+    }
+
+    /// <summary>
+    /// Creates a UI element inside <paramref name="parent"/> when it belongs to a canvas; otherwise inside the scene's
+    /// first canvas, or a new canvas (returned in <paramref name="newCanvas"/>, which then holds the element).
+    /// </summary>
+    public static Entity CreateUI(Scene scene, UIElementKind kind, Entity? parent, out Entity? newCanvas)
+    {
+        newCanvas = null;
+        if (parent is null || UILayout.CanvasOf(parent) is null)
+        {
+            parent = scene.AllEntities.FirstOrDefault(entity => entity.GetComponent<Canvas>() is not null);
+            if (parent is null)
+            {
+                parent = newCanvas = CreateCanvas(scene);
+            }
+        }
+
+        var entity = Create(scene, kind.ToString(), parent);
+        var rect = entity.AddComponent<RectTransform>();
+        switch (kind)
+        {
+            case UIElementKind.Panel:
+                rect.Size = new Vector2(600f, 400f);
+                entity.AddComponent<Image>().Color = new Color(0.08f, 0.08f, 0.1f, 0.75f);
+                break;
+            case UIElementKind.Image:
+                entity.AddComponent<Image>();
+                break;
+            case UIElementKind.Text:
+                rect.Size = new Vector2(400f, 60f);
+                entity.AddComponent<Text>().Alignment = TextAlignment.Center;
+                break;
+            case UIElementKind.Button:
+                rect.Size = new Vector2(260f, 64f);
+                entity.AddComponent<Image>().Color = new Color(0.95f, 0.95f, 0.95f);
+                entity.AddComponent<Button>();
+                var label = Create(scene, "Text", entity);
+                label.AddComponent<RectTransform>().Stretch();
+                var text = label.AddComponent<Text>();
+                text.Content = "Button";
+                text.FontSize = 28f;
+                text.Color = new Color(0.12f, 0.12f, 0.14f);
+                text.Alignment = TextAlignment.Center;
+                break;
+        }
+
+        return entity;
+    }
+}
+
+/// <summary>The UI elements offered by the Create menu.</summary>
+internal enum UIElementKind
+{
+    Panel,
+    Image,
+    Text,
+    Button,
 }

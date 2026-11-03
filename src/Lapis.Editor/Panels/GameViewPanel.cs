@@ -81,8 +81,12 @@ internal sealed unsafe class GameViewPanel(EditorContext context, SceneRenderer 
         var scale = ImGui.GetIO().DisplayFramebufferScale;
         framebuffer.Resize((int)(size.X * scale.X), (int)(size.Y * scale.Y));
 
+        Screen.SetSize(framebuffer.Width, framebuffer.Height, scale.X);
+        context.GameViewSize = new Vector2(framebuffer.Width, framebuffer.Height);
+
         framebuffer.Bind();
         renderer.Render(context.Scene, RenderView.FromCamera(camera, framebuffer.AspectRatio));
+        renderer.RenderUI(context.Scene, new Vector2(framebuffer.Width, framebuffer.Height));
         renderer.RenderScreenFade();
         framebuffer.Unbind();
 

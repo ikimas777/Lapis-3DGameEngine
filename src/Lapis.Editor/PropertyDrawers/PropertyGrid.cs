@@ -22,6 +22,7 @@ internal static unsafe class PropertyGrid
         var label = Nicify(member.Name);
         var tooltip = member.GetAttribute<TooltipAttribute>()?.Text;
         var range = member.GetAttribute<RangeAttribute>();
+        var speed = member.GetAttribute<DragSpeedAttribute>()?.Speed ?? 0.05f;
         var type = member.ValueType;
         var value = member.GetValue(target);
 
@@ -32,7 +33,7 @@ internal static unsafe class PropertyGrid
         switch (value)
         {
             case float f:
-                changed = range is null ? Float(label, ref f, tooltip: tooltip) : Slider(label, ref f, range.Min, range.Max, tooltip);
+                changed = range is null ? Float(label, ref f, speed, tooltip) : Slider(label, ref f, range.Min, range.Max, tooltip);
                 newValue = f;
                 break;
             case double d:
@@ -49,11 +50,11 @@ internal static unsafe class PropertyGrid
                 newValue = b;
                 break;
             case Vector2 v2:
-                changed = Vector2(label, ref v2, tooltip);
+                changed = Vector2(label, ref v2, speed, tooltip);
                 newValue = v2;
                 break;
             case Vector3 v3:
-                changed = Vector3(label, ref v3, tooltip: tooltip);
+                changed = Vector3(label, ref v3, speed, tooltip);
                 newValue = v3;
                 break;
             case Vector4 v4:
@@ -83,7 +84,7 @@ internal static unsafe class PropertyGrid
                 else if (type == typeof(string))
                 {
                     var text = (string?)value ?? string.Empty;
-                    changed = Text(label, ref text, tooltip);
+                    changed = member.GetAttribute<MultilineAttribute>() is null ? Text(label, ref text, tooltip) : MultilineText(label, ref text, tooltip);
                     newValue = text;
                 }
                 else if (type == typeof(Entity) || typeof(Component).IsAssignableFrom(type))
@@ -143,12 +144,20 @@ internal static unsafe class PropertyGrid
         return ImGui.InputText($"##{label}", ref value, 256);
     }
 
-    public static bool Vector2(string label, ref Vector2 value, string? tooltip = null)
+    /// <summary>A text box a few lines high; Enter starts a new line.</summary>
+    public static bool MultilineText(string label, ref string value, string? tooltip = null)
+    {
+        Label(label, tooltip);
+        var lines = Math.Clamp(value.Count(character => character == '\n') + 1, 3, 8);
+        return ImGui.InputTextMultiline($"##{label}", ref value, 4096, new Vector2(-1, ImGui.GetTextLineHeight() * lines + 8));
+    }
+
+    public static bool Vector2(string label, ref Vector2 value, float speed = 0.05f, string? tooltip = null)
     {
         Label(label, tooltip);
         fixed (Vector2* pointer = &value)
         {
-            return ImGui.DragFloat2($"##{label}", (float*)pointer, 0.05f);
+            return ImGui.DragFloat2($"##{label}", (float*)pointer, speed);
         }
     }
 

@@ -240,7 +240,7 @@ internal sealed unsafe partial class EditorApplication(EditorLaunchOptions launc
             // While the game has the mouse, the cursor is hidden and held in the window, and the editor UI ignores
             // the mouse: clicks must reach only the game (a click would otherwise move focus away and end the
             // capture). Esc gives the mouse back.
-            _gameInput.CaptureCursor = playing;
+            _gameInput.CaptureCursor = playing && Cursor.Locked; // a script may show the cursor, e.g. for a menu
             _imgui.IgnoreMouse = playing;
             var io = ImGui.GetIO();
             io.ConfigFlags = playing ? io.ConfigFlags | ImGuiConfigFlags.NoMouseCursorChange : io.ConfigFlags & ~ImGuiConfigFlags.NoMouseCursorChange;

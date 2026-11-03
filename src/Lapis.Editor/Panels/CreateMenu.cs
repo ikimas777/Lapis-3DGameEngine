@@ -94,6 +94,38 @@ internal static class CreateMenu
             created = EntityFactory.CreateLight(scene, LightType.Point, parent);
         }
 
+        ImGui.Separator();
+
+        Entity? createdUI = null;
+        Entity? newCanvas = null;
+        if (ImGui.BeginMenu("UI"))
+        {
+            if (ImGui.MenuItem("Canvas"))
+            {
+                createdUI = EntityFactory.CreateCanvas(scene, parent);
+            }
+
+            foreach (var kind in Enum.GetValues<UIElementKind>())
+            {
+                if (ImGui.MenuItem(kind.ToString()))
+                {
+                    // From the main menu, a new element goes inside the selected UI element.
+                    var uiParent = parent ?? (SceneView.UIHandles.IsUI(context.Selection) ? context.Selection : null);
+                    createdUI = EntityFactory.CreateUI(scene, kind, uiParent, out newCanvas);
+                }
+            }
+
+            ImGui.EndMenu();
+        }
+
+        if (createdUI is not null)
+        {
+            // UI is placed by its RectTransform, not at the spawn position. A new canvas is recorded with the element in it.
+            context.Selection = createdUI;
+            EditorActions.RecordCreated(context, newCanvas ?? createdUI);
+            return;
+        }
+
         if (created is null)
         {
             return;

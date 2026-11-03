@@ -59,7 +59,14 @@ internal sealed class RuntimeApplication(RuntimeOptions options, GameManifest ma
 
     protected override void OnUpdate()
     {
+        var size = FramebufferSize;
+        Screen.SetSize(size.X, size.Y, Window.Size.X > 0 ? (float)size.X / Window.Size.X : 1f);
         _game?.Tick(Time.DeltaTime);
+        if (_input is not null)
+        {
+            _input.CaptureCursor = Cursor.Locked; // a script may show the cursor, e.g. for a menu
+        }
+
         Input.BeginFrame();
     }
 
@@ -78,6 +85,7 @@ internal sealed class RuntimeApplication(RuntimeOptions options, GameManifest ma
         else
         {
             _renderer!.Render(_scene, RenderView.FromCamera(camera, _aspectRatio));
+            _renderer.RenderUI(_scene, new System.Numerics.Vector2(FramebufferSize.X, FramebufferSize.Y));
             _renderer.RenderScreenFade();
         }
 

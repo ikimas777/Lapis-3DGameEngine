@@ -35,6 +35,7 @@ internal sealed unsafe class SceneViewPanel(
     private Entity? _gizmoEntity;
     private readonly List<(Entity Entity, TransformState Start)> _gizmoOthers = [];
     private readonly ColliderHandles _colliderHandles = new(context);
+    private readonly UIHandles _uiHandles = new(context);
 
     private enum NavigationMode
     {
@@ -49,6 +50,9 @@ internal sealed unsafe class SceneViewPanel(
     /// <summary>True while the Collider tool is on and the selection has a collider it can resize.</summary>
     private bool EditingCollider =>
         context.EditingCollider && context.Selection is { } selection && selection.Components.OfType<Collider>().Any(ColliderHandles.CanEdit);
+
+    /// <summary>True while a canvas or UI element is selected: the view shows the game screen with the UI to edit.</summary>
+    private bool EditingUI => UIHandles.IsUI(context.Selection);
 
     /// <summary>Draw collider outlines.</summary>
     public bool ShowColliders { get; set; } = true;
@@ -115,6 +119,11 @@ internal sealed unsafe class SceneViewPanel(
         CameraGizmos.Add(lines, context.Scene, context.IsSelected);
         LightGizmos.Add(lines, context.Scene, context.IsSelected);
         lines.Render(view);
+        if (EditingUI)
+        {
+            _uiHandles.RenderPreview(renderer, size, new Vector2(framebuffer.Width, framebuffer.Height));
+        }
+
         framebuffer.Unbind();
 
         var origin = ImGui.GetCursorScreenPos();
@@ -122,20 +131,28 @@ internal sealed unsafe class SceneViewPanel(
         var imageHovered = ImGui.IsItemHovered();
 
         // The Collider tool replaces the transform gizmo with dots for resizing the selection's collider.
-        if (EditingCollider)
+        if (EditingUI)
         {
+            FinishGizmoDrag();
+            _colliderHandles.Finish();
+            _uiHandles.Draw(origin, size, imageHovered);
+        }
+        else if (EditingCollider)
+        {
+            _uiHandles.Finish();
             FinishGizmoDrag();
             _colliderHandles.Draw(context.Selection!, view, origin, size, imageHovered, Snap ^ ImGui.GetIO().KeyCtrl ? ScaleSnap : 0f);
         }
         else
         {
             _colliderHandles.Finish();
+            _uiHandles.Finish();
             DrawGizmo(view, origin, size);
         }
 
         var toolbarHovered = DrawToolbar(origin);
         var sidebarHovered = Sidebar?.Draw(origin, size) ?? false;
-        var gizmoBusy = EditingCollider ? _colliderHandles.IsBusy : ImGuizmo.IsOver() || ImGuizmo.IsUsing();
+        var gizmoBusy = EditingUI ? _uiHandles.IsBusy : EditingCollider ? _colliderHandles.IsBusy : ImGuizmo.IsOver() || ImGuizmo.IsUsing();
         var hovered = imageHovered && !toolbarHovered && !sidebarHovered;
 
         HandleNavigation(hovered, size);
@@ -625,6 +642,7 @@ internal sealed unsafe class SceneViewPanel(
             NavigationMode.Look => "Look  ·  WASD / Q / E to fly, Shift = faster",
             NavigationMode.Orbit => "Orbit",
             NavigationMode.Pan => "Pan",
+            _ when EditingUI => "Click a UI element to select it  ·  drag it to move  ·  drag its edges or corners to resize  ·  the frame is the Game view's screen",
             _ when EditingCollider => "Drag the dots to resize the collider (Ctrl: snap)  ·  4 or Move / Rotate / Scale: back to the gizmo",
             _ when FlyOnlyWithRightMouse => "Click select (Ctrl/Shift: add)  ·  RMB look + WASD / Q / E fly  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",
             _ => "Click select (Ctrl/Shift: add)  ·  WASD / Q / E fly  ·  RMB look  ·  Alt+LMB orbit  ·  MMB pan  ·  Wheel zoom  ·  F focus",

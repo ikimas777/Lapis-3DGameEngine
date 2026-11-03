@@ -24,11 +24,17 @@
     <PackageReference Include="Silk.NET.OpenAL" />
     <PackageReference Include="Silk.NET.OpenAL.Soft.Native" />
     <PackageReference Include="NVorbis" />
+    <PackageReference Include="StbTrueTypeSharp" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Built-in shaders are copied next to every app that references the engine -->
     <None Include="Shaders\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="Shaders" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Default font of in-game text (SIL Open Font License, see scripts/package/licenses) -->
+    <EmbeddedResource Include="Fonts\Lato-Regular.ttf" LogicalName="Lapis.Fonts.Lato-Regular.ttf" />
   </ItemGroup>
 
 </Project>

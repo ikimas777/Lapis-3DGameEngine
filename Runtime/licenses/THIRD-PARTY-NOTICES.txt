@@ -14,7 +14,13 @@ OpenAL Soft 1.23.1 (sound)
   with your own build of OpenAL Soft (same file name, same processor type); the program
   then uses that one.
 
+Lato 2.015 (default font of in-game text)
+-----------------------------------------
+  Files:   built into the programs; Text components use it when no other font is chosen
+  Licence: SIL Open Font License, version 1.1 (Lato-OFL.txt in this folder)
+  Source:  https://github.com/google/fonts/tree/main/ofl/lato
+
 Everything else in Lapis is under the MIT licence (LICENSE.txt next to the editor). The
 other libraries built into the programs (.NET, Silk.NET, GLFW, Dear ImGui, Jolt Physics,
-SharpGLTF, StbImageSharp, NVorbis, Roslyn) are under the MIT, BSD, zlib or Apache 2.0
-licences, or in the public domain.
+SharpGLTF, StbImageSharp, StbTrueTypeSharp, NVorbis, Roslyn) are under the MIT, BSD, zlib
+or Apache 2.0 licences, or in the public domain.

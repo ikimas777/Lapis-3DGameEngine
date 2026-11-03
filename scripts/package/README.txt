@@ -13,7 +13,7 @@ What is in this folder
   Lapis.Monitor(.exe)     Live performance monitor: frame time, rendering, physics, memory,
                           errors and alerts. Start it from the editor (Debug > Lapis Monitor)
                           or on its own; it attaches to the running editor by itself.
-  Docs/                   Guides: scripting.md, assets.md, export.md, mcp.md (AI assistants),
+  Docs/                   Guides: scripting.md, ui.md, assets.md, export.md, mcp.md (AI assistants),
                           monitor.md, scene-format.md.
   soft_oal.dll            The sound library, OpenAL Soft (libopenal.so on Linux), a separate
                           file because of its licence (LGPL). Also next to Runtime and copied

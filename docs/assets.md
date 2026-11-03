@@ -11,6 +11,7 @@ Everything a game uses lives in the project's `Assets` folder and appears in the
 | Texture | `.png`, `.jpg`, `.jpeg`, `.tga`, `.bmp` | Treated as sRGB colour, with mipmaps and repeat wrapping. |
 | Material | `.lmat` | Colour, texture, metallic and roughness shared by many objects. Edited in the Inspector. |
 | Sound | `.wav`, `.ogg` | WAV: 8, 16, 24 or 32-bit PCM, or 32-bit float. Mono or stereo (more channels keep the first two). Select one to see its length and press **Play** (or double-click it) to listen. Drop it on an object to play it from there. See [Sound](scripting.md#sound). |
+| Font | `.ttf`, `.otf` | TrueType or OpenType fonts for UI text: drag one into a Text component's **Font** slot. See [ui.md](ui.md). |
 | Scene | `.lscene` | See [scene-format.md](scene-format.md). |
 | Script | `.cs` | See [scripting.md](scripting.md). |
 

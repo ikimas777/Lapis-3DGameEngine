@@ -48,6 +48,22 @@ public sealed class McpTests : IDisposable
     }
 
     [Fact]
+    public void CreateEntity_UIButton_CreatesItsCanvasInTheSameUndoStep()
+    {
+        var (context, tools, _) = Create();
+
+        var result = Json(tools.CreateEntity("Play", "ui_button", null, [0, 120], null, null, physics: false));
+
+        var button = context.Scene.FindById(Guid.Parse(result.GetProperty("id").GetString()!))!;
+        Assert.NotNull(button.GetComponent<Button>());
+        Assert.Equal(new Vector2(0, 120), button.GetComponent<RectTransform>()!.Position);
+        Assert.NotNull(button.Parent?.GetComponent<Canvas>());
+
+        context.Undo();
+        Assert.Empty(context.Scene.AllEntities);
+    }
+
+    [Fact]
     public void SetProperty_ReadsJsonValues_AndCanBeUndone()
     {
         var (context, tools, _) = Create();

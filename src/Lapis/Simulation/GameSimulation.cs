@@ -27,6 +27,8 @@ public sealed class GameSimulation : IDisposable
         _scripts.PhysicsStep += _physics.Step;
         Lapis.Physics.ActiveWorld = _physics;
         Screen.Reset(); // every run starts with a clear picture
+        Cursor.Reset();
+        UI.Reset();
         AudioSystem.BeginGame();
     }
 
@@ -43,6 +45,12 @@ public sealed class GameSimulation : IDisposable
     public void Tick(float deltaTime)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+
+        // Buttons are clicked before the scripts' Update, so scripts see the result in the same frame.
+        var pointer = Cursor.Locked ? (System.Numerics.Vector2?)null : Input.MousePosition * Screen.PixelsPerPoint;
+        UI.Update(Scene, new System.Numerics.Vector2(Screen.Width, Screen.Height), pointer,
+            Input.GetMouseButtonDown(MouseButton.Left), Input.GetMouseButtonUp(MouseButton.Left));
+
         _scripts.Tick(deltaTime);
         Screen.Advance(deltaTime);
         AudioSystem.Update(Scene);
@@ -58,6 +66,8 @@ public sealed class GameSimulation : IDisposable
 
         _scripts.Shutdown();
         Screen.Reset();
+        Cursor.Reset();
+        UI.Reset();
         AudioSystem.EndGame();
         if (Lapis.Physics.ActiveWorld == _physics)
         {

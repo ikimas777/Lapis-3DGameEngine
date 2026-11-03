@@ -226,6 +226,7 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
             _ => null,
         };
 
+        Entity? newCanvas = null;
         var entity = (shape ?? "empty").Trim().ToLowerInvariant() switch
         {
             "empty" or "" => EntityFactory.CreateEmpty(scene, parentEntity),
@@ -236,7 +237,12 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
             "directional_light" => EntityFactory.CreateLight(scene, LightType.Directional, parentEntity),
             "point_light" => EntityFactory.CreateLight(scene, LightType.Point, parentEntity),
             "spot_light" => EntityFactory.CreateLight(scene, LightType.Spot, parentEntity),
-            _ => throw new McpException($"Unknown shape '{shape}'. Use empty, cube, sphere, capsule, cylinder, plane, camera, directional_light, point_light or spot_light."),
+            "canvas" => EntityFactory.CreateCanvas(scene, parentEntity),
+            "ui_panel" => EntityFactory.CreateUI(scene, UIElementKind.Panel, parentEntity, out newCanvas),
+            "ui_image" => EntityFactory.CreateUI(scene, UIElementKind.Image, parentEntity, out newCanvas),
+            "ui_text" => EntityFactory.CreateUI(scene, UIElementKind.Text, parentEntity, out newCanvas),
+            "ui_button" => EntityFactory.CreateUI(scene, UIElementKind.Button, parentEntity, out newCanvas),
+            _ => throw new McpException($"Unknown shape '{shape}'. Use empty, cube, sphere, capsule, cylinder, plane, camera, directional_light, point_light, spot_light, canvas, ui_panel, ui_image, ui_text or ui_button."),
         };
 
         if (!string.IsNullOrWhiteSpace(name))
@@ -244,8 +250,21 @@ internal sealed class McpEditorTools(EditorContext context, McpSettings settings
             entity.Name = name.Trim();
         }
 
-        ApplyTransform(entity.Transform, position, rotation, scale);
-        Record(EntityLifetimeCommand.Created($"Create {entity.Name}", entity));
+        if (entity.GetComponent<RectTransform>() is { } rect)
+        {
+            // UI is placed by its RectTransform: the position is its offset from the anchors, in canvas units.
+            if (position is { Length: >= 2 })
+            {
+                rect.Position = new System.Numerics.Vector2(position[0], position[1]);
+            }
+        }
+        else
+        {
+            ApplyTransform(entity.Transform, position, rotation, scale);
+        }
+
+        var root = newCanvas ?? entity;
+        Record(EntityLifetimeCommand.Created($"Create {root.Name}", root));
         return WithPlayNote(Summary(entity)).ToJsonString();
     }
 

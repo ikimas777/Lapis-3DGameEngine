@@ -302,6 +302,8 @@ Attributes for the Inspector:
 
 - `[Range(min, max)]` — slider for numbers.
 - `[Tooltip("text")]` — help text on hover.
+- `[Multiline]` — a box with several lines for a `string`.
+- `[DragSpeed(1f)]` — how fast a number changes when dragged (default 0.05).
 
 ## Useful API
 
@@ -323,6 +325,8 @@ Attributes for the Inspector:
 | `Screen.FadeTo(Color.Black, 0.1f)`, `Screen.FadeIn(0.2f)`, `Screen.IsFading` | Fading the picture (see below) |
 | `GetComponent<AudioSource>().Play()`, `AudioSource.PlayClipAtPoint(clip, position)` | Sound (see below) |
 | `entity.Scene.Environment.FogDensity = 0.2f` | Fog and other scene settings (see below) |
+| `Cursor.Locked = false`, `UI.IsPointerOverUI`, `Screen.Width`, `Screen.Height` | Mouse cursor for menus, clicks on the UI, picture size |
+| `GetComponent<Text>().Content = "Score: 3"`, `button.Clicked += ...` | UI (see the [UI guide](ui.md)) |
 
 ## Lights, fog and fading
 

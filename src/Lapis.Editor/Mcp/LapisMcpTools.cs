@@ -72,12 +72,12 @@ internal sealed class LapisMcpTools(EditorDispatcher dispatcher, McpEditorTools 
 
     // ----- Entities -----
 
-    [McpServerTool(Name = "create_entity"), Description("Creates an entity: empty, a shape (with a collider) or a camera or light. Returns its id.")]
+    [McpServerTool(Name = "create_entity"), Description("Creates an entity: empty, a shape (with a collider), a camera or light, or UI (a canvas, or a panel, image, text or button inside the scene's canvas, created when there is none). Returns its id.")]
     public Task<string> CreateEntity(
         [Description("Name; the shape's name when empty.")] string? name = null,
-        [Description("empty, cube, sphere, capsule, cylinder, plane, camera, directional_light, point_light or spot_light.")] string shape = "empty",
+        [Description("empty, cube, sphere, capsule, cylinder, plane, camera, directional_light, point_light, spot_light, canvas, ui_panel, ui_image, ui_text or ui_button.")] string shape = "empty",
         [Description("Parent entity; empty for the top level.")] string? parent = null,
-        [Description("Local position [x, y, z].")] float[]? position = null,
+        [Description("Local position [x, y, z]; for UI, the RectTransform position [x, y] in canvas units (Y down).")] float[]? position = null,
         [Description("Local rotation in degrees [x, y, z].")] float[]? rotation = null,
         [Description("Local scale [x, y, z].")] float[]? scale = null,
         [Description("Give a shape a RigidBody so it falls and collides when the game runs.")] bool physics = false) =>

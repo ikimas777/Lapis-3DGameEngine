@@ -25,6 +25,7 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
     // Euler angles are cached while editing so values like 180° do not flip to -180° mid-drag.
     private Transform? _eulerOwner;
+    private readonly SceneView.UIHandles _uiHandles = new(context);
     private Quaternion _eulerSource;
     private Vector3 _euler;
 
@@ -59,7 +60,10 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
         DrawHeader(entity);
         ImGui.Spacing();
-        DrawTransform(entity);
+        if (entity.GetComponent<RectTransform>() is null)
+        {
+            DrawTransform(entity); // UI elements are placed by their RectTransform instead
+        }
 
         Component? toRemove = null;
         var index = 0;
@@ -376,6 +380,28 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
         ImGui.EndPopup();
     }
 
+    /// <summary>A menu of common anchors; the element stays where it is on screen.</summary>
+    private void DrawAnchorPresets(RectTransform transform)
+    {
+        PropertyGrid.Label("Anchor Preset", "Pin the element to a corner, an edge or the centre of its parent, or stretch it with the parent. It stays where it is.");
+        var current = SceneView.UIHandles.AnchorPresets.FirstOrDefault(preset => preset.Min == transform.AnchorMin && preset.Max == transform.AnchorMax).Name ?? "Custom";
+        ImGui.SetNextItemWidth(-1);
+        if (!ImGui.BeginCombo("##anchorPreset", current))
+        {
+            return;
+        }
+
+        foreach (var (name, min, max) in SceneView.UIHandles.AnchorPresets)
+        {
+            if (ImGui.Selectable(name, name == current))
+            {
+                _uiHandles.ApplyAnchorPreset(transform, min, max);
+            }
+        }
+
+        ImGui.EndCombo();
+    }
+
     /// <returns>False when the user asked to remove the component.</returns>
     private bool DrawComponent(Component component, Scene scene)
     {
@@ -410,6 +436,11 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
             {
                 ImGui.SetTooltip("Open the script in VS Code");
             }
+        }
+
+        if (component is RectTransform rectTransform)
+        {
+            DrawAnchorPresets(rectTransform);
         }
 
         if (component is Collider collider && SceneView.ColliderHandles.CanEdit(collider))
@@ -497,9 +528,15 @@ internal sealed unsafe class InspectorPanel(EditorContext context, ScriptManager
 
             if (ImGui.Selectable(PropertyGrid.Nicify(type.Name)))
             {
-                var component = entity.AddComponent(type);
                 context.History.BeginGesture();
-                context.Record(ComponentLifetimeCommand.Added(component));
+
+                // UI parts need a RectTransform to be placed; add one first when the entity has none.
+                var isUIPart = type == typeof(Image) || type == typeof(Text) || type == typeof(Button);
+                var rect = isUIPart && entity.GetComponent<RectTransform>() is null ? entity.AddComponent<RectTransform>() : null;
+                var component = entity.AddComponent(type);
+                context.Record(rect is null
+                    ? ComponentLifetimeCommand.Added(component)
+                    : new CompositeCommand($"Add {type.Name}", [ComponentLifetimeCommand.Added(rect), ComponentLifetimeCommand.Added(component)]));
                 ImGui.CloseCurrentPopup();
             }
 

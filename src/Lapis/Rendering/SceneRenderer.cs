@@ -39,6 +39,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly Shader _skyShader;
     private readonly Shader _fadeShader;
     private readonly ShadowMap _shadowMap;
+    private readonly UIRenderer _ui;
     private readonly uint _emptyVertexArray;
     private Light? _directionalLight;
     private int _shadowDrawCount;
@@ -54,6 +55,7 @@ public sealed class SceneRenderer : IDisposable
         _skyShader = Shader.LoadBuiltIn(gl, "fullscreen", "sky");
         _fadeShader = Shader.LoadBuiltIn(gl, "fullscreen", "fade");
         _shadowMap = new ShadowMap(gl, 2048);
+        _ui = new UIRenderer(gl, _textures);
         _emptyVertexArray = gl.GenVertexArray(); // the sky triangle is generated in the shader
     }
 
@@ -144,6 +146,30 @@ public sealed class SceneRenderer : IDisposable
     }
 
     /// <summary>
+    /// Draws the scene's UI (its <see cref="Canvas"/>es) over the current viewport, laid out for a screen of
+    /// <paramref name="screenSize"/> pixels. Call it after <see cref="Render"/> and before <see cref="RenderScreenFade"/>.
+    /// </summary>
+    public void RenderUI(Scene scene, Vector2 screenSize)
+    {
+        ArgumentNullException.ThrowIfNull(scene);
+        _ui.Render(scene, screenSize);
+    }
+
+    /// <summary>
+    /// Draws the scene's UI laid out for a screen of <paramref name="screenSize"/> pixels, shrunk or enlarged into
+    /// <paramref name="viewport"/> (pixels of the current framebuffer, from its bottom-left corner), e.g. a preview.
+    /// </summary>
+    public unsafe void RenderUI(Scene scene, Vector2 screenSize, Rect viewport)
+    {
+        ArgumentNullException.ThrowIfNull(scene);
+        Span<int> previous = stackalloc int[4];
+        _gl.GetInteger(GetPName.Viewport, previous);
+        _gl.Viewport((int)viewport.X, (int)viewport.Y, (uint)Math.Max(viewport.Width, 1f), (uint)Math.Max(viewport.Height, 1f));
+        _ui.Render(scene, screenSize);
+        _gl.Viewport(previous[0], previous[1], (uint)previous[2], (uint)previous[3]);
+    }
+
+    /// <summary>
     /// Draws <see cref="Screen.FadeColor"/> over the whole current framebuffer (nothing when it is clear).
     /// Call after <see cref="Render"/> for views that show the game, not for the editor's Scene view.
     /// </summary>
@@ -173,6 +199,7 @@ public sealed class SceneRenderer : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        _ui.Dispose();
         _meshes.Dispose();
         _textures.Dispose();
         _shadowMap.Dispose();

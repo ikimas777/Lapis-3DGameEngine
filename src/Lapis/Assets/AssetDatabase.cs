@@ -27,6 +27,9 @@ public enum AssetType
 
     /// <summary>A sound: <c>.wav</c> or <c>.ogg</c>.</summary>
     Audio,
+
+    /// <summary>A font for UI text: <c>.ttf</c> or <c>.otf</c>.</summary>
+    Font,
 }
 
 /// <summary>A file in the <c>Assets</c> folder and its stable id.</summary>
@@ -116,6 +119,7 @@ public sealed class AssetDatabase
         ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => AssetType.Texture,
         ".lmat" => AssetType.Material,
         ".wav" or ".ogg" => AssetType.Audio,
+        ".ttf" or ".otf" => AssetType.Font,
         _ => AssetType.Other,
     };
 
